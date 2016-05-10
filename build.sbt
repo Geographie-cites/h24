@@ -23,7 +23,9 @@ libraryDependencies ++= Seq (
   "org.geotools" % "gt-epsg-wkt" % geotoolsVersion,
   "org.geotools" % "gt-cql" % geotoolsVersion,
   "com.vividsolutions" % "jts" % jtsVersion,
-  "com.github.tototoshi" %% "scala-csv" % "1.3.1"
+  "com.github.tototoshi" %% "scala-csv" % "1.3.1",
+  "org.apache.commons" % "commons-compress" % "1.11",
+  "org.tukaani" % "xz" % "1.5"
 )
  
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)

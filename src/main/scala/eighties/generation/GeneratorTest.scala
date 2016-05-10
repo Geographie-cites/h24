@@ -1,18 +1,21 @@
 package eighties.generation
 
-import java.io.File
+import java.io.{BufferedInputStream, File, FileInputStream}
 
+import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
 import org.geotools.data.{DataUtilities, Transaction}
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
 
 import scala.util.Random
 
 object GeneratorTest extends App {
-  val path = args(0)
+  val path = "data"
+  val outputPath = "results"
+  new File(outputPath).mkdirs()
   val contourIRISFileName = s"${path}/CONTOURS-IRIS_FE_IDF.shp"
-  val baseICEvolStructPopFileName = s"${path}/base-ic-evol-struct-pop-2012-IDF.csv"
-  val baseICDiplomesFormationPopFileName = s"${path}/base-ic-diplomes-formation-2012-IDF.csv"
-  val outFileName = s"${path}/generated-population-IDF.shp"
+  val baseICEvolStructPopFileName = s"${path}/base-ic-evol-struct-pop-2012-IDF.csv.lzma"
+  val baseICDiplomesFormationPopFileName = s"${path}/base-ic-diplomes-formation-2012-IDF.csv.lzma"
+  val outFileName = s"${outputPath}/generated-population-IDF.shp"
 
   val specs = "geom:Point,age:Integer,sex:Integer,education:Integer"
   val factory = new ShapefileDataStoreFactory
@@ -23,10 +26,14 @@ object GeneratorTest extends App {
   val typeName = dataStore.getTypeNames()(0)
   val writer = dataStore.getFeatureWriterAppend(typeName, Transaction.AUTO_COMMIT)
   val rng = new Random(42)
+  val finBaseICEvolStructPop = new FileInputStream(baseICEvolStructPopFileName)
+  val inBaseICEvolStructPop = new BufferedInputStream(finBaseICEvolStructPop)
+  val finBaseICDiplomesFormationPop = new FileInputStream(baseICDiplomesFormationPopFileName)
+  val inBaseICDiplomesFormationPop = new BufferedInputStream(finBaseICDiplomesFormationPop)
   for {
     geom <- reader.readGeometry(new File(contourIRISFileName))
-    ageSex <- reader.readAgeSex(new File(baseICEvolStructPopFileName))
-    educationSex <- reader.readEducationSex(new File(baseICDiplomesFormationPopFileName))
+    ageSex <- reader.readAgeSex(new LZMACompressorInputStream(inBaseICEvolStructPop))
+    educationSex <- reader.readEducationSex(new LZMACompressorInputStream(inBaseICDiplomesFormationPop))
   } yield {
     reader.generatePopulation(rng, geom, ageSex, educationSex).toIterator.flatten.zipWithIndex.foreach {
       case ((age, sex, education, point), i) =>

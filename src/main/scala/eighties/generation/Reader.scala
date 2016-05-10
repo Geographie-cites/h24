@@ -1,6 +1,6 @@
 package eighties.generation
 
-import java.io.File
+import java.io.{File, FileInputStream, InputStream}
 
 import com.github.tototoshi.csv.CSVReader
 import com.vividsolutions.jts.geom.{Geometry, MultiPolygon, Polygon}
@@ -8,6 +8,7 @@ import eighties.geometry.PolygonSampler
 import org.geotools.data.shapefile.ShapefileDataStore
 
 import scala.collection.mutable.ArrayBuffer
+import scala.io.Source
 import scala.util.{Random, Try}
 
 object reader {
@@ -28,7 +29,7 @@ object reader {
     val result =
      Try {
        featureReader
-         //.filter(feature =>feature.getAttribute("DCOMIRIS").toString.startsWith("75"))
+         //.filter(feature =>feature.getAttribute("DCOMIRIS").toString.startsWith("78"))
          .map { feature =>
          val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon].getGeometryN(0).asInstanceOf[Polygon]
          val iris = feature.getAttribute("DCOMIRIS").toString
@@ -42,9 +43,8 @@ object reader {
     result
   }
 
-
-  def readEducationSex(aFile: File) = {
-    val reader = CSVReader.open(aFile)
+  def readEducationSex(stream: InputStream) = {
+    val reader = CSVReader.open(Source.fromInputStream(stream))
     val result =
       Try {
         reader.iterator.drop(6).map { line =>
@@ -58,8 +58,8 @@ object reader {
     result
   }
 
-  def readAgeSex(aFile: File) = {
-    val reader = CSVReader.open(aFile)
+  def readAgeSex(stream: InputStream) = {
+    val reader = CSVReader.open(Source.fromInputStream(stream))
     val result =
       Try {
         reader.iterator.drop(6).map { line =>
