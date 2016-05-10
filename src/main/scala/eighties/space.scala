@@ -1,5 +1,5 @@
 /**
-  * Created by Romain Reuillon on 09/05/16.
+  * Created by Romain Reuillon on 10/05/16.
   *
   * This program is free software: you can redistribute it and/or modify
   * it under the terms of the GNU Affero General Public License as published by
@@ -19,11 +19,26 @@ package eighties
 
 import monocle.macros.Lenses
 
-object Meatic {
+object space {
 
+  type Location = (Int, Int)
 
-  @Lenses case class Grid()
+  /* définition d'un voisinage*/
+  def neighbours(side: Int, location: Location, size: Int) = {
+    val (i, j) = location
 
+    for {
+      di <- (-size to size)
+      dj <- (-size to size)
+      if (di != 0 && dj != 0)
+      ni = i + di
+      nj = j + dj
+      if (ni >= 0 && nj >= 0 && ni < side && nj < side)
+    } yield (i + di, j + dj)
+  }
 
+  /* Définition d'une classe Grid, composé de vecteurs, de edges et de side*/
+  @Lenses case class Grid(cells: Vector[Vector[Cell]], side: Int)
+  @Lenses case class Cell(location: Location)
 
 }
