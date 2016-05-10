@@ -1,4 +1,6 @@
 
+name := "meatyc"
+
 scalaVersion := "2.11.8"
 
 val monocleVersion = "1.2.0"
