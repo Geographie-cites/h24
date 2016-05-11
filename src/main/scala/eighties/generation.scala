@@ -42,8 +42,7 @@ import Scalaz._
 object generation {
 
   type IrisID = String
-  case class Iris(id: IrisID, geometry: Geometry, population: Int, ageSex: Vector[Vector[Double]], educationSex: Vector[Vector[Double]])
-  case class Features(age: Int, sex: Int, education: Int, point: Point)
+  case class Feature(age: Int, sex: Int, education: Int, point: Point)
 
   def toDouble(s: String) =
     s.filter(_ != '"').replace(',', '.') match {
@@ -100,7 +99,7 @@ object generation {
     result
   }
 
-  def generatePopulation(rnd: Random, geometry: Map[String, Polygon], ageSex: Map[String, Vector[Double]], educationSex: Map[String, Vector[Vector[Double]]]) = {
+  def generatePopulation(rnd: Random, geometry: Map[IrisID, Polygon], ageSex: Map[IrisID, Vector[Double]], educationSex: Map[IrisID, Vector[Vector[Double]]]) = {
     geometry.toSeq.map {
       case (id, geom) => {
         val sampler = new PolygonSampler(geom)
@@ -120,10 +119,16 @@ object generation {
           val sample = ageSexVariate.compute(rnd)
           val age = (sample(0)*ageSexSizes(0)).toInt
           val sex = (sample(1)*ageSexSizes(1)).toInt
-          val education = if (age>0) {
-            (educationSexVariates(sex).compute(rnd)(0) * educationSexSizes(0)).toInt
-          } else -1
-          (age,sex,education,geom.getFactory.createPoint(sampler.apply(rnd)))
+          val education =
+            if (age>0) (educationSexVariates(sex).compute(rnd)(0) * educationSexSizes(0)).toInt
+            else -1
+
+          Feature(
+            age = age,
+            sex = sex,
+            education = education,
+            point = geom.getFactory.createPoint(sampler.apply(rnd))
+          )
         }
         res
       }

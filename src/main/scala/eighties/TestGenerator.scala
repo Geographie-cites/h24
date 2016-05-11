@@ -51,8 +51,9 @@ object TestGenerator extends App {
   val rng = new Random(42)
 
   for {
-    ((age,sex,education,point), i) <- generation.generateFeatures(path, rng).get.zipWithIndex
+    (feature, i) <- generation.generateFeatures(path, rng).get.zipWithIndex
   } yield {
+    import feature._
     val transformedPoint = JTS.transform(point, transform)
     def discrete(v:Double) = (v / 200.0).toInt * 200
     val values = Array[AnyRef](

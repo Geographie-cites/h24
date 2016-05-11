@@ -17,13 +17,24 @@
   */
 package eighties
 
-import monocle.macros.Lenses
+import better.files.File
+import com.vividsolutions.jts.geom.Point
+import eighties.population.Individual
 
-object Meatic {
-
-
-  @Lenses case class Grid()
-
+import scala.util.Random
 
 
+object Meatic extends App {
+
+  val path = File("data")
+  val rng = new Random(42)
+
+  def projection = (p: Point) => space.project(p, 100, 100)
+
+  val individuals =
+    for {
+      features <- generation.generateFeatures(path, rng)
+    } yield features.map(f => Individual(f, projection))
+
+  println(individuals.get.size)
 }
