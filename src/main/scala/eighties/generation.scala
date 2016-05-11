@@ -51,9 +51,8 @@ object generation {
     val From18To24 = AgeValue(18, Some(24))
     val From25To29 = AgeValue(25, Some(29))
     val Above30 = AgeValue(30, None)
-
     def all = Vector(From0To1, From2To5, From6To10, From11To14, From15To17, From18To24, From25To29, Above30)
-    def index(age: Double) = all.indexWhere(value => age > value.from)
+    def index(age: Double) = SchoolAge.all.lastIndexWhere(value => age > value.from)
   }
 
   type IrisID = String
@@ -151,12 +150,15 @@ object generation {
           val age = ageInterval.to.map(max => rescale(ageInterval.from, max, residual))
           val sex = (sample(1)*ageSexSizes(1)).toInt
 
+          var tempIndex = -1
+          var tempP = -1.0
           val schooled = age match {
             case Some(a) =>
               val schoolAgeIndex = SchoolAge.index(a)
+              tempIndex = schoolAgeIndex
               if (schoolAgeIndex == 0) false else {
-                val proba = schoolAgeV(schoolAgeIndex - 1)
-                (rnd.nextDouble() < proba)
+                tempP = schoolAgeV(schoolAgeIndex - 1)
+                rnd.nextDouble() < schoolAgeV(schoolAgeIndex - 1)
               }
             case None => false
           }
@@ -164,6 +166,7 @@ object generation {
             if (ageIndex > 0) (educationSexVariates(sex).compute(rnd)(0) * educationSexSizes(0)).toInt + 1
             else 1
           }
+          //println(s"$age = $tempIndex - $tempP with $schooled and $education")
           Feature(
             ageCategory = ageIndex,
             age = age,
