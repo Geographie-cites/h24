@@ -40,7 +40,7 @@ object TestGenerator extends App {
   val outCRS = CRS.decode("EPSG:3035")
   val transform = CRS.findMathTransform(inCRS, outCRS, true)
   //geom:Point:srid=2154,
-  val specs = "geomLAEA:Point:srid=3035,cellX:Integer,cellY:Integer,ageCategory:Integer,age:Double,sex:Integer,education:Integer"
+  val specs = "geomLAEA:Point:srid=3035,cellX:Integer,cellY:Integer,ageCat:Integer,age:Double,sex:Integer,education:Integer"
   val factory = new ShapefileDataStoreFactory
   val dataStore = factory.createDataStore(outFile.toJava.toURI.toURL)
   val featureTypeName = "Object"
