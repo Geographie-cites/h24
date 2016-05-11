@@ -32,6 +32,8 @@ import scala.io.Source
 import scala.util.{Random, Try}
 import better.files._
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
+import eighties.population.Age
+import eighties.population.Age.AgeValue
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
@@ -40,9 +42,22 @@ import Scalaz._
 
 
 object generation {
+  object SchoolAge {
+    val From0To1 = AgeValue(0, Some(1))
+    val From2To5 = AgeValue(2, Some(5))
+    val From6To10 = AgeValue(6, Some(10))
+    val From11To14 = AgeValue(11, Some(14))
+    val From15To17 = AgeValue(15, Some(17))
+    val From18To24 = AgeValue(18, Some(24))
+    val From25To29 = AgeValue(25, Some(29))
+    val Above30 = AgeValue(30, None)
+
+    def all = Vector(From0To1, From2To5, From6To10, From11To14, From15To17, From18To24, From25To29, Above30)
+    def index(age: Double) = all.indexWhere(value => age > value.from)
+  }
 
   type IrisID = String
-  case class Feature(age: Int, sex: Int, education: Int, point: Point)
+  case class Feature(ageCategory: Int, age: Option[Double], sex: Int, education: Int, point: Point)
 
   def toDouble(s: String) =
     s.filter(_ != '"').replace(',', '.') match {
@@ -57,7 +72,7 @@ object generation {
     val result =
       Try {
         featureReader
-          .filter(feature =>feature.getAttribute("DCOMIRIS").toString.startsWith("78"))
+          .filter(feature =>feature.getAttribute("DCOMIRIS").toString.startsWith("75"))
           .map { feature =>
             val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon].getGeometryN(0).asInstanceOf[Polygon]
             val iris = feature.getAttribute("DCOMIRIS").toString
@@ -74,10 +89,24 @@ object generation {
     val reader = CSVReader.open(Source.fromInputStream(stream))
     val result =
       Try {
-        reader.iterator.drop(6).map { line =>
+        reader.iterator.map { line =>
           val men = line.drop(36).take(7).map(toDouble).toVector
           val women = line.drop(44).take(7).map(toDouble).toVector
           line(0) -> Vector(men, women)
+        }.toMap
+      }
+    reader.close
+    result
+  }
+
+  def readAgeSchool(stream: InputStream) = {
+    val reader = CSVReader.open(Source.fromInputStream(stream))
+    val result =
+      Try {
+        reader.iterator.map { line =>
+          val totalPop = line.drop(13).take(7).map(toDouble).toVector
+          val schooled = line.drop(20).take(7).map(toDouble).toVector
+          line(0) -> ((schooled zip totalPop).map { case (x,y)=>y/x })
         }.toMap
       }
     reader.close
@@ -88,7 +117,7 @@ object generation {
     val reader = CSVReader.open(Source.fromInputStream(stream))
     val result =
       Try {
-        reader.iterator.drop(6).map { line =>
+        reader.iterator.map { line =>
           val men = line.drop(34).take(6).map(toDouble).toVector
           val women = line.drop(44).take(6).map(toDouble).toVector
           line(0) -> (men ++ women)
@@ -98,13 +127,16 @@ object generation {
     result
   }
 
-  def generatePopulation(rnd: Random, geometry: Map[IrisID, Polygon], ageSex: Map[IrisID, Vector[Double]], educationSex: Map[IrisID, Vector[Vector[Double]]]) = {
+  def generatePopulation(rnd: Random, geometry: Map[IrisID, Polygon], ageSex: Map[IrisID, Vector[Double]],
+                         schoolAge: Map[IrisID, Vector[Double]], educationSex: Map[IrisID, Vector[Vector[Double]]]) = {
     geometry.toSeq.map {
       case (id, geom) => {
-        val sampler = new PolygonSampler(geom)
         val ageSexV = ageSex.get(id).get
-        val total = ageSexV.sum
+        val schoolAgeV = schoolAge.get(id).get
         val educationSexV = educationSex.get(id).get
+        val sampler = new PolygonSampler(geom)
+
+        val total = ageSexV.sum
 
         val ageSexSizes = Seq(6,2)
         val ageSexVariate = new RasterVariate(ageSexV, ageSexSizes)
@@ -114,15 +146,30 @@ object generation {
           new RasterVariate(educationSexV(0), educationSexSizes),
           new RasterVariate(educationSexV(1), educationSexSizes))
 
+        def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
         val res = (0 to total.toInt).map{_=>
           val sample = ageSexVariate.compute(rnd)
-          val age = (sample(0)*ageSexSizes(0)).toInt
+          val ageIndex = (sample(0)*ageSexSizes(0)).toInt
+          val ageInterval = Age.all(ageIndex)
+          val residual = sample(0)*ageSexSizes(0) - ageIndex
+          val age = ageInterval.to.map(max => rescale(ageInterval.from, max, residual))
           val sex = (sample(1)*ageSexSizes(1)).toInt
-          val education =
-            if (age>0) (educationSexVariates(sex).compute(rnd)(0) * educationSexSizes(0)).toInt
-            else -1
 
+          val schooled = age match {
+            case Some(a) =>
+              val schoolAgeIndex = SchoolAge.index(a)
+              if (schoolAgeIndex == 0) false else {
+                val proba = schoolAgeV(schoolAgeIndex - 1)
+                (rnd.nextDouble() < proba)
+              }
+            case None => false
+          }
+          val education = if (schooled) 0 else {
+            if (ageIndex > 0) (educationSexVariates(sex).compute(rnd)(0) * educationSexSizes(0)).toInt + 1
+            else 1
+          }
           Feature(
+            ageCategory = ageIndex,
             age = age,
             sex = sex,
             education = education,
@@ -138,7 +185,7 @@ object generation {
     val contourIRISFile = inputDirectory / "CONTOURS-IRIS_FE_IDF.shp"
     val baseICEvolStructPopFileName = inputDirectory / "base-ic-evol-struct-pop-2012-IDF.csv.lzma"
     val baseICDiplomesFormationPopFileName = inputDirectory / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
-    val outFileName = inputDirectory / "generated-population-78.shp"
+    val outFileName = inputDirectory / "generated-population-75.shp"
     val specs = "geomLAEA:Point:srid=3035,cellX:Integer,cellY:Integer,age:Integer,sex:Integer,education:Integer"
     val factory = new ShapefileDataStoreFactory
     val inBaseICEvolStructPop = new BufferedInputStream(new FileInputStream(baseICEvolStructPopFileName.toJava))
@@ -146,8 +193,9 @@ object generation {
     for {
       geom <- readGeometry(contourIRISFile)
       ageSex <- readAgeSex(new LZMACompressorInputStream(inBaseICEvolStructPop))
+      schoolAge <- readAgeSchool(new LZMACompressorInputStream(inBaseICDiplomesFormationPop))
       educationSex <- readEducationSex(new LZMACompressorInputStream(inBaseICDiplomesFormationPop))
-    } yield generatePopulation(rng, geom, ageSex, educationSex).toIterator.flatten
+    } yield generatePopulation(rng, geom, ageSex, schoolAge, educationSex).toIterator.flatten
   }
 
 

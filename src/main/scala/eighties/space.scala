@@ -53,5 +53,4 @@ object space {
   /* Définition d'une classe Grid, composé de vecteurs, de edges et de side*/
   @Lenses case class Grid(cells: Vector[Vector[Cell]], side: Int)
   @Lenses case class Cell(location: Location)
-
 }

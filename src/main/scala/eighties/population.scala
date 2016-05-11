@@ -26,18 +26,20 @@ object population {
 
   sealed trait Age {
     def from: Int
-    def to: Int
+    def to: Option[Int]
   }
 
   object Age {
-    case class AgeValue private(from: Int, to: Int) extends Age
+    case class AgeValue private(from: Int, to: Option[Int]) extends Age
 
-    val From0To14 = AgeValue(0, 14)
-    val From15To29 = AgeValue(15, 29)
-    val From30To44 = AgeValue(30, 44)
-    val From45To59 = AgeValue(45, 59)
-    val From60To74 = AgeValue(60, 74)
-    val Above75 = AgeValue(75, Int.MaxValue)
+    val From0To14 = AgeValue(0, Some(14))
+    val From15To29 = AgeValue(15, Some(29))
+    val From30To44 = AgeValue(30, Some(44))
+    val From45To59 = AgeValue(45, Some(59))
+    val From60To74 = AgeValue(60, Some(74))
+    val Above75 = AgeValue(75, None)
+
+    def all = Vector(From0To14, From15To29, From30To44, From45To59, From60To74, Above75)
 
     def apply(code: Int) =
       code match {
@@ -94,7 +96,7 @@ object population {
   object Individual {
     def apply(feature: Feature, project: Point => Location): Option[Individual] =
       for {
-        age <- Age(feature.age)
+        age <- Age(feature.ageCategory)
         sex <- Sex(feature.sex)
         education <- Education(feature.education)
         point = feature.point
