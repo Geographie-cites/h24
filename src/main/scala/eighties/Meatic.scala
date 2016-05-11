@@ -37,14 +37,9 @@ object Meatic extends App {
   val grid = World(individuals.get)
 
   val begin = System.currentTimeMillis()
-
-  val pos =
-    for {
-      i <- (0 until grid.sideI)
-      j <- (0 until grid.sideJ)
-    } yield grid.individuals.count(i => Individual.location == (i, j))
-
+  Index(grid)
   println(System.currentTimeMillis() - begin)
-  println(pos)
+
+
 
 }

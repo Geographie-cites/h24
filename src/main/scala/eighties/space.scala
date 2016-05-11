@@ -66,23 +66,30 @@ object space {
       def relocate = Individual.i.modify(_ - minI) andThen Individual.j.modify(_ - minJ)
       def relocated = individuals.map(relocate)
 
-      /*val cellBuffer: Array[Array[ArrayBuffer[Individual]]] = Array.fill(sideI, sideJ) { ArrayBuffer[Individual]() }
-
-      for {
-        individual <- relocated
-      } cellBuffer(Individual.i.get(individual))(Individual.j.get(individual)) += individual
-*/
-      /*def cells =
-        cellBuffer.zipWithIndex.map { case(line, i) =>
-          line.zipWithIndex.map { case(is, j) => Cell((i, j), is.toVector) }.toVector
-        }.toVector*/
-
-      World(relocated, sideI, sideJ)
+      World(relocated, sideI + 1, sideJ + 1)
     }
   }
 
   /* Définition d'une classe Grid, composé de vecteurs, de edges et de side*/
   @Lenses case class World(individuals: Vector[Individual], sideI: Int, sideJ: Int)
+
+
+  object Index {
+
+    def apply(world: World): Index = {
+      import world._
+      val cellBuffer: Array[Array[ArrayBuffer[Individual]]] = Array.fill(sideI, sideJ) { ArrayBuffer[Individual]() }
+
+      for {
+        individual <- world.individuals
+      } cellBuffer(Individual.i.get(individual))(Individual.j.get(individual)) += individual
+
+      Index(cellBuffer.toVector.map(_.toVector.map(_.toVector)))
+    }
+
+  }
+
+  @Lenses case class Index(cells: Vector[Vector[Vector[Individual]]])
   //@Lenses case class Cell(location: Location, individuals: Vector[Individual])
 
 }
