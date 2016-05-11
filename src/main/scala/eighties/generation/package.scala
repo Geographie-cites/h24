@@ -17,16 +17,21 @@
   */
 package eighties
 
-import java.io.{File, InputStream}
+import java.io.{BufferedInputStream, FileInputStream, InputStream}
 
 import com.github.tototoshi.csv.CSVReader
 import com.vividsolutions.jts.geom.{Geometry, MultiPolygon, Polygon}
 import eighties.geometry.PolygonSampler
-import org.geotools.data.shapefile.ShapefileDataStore
+import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
+import org.geotools.data.{DataUtilities, Transaction}
+import org.geotools.data.shapefile.{ShapefileDataStore, ShapefileDataStoreFactory}
+import org.geotools.geometry.jts.JTS
+import org.geotools.referencing.CRS
 
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 import scala.util.{Random, Try}
+import better.files._
 
 package object generation {
 
@@ -41,7 +46,7 @@ package object generation {
     }
 
   def readGeometry(aFile: File) = {
-    val store = new ShapefileDataStore(aFile.toURI.toURL)
+    val store = new ShapefileDataStore(aFile.toJava.toURI.toURL)
     val reader = store.getFeatureReader
     val featureReader = Iterator.continually(reader.next).takeWhile(_ => reader.hasNext)
     val result =
@@ -117,6 +122,22 @@ package object generation {
         res
       }
     }
+  }
+
+  def generateIndividuals(inputDirectory: File, rng: Random) = {
+    val contourIRISFile = inputDirectory / "CONTOURS-IRIS_FE_IDF.shp"
+    val baseICEvolStructPopFileName = inputDirectory / "base-ic-evol-struct-pop-2012-IDF.csv.lzma"
+    val baseICDiplomesFormationPopFileName = inputDirectory / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
+    val outFileName = inputDirectory / "generated-population-78.shp"
+    val specs = "geomLAEA:Point:srid=3035,cellX:Integer,cellY:Integer,age:Integer,sex:Integer,education:Integer"
+    val factory = new ShapefileDataStoreFactory
+    val inBaseICEvolStructPop = new BufferedInputStream(new FileInputStream(baseICEvolStructPopFileName.toJava))
+    val inBaseICDiplomesFormationPop = new BufferedInputStream(new FileInputStream(baseICDiplomesFormationPopFileName.toJava))
+    for {
+      geom <- readGeometry(contourIRISFile)
+      ageSex <- readAgeSex(new LZMACompressorInputStream(inBaseICEvolStructPop))
+      educationSex <- readEducationSex(new LZMACompressorInputStream(inBaseICDiplomesFormationPop))
+    } yield generatePopulation(rng, geom, ageSex, educationSex).toIterator.flatten
   }
 
 }

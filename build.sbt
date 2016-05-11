@@ -25,7 +25,8 @@ libraryDependencies ++= Seq (
   "com.vividsolutions" % "jts" % jtsVersion,
   "com.github.tototoshi" %% "scala-csv" % "1.3.1",
   "org.apache.commons" % "commons-compress" % "1.11",
-  "org.tukaani" % "xz" % "1.5"
+  "org.tukaani" % "xz" % "1.5",
+  "com.github.pathikrit" %% "better-files" % "2.15.0"
 )
  
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
