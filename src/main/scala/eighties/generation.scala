@@ -56,7 +56,7 @@ object generation {
   }
 
   type IrisID = String
-  case class Feature(ageCategory: Int, age: Option[Double], sex: Int, education: Int, point: Point)
+  case class Feature(ageCategory: Int, age: Option[Double], sex: Int, education: Int, point: Point, location:space.Coordinate)
 
   def toDouble(s: String) =
     s.filter(_ != '"').replace(',', '.') match {
@@ -124,6 +124,10 @@ object generation {
 
   def generatePopulation(rnd: Random, geometry: Map[IrisID, Polygon], ageSex: Map[IrisID, Vector[Double]],
                          schoolAge: Map[IrisID, Vector[Double]], educationSex: Map[IrisID, Vector[Vector[Double]]]) = {
+    val inCRS = CRS.decode("EPSG:2154")
+    val outCRS = CRS.decode("EPSG:3035")
+    val transform = CRS.findMathTransform(inCRS, outCRS, true)
+
     geometry.toSeq.map {
       case (id, geom) => {
         val ageSexV = ageSex.get(id).get
@@ -166,13 +170,16 @@ object generation {
             if (ageIndex > 0) (educationSexVariates(sex).compute(rnd)(0) * educationSexSizes(0)).toInt + 1
             else 1
           }
-          //println(s"$age = $tempIndex - $tempP with $schooled and $education")
+          val coordinate = sampler.apply(rnd)
+          val transformed = JTS.transform(coordinate, null, transform)
+          val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
           Feature(
             ageCategory = ageIndex,
             age = age,
             sex = sex,
             education = education,
-            point = geom.getFactory.createPoint(sampler.apply(rnd))
+            point = point,
+            location = (point.getX,point.getY)
           )
         }
         res
@@ -184,6 +191,7 @@ object generation {
     val contourIRISFile = inputDirectory / "CONTOURS-IRIS_FE_IDF.shp"
     val baseICEvolStructPopFileName = inputDirectory / "base-ic-evol-struct-pop-2012-IDF.csv.lzma"
     val baseICDiplomesFormationPopFileName = inputDirectory / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
+
     for {
       geom <- readGeometry(contourIRISFile)
       ageSex <- readAgeSex(baseICEvolStructPopFileName)
@@ -192,11 +200,10 @@ object generation {
     } yield generatePopulation(rng, geom, ageSex, schoolAge, educationSex).toIterator.flatten
   }
 
-
   class RasterVariate(pdf: Seq[Double], val m_size: Seq[Int]) {
     val N = m_size.size
-    val m_totalsize = m_size.product
-    val m_cdf = buildCdf(m_totalsize, pdf, m_size).toParArray
+    val m_totalsSize = m_size.product
+    val m_cdf = buildCdf(m_totalsSize, pdf, m_size).toParArray
     val m_sum = pdf.foldLeft(0.0)((a, b) => a + b)
 
     def buildCdf(totsize: Int, pdf: Seq[Double], size: Seq[Int]) = {

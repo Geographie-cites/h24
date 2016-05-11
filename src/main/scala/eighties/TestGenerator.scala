@@ -34,13 +34,9 @@ object TestGenerator extends App {
   val outputPath = File("results")
   outputPath.createDirectories()
 
-  val outFile = outputPath / "generated-population-75.shp"
+  val outFile = outputPath / "generated-population-75-bis.shp"
 
-  val inCRS = CRS.decode("EPSG:2154")
-  val outCRS = CRS.decode("EPSG:3035")
-  val transform = CRS.findMathTransform(inCRS, outCRS, true)
-  //geom:Point:srid=2154,
-  val specs = "geomLAEA:Point:srid=3035,cellX:Integer,cellY:Integer,ageCat:Integer,age:Double,sex:Integer,education:Integer"
+  val specs = "geom:Point:srid=3035,cellX:Integer,cellY:Integer,ageCat:Integer,age:Double,sex:Integer,education:Integer"
   val factory = new ShapefileDataStoreFactory
   val dataStore = factory.createDataStore(outFile.toJava.toURI.toURL)
   val featureTypeName = "Object"
@@ -54,12 +50,11 @@ object TestGenerator extends App {
     (feature, i) <- generation.generateFeatures(path, rng).get.zipWithIndex
   } {
     import feature._
-    val transformedPoint = JTS.transform(point, transform)
     def discrete(v:Double) = (v / 200.0).toInt * 200
     val values = Array[AnyRef](
-      transformedPoint,
-      discrete(transformedPoint.getCoordinate.x).asInstanceOf[AnyRef],
-      discrete(transformedPoint.getCoordinate.y).asInstanceOf[AnyRef],
+      point,
+      discrete(point.getCoordinate.x).asInstanceOf[AnyRef],
+      discrete(point.getCoordinate.y).asInstanceOf[AnyRef],
       ageCategory.asInstanceOf[AnyRef],
       age.getOrElse(75).asInstanceOf[AnyRef],
       sex.asInstanceOf[AnyRef],
