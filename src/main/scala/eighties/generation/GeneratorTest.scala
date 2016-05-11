@@ -22,8 +22,8 @@ object GeneratorTest extends App {
   val inCRS = CRS.decode("EPSG:2154")
   val outCRS = CRS.decode("EPSG:3035")
   val transform = CRS.findMathTransform(inCRS, outCRS, true)
-
-  val specs = "geom:Point:srid=2154,geomLAEA:Point:srid=3035,cellX:Integer,cellY:Integer,age:Integer,sex:Integer,education:Integer"
+//geom:Point:srid=2154,
+  val specs = "geomLAEA:Point:srid=3035,cellX:Integer,cellY:Integer,age:Integer,sex:Integer,education:Integer"
   val factory = new ShapefileDataStoreFactory
   val dataStore = factory.createDataStore(new File(outFileName).toURI().toURL())
   val featureTypeName = "Object"
@@ -45,10 +45,16 @@ object GeneratorTest extends App {
       case ((age, sex, education, point), i) =>
         val transformedPoint = JTS.transform(point, transform)
         def discrete(v:Double) = (v/200.0).toInt * 200
-        val values = Array[AnyRef](point, transformedPoint, discrete(transformedPoint.getCoordinate.x).asInstanceOf[AnyRef], discrete(transformedPoint.getCoordinate.y).asInstanceOf[AnyRef], age.asInstanceOf[AnyRef], sex.asInstanceOf[AnyRef], education.asInstanceOf[AnyRef])
-        val simpleFeature = writer.next()
+        val values = Array[AnyRef](
+          transformedPoint,
+          discrete(transformedPoint.getCoordinate.x).asInstanceOf[AnyRef],
+          discrete(transformedPoint.getCoordinate.y).asInstanceOf[AnyRef],
+          age.asInstanceOf[AnyRef],
+          sex.asInstanceOf[AnyRef],
+          education.asInstanceOf[AnyRef])
+        val simpleFeature = writer.next
         simpleFeature.setAttributes(values)
-        writer.write()
+        writer.write
     }
     writer.close
   }
