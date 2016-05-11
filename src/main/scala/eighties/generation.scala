@@ -108,7 +108,7 @@ object generation {
       reader.iterator.drop(6).map { line =>
         val totalPop = line.drop(13).take(7).map(toDouble).toVector
         val schooled = line.drop(20).take(7).map(toDouble).toVector
-        line(0) -> ((schooled zip totalPop).map { case (x,y)=>y/x })
+        line(0) -> ((schooled zip totalPop).map { case (x,y)=> x / y })
       }.toMap
     }
   }
