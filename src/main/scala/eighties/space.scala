@@ -17,7 +17,10 @@
   */
 package eighties
 
+import com.vividsolutions.jts.geom.Point
 import monocle.macros.Lenses
+import org.geotools.geometry.jts.JTS
+import org.geotools.referencing.CRS
 
 object space {
   type Coordinate = (Double, Double)
@@ -35,6 +38,16 @@ object space {
       nj = j + dj
       if (ni >= 0 && nj >= 0 && ni < side && nj < side)
     } yield (i + di, j + dj)
+  }
+
+  def project(p: Point, minX: Int, minY: Int) = {
+    val inCRS = CRS.decode("EPSG:2154")
+    val outCRS = CRS.decode("EPSG:3035")
+    val transform = CRS.findMathTransform(inCRS, outCRS, true)
+    def discrete(v:Double) = (v / 200.0).toInt * 200
+    val transformedPoint = JTS.transform(p, transform)
+    (discrete(transformedPoint.getCoordinate.x) - minX,
+      discrete(transformedPoint.getCoordinate.y) - minY)
   }
 
   /* Définition d'une classe Grid, composé de vecteurs, de edges et de side*/
