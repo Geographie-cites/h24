@@ -18,9 +18,12 @@
 package eighties
 
 import com.vividsolutions.jts.geom.Point
+import eighties.population.Individual
 import monocle.macros.Lenses
 import org.geotools.geometry.jts.JTS
 import org.geotools.referencing.CRS
+
+import scala.collection.mutable.ArrayBuffer
 
 object space {
   type Coordinate = (Double, Double)
@@ -40,17 +43,52 @@ object space {
     } yield (i + di, j + dj)
   }
 
-  def project(p: Point, minX: Int, minY: Int) = {
+  def project(p: Point) = {
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(inCRS, outCRS, true)
-    def discrete(v:Double) = (v / 200.0).toInt * 200
+    def cell(v:Double) = (v / 200.0).toInt
     val transformedPoint = JTS.transform(p, transform)
-    (discrete(transformedPoint.getCoordinate.x) - minX,
-      discrete(transformedPoint.getCoordinate.y) - minY)
+    (cell(transformedPoint.getCoordinate.x),
+      cell(transformedPoint.getCoordinate.y))
+  }
+
+
+  object World {
+    def apply(individuals: Vector[Individual]): World = {
+      val minI = individuals.map(Individual.i.get).min
+      val maxI = individuals.map(Individual.i.get).max
+      val minJ = individuals.map(Individual.j.get).min
+      val maxJ = individuals.map(Individual.j.get).max
+      val sideI = maxI - minI
+      val sideJ = maxJ - minJ
+
+      def relocate = Individual.i.modify(_ - minI) andThen Individual.j.modify(_ - minJ)
+      def relocated = individuals.map(relocate)
+
+      World(relocated, sideI + 1, sideJ + 1)
+    }
   }
 
   /* Définition d'une classe Grid, composé de vecteurs, de edges et de side*/
-  @Lenses case class Grid(cells: Vector[Vector[Cell]], side: Int)
-  @Lenses case class Cell(location: Location)
+  @Lenses case class World(individuals: Vector[Individual], sideI: Int, sideJ: Int)
+
+
+  object Index {
+
+    def apply(world: World): Index = {
+      import world._
+      val cellBuffer: Array[Array[ArrayBuffer[Individual]]] = Array.fill(sideI, sideJ) { ArrayBuffer[Individual]() }
+
+      for {
+        individual <- world.individuals
+      } cellBuffer(Individual.i.get(individual))(Individual.j.get(individual)) += individual
+
+      Index(cellBuffer.toVector.map(_.toVector.map(_.toVector)))
+    }
+
+  }
+
+  @Lenses case class Index(cells: Vector[Vector[Vector[Individual]]])
+  //@Lenses case class Cell(location: Location, individuals: Vector[Individual])
 }

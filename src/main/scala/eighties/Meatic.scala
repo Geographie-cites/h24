@@ -22,19 +22,24 @@ import com.vividsolutions.jts.geom.Point
 import eighties.population.Individual
 
 import scala.util.Random
-
+import space._
 
 object Meatic extends App {
 
   val path = File("data")
   val rng = new Random(42)
 
-  def projection = (p: Point) => space.project(p, 100, 100)
-
-  val individuals =
+  def individuals =
     for {
       features <- generation.generateFeatures(path, rng)
-    } yield features.map(f => Individual(f, projection))
+    } yield features.flatMap(f => Individual(f)).toVector
 
-  println(individuals.get.size)
+  val grid = World(individuals.get)
+
+  val begin = System.currentTimeMillis()
+  Index(grid)
+  println(System.currentTimeMillis() - begin)
+
+
+
 }
