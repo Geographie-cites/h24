@@ -85,46 +85,42 @@ object generation {
     result
   }
 
-  def readEducationSex(stream: InputStream) = {
+  def withCSVReader[T](file: File)(f: CSVReader => T) = {
+    val in = new BufferedInputStream(new FileInputStream(file.toJava))
+    val stream = new LZMACompressorInputStream(in)
     val reader = CSVReader.open(Source.fromInputStream(stream))
-    val result =
-      Try {
-        reader.iterator.map { line =>
-          val men = line.drop(36).take(7).map(toDouble).toVector
-          val women = line.drop(44).take(7).map(toDouble).toVector
-          line(0) -> Vector(men, women)
-        }.toMap
-      }
-    reader.close
-    result
+    try f(reader)
+    finally reader.close
   }
 
-  def readAgeSchool(stream: InputStream) = {
-    val reader = CSVReader.open(Source.fromInputStream(stream))
-    val result =
-      Try {
-        reader.iterator.map { line =>
-          val totalPop = line.drop(13).take(7).map(toDouble).toVector
-          val schooled = line.drop(20).take(7).map(toDouble).toVector
-          line(0) -> ((schooled zip totalPop).map { case (x,y)=>y/x })
-        }.toMap
-      }
-    reader.close
-    result
+  def readEducationSex(file: File) = withCSVReader(file){ reader =>
+    Try {
+      reader.iterator.drop(6).map { line =>
+        val men = line.drop(36).take(7).map(toDouble).toVector
+        val women = line.drop(44).take(7).map(toDouble).toVector
+        line(0) -> Vector(men, women)
+      }.toMap
+    }
   }
 
-  def readAgeSex(stream: InputStream) = {
-    val reader = CSVReader.open(Source.fromInputStream(stream))
-    val result =
-      Try {
-        reader.iterator.map { line =>
-          val men = line.drop(34).take(6).map(toDouble).toVector
-          val women = line.drop(44).take(6).map(toDouble).toVector
-          line(0) -> (men ++ women)
-        }.toMap
-      }
-    reader.close
-    result
+  def readAgeSchool(file: File) = withCSVReader(file){ reader =>
+    Try {
+      reader.iterator.drop(6).map { line =>
+        val totalPop = line.drop(13).take(7).map(toDouble).toVector
+        val schooled = line.drop(20).take(7).map(toDouble).toVector
+        line(0) -> ((schooled zip totalPop).map { case (x,y)=>y/x })
+      }.toMap
+    }
+  }
+
+  def readAgeSex(file: File) = withCSVReader(file){ reader =>
+    Try {
+      reader.iterator.drop(6).map { line =>
+        val men = line.drop(34).take(6).map(toDouble).toVector
+        val women = line.drop(44).take(6).map(toDouble).toVector
+        line(0) -> (men ++ women)
+      }.toMap
+    }
   }
 
   def generatePopulation(rnd: Random, geometry: Map[IrisID, Polygon], ageSex: Map[IrisID, Vector[Double]],
@@ -147,7 +143,7 @@ object generation {
           new RasterVariate(educationSexV(1), educationSexSizes))
 
         def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
-        val res = (0 to total.toInt).map{_=>
+        val res = (0 until total.toInt).map{_=>
           val sample = ageSexVariate.compute(rnd)
           val ageIndex = (sample(0)*ageSexSizes(0)).toInt
           val ageInterval = Age.all(ageIndex)
@@ -185,29 +181,24 @@ object generation {
     val contourIRISFile = inputDirectory / "CONTOURS-IRIS_FE_IDF.shp"
     val baseICEvolStructPopFileName = inputDirectory / "base-ic-evol-struct-pop-2012-IDF.csv.lzma"
     val baseICDiplomesFormationPopFileName = inputDirectory / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
-    val outFileName = inputDirectory / "generated-population-75.shp"
-    val specs = "geomLAEA:Point:srid=3035,cellX:Integer,cellY:Integer,age:Integer,sex:Integer,education:Integer"
-    val factory = new ShapefileDataStoreFactory
-    val inBaseICEvolStructPop = new BufferedInputStream(new FileInputStream(baseICEvolStructPopFileName.toJava))
-    val inBaseICDiplomesFormationPop = new BufferedInputStream(new FileInputStream(baseICDiplomesFormationPopFileName.toJava))
     for {
       geom <- readGeometry(contourIRISFile)
-      ageSex <- readAgeSex(new LZMACompressorInputStream(inBaseICEvolStructPop))
-      schoolAge <- readAgeSchool(new LZMACompressorInputStream(inBaseICDiplomesFormationPop))
-      educationSex <- readEducationSex(new LZMACompressorInputStream(inBaseICDiplomesFormationPop))
+      ageSex <- readAgeSex(baseICEvolStructPopFileName)
+      schoolAge <- readAgeSchool(baseICDiplomesFormationPopFileName)
+      educationSex <- readEducationSex(baseICDiplomesFormationPopFileName)
     } yield generatePopulation(rng, geom, ageSex, schoolAge, educationSex).toIterator.flatten
   }
 
 
   class RasterVariate(pdf: Seq[Double], val m_size: Seq[Int]) {
     val N = m_size.size
-    val m_totsize = m_size.product
-    val m_cdf = buildCdf(m_totsize, pdf, m_size).toParArray
+    val m_totalsize = m_size.product
+    val m_cdf = buildCdf(m_totalsize, pdf, m_size).toParArray
     val m_sum = pdf.foldLeft(0.0)((a, b) => a + b)
 
     def buildCdf(totsize: Int, pdf: Seq[Double], size: Seq[Int]) = {
       var sum = 0.0
-      var cdf = ArrayBuffer(0.0)
+      var cdf = ArrayBuffer(sum)
       for (i <- 0 until totsize) {
         sum = sum + pdf(i)
         cdf.append(sum)
@@ -217,20 +208,19 @@ object generation {
     }
 
     def compute(rng: Random): Vector[Double] = {
-      def dim(i: Int) = State[(Int, Random), Double] { case(offset, rng) =>
-        val ix = offset % m_size(i)
-        val newOffset = offset / m_size(i)
-        val v = (ix + rng.nextDouble()) / m_size(i)
-        ((newOffset, rng), v)
-      }
-
       val x = rng.nextDouble()
-      val offset = m_cdf.indexWhere(p => p > x) - 1
-
-      (0 until N).toVector.map(dim).sequenceU.eval((offset, rng))
+      var offset = m_cdf.indexWhere(p => p > x) - 1
+      //assert(offset>=0, s"$x within $m_cdf gives $offset")
+      val output = ArrayBuffer.fill(N)(0.0)
+      for (i <- 0 until N) {
+        val ix = offset % m_size(i)
+        output(i) = (ix + rng.nextDouble()) / m_size(i)
+        offset /= m_size(i)
+      }
+      output.toVector
     }
-  }
 
+  }
   class PolygonSampler(val polygon: Polygon, val tolerance: Double = 0.1) {
     val triangles = {
       val builder = new ConformingDelaunayTriangulationBuilder
