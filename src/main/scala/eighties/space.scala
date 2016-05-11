@@ -18,9 +18,12 @@
 package eighties
 
 import com.vividsolutions.jts.geom.Point
+import eighties.population.Individual
 import monocle.macros.Lenses
 import org.geotools.geometry.jts.JTS
 import org.geotools.referencing.CRS
+
+import scala.collection.mutable.ArrayBuffer
 
 object space {
   type Coordinate = (Double, Double)
@@ -40,18 +43,46 @@ object space {
     } yield (i + di, j + dj)
   }
 
-  def project(p: Point, minX: Int, minY: Int) = {
+  def project(p: Point) = {
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(inCRS, outCRS, true)
-    def discrete(v:Double) = (v / 200.0).toInt * 200
+    def cell(v:Double) = (v / 200.0).toInt
     val transformedPoint = JTS.transform(p, transform)
-    (discrete(transformedPoint.getCoordinate.x) - minX,
-      discrete(transformedPoint.getCoordinate.y) - minY)
+    (cell(transformedPoint.getCoordinate.x),
+      cell(transformedPoint.getCoordinate.y))
+  }
+
+
+  object World {
+    def apply(individuals: Vector[Individual]): World = {
+      val minI = individuals.map(Individual.i.get).min
+      val maxI = individuals.map(Individual.i.get).max
+      val minJ = individuals.map(Individual.j.get).min
+      val maxJ = individuals.map(Individual.j.get).max
+      val sideI = maxI - minI
+      val sideJ = maxJ - minJ
+
+      def relocate = Individual.i.modify(_ - minI) andThen Individual.j.modify(_ - minJ)
+      def relocated = individuals.map(relocate)
+
+      /*val cellBuffer: Array[Array[ArrayBuffer[Individual]]] = Array.fill(sideI, sideJ) { ArrayBuffer[Individual]() }
+
+      for {
+        individual <- relocated
+      } cellBuffer(Individual.i.get(individual))(Individual.j.get(individual)) += individual
+*/
+      /*def cells =
+        cellBuffer.zipWithIndex.map { case(line, i) =>
+          line.zipWithIndex.map { case(is, j) => Cell((i, j), is.toVector) }.toVector
+        }.toVector*/
+
+      World(relocated, sideI, sideJ)
+    }
   }
 
   /* Définition d'une classe Grid, composé de vecteurs, de edges et de side*/
-  @Lenses case class Grid(cells: Vector[Vector[Cell]], side: Int)
-  @Lenses case class Cell(location: Location)
+  @Lenses case class World(individuals: Vector[Individual], sideI: Int, sideJ: Int)
+  //@Lenses case class Cell(location: Location, individuals: Vector[Individual])
 
 }

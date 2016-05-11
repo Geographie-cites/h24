@@ -21,6 +21,8 @@ import com.vividsolutions.jts.geom.Point
 import eighties.generation.Feature
 import space._
 import monocle.macros.Lenses
+import monocle.function.all._
+import monocle.std.all._
 
 object population {
 
@@ -92,7 +94,7 @@ object population {
   }
 
   object Individual {
-    def apply(feature: Feature, project: Point => Location): Option[Individual] =
+    def apply(feature: Feature): Option[Individual] =
       for {
         age <- Age(feature.age)
         sex <- Sex(feature.sex)
@@ -104,8 +106,13 @@ object population {
           sex,
           education,
           (point.getX, point.getY),
-          project(point)
+          space.project(point)
         )
+
+    def i = Individual.location composeLens first
+    def j = Individual.location composeLens second
+    def x = Individual.location composeLens first
+    def y = Individual.location composeLens second
   }
 
   @Lenses case class Individual(
