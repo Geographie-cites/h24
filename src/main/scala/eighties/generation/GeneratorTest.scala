@@ -31,11 +31,11 @@ object GeneratorTest extends App {
   val finBaseICDiplomesFormationPop = new FileInputStream(baseICDiplomesFormationPopFileName)
   val inBaseICDiplomesFormationPop = new BufferedInputStream(finBaseICDiplomesFormationPop)
   for {
-    geom <- reader.readGeometry(new File(contourIRISFileName))
-    ageSex <- reader.readAgeSex(new LZMACompressorInputStream(inBaseICEvolStructPop))
-    educationSex <- reader.readEducationSex(new LZMACompressorInputStream(inBaseICDiplomesFormationPop))
+    geom <- readGeometry(new File(contourIRISFileName))
+    ageSex <- readAgeSex(new LZMACompressorInputStream(inBaseICEvolStructPop))
+    educationSex <- readEducationSex(new LZMACompressorInputStream(inBaseICDiplomesFormationPop))
   } yield {
-    reader.generatePopulation(rng, geom, ageSex, educationSex).toIterator.flatten.zipWithIndex.foreach {
+    generatePopulation(rng, geom, ageSex, educationSex).toIterator.flatten.zipWithIndex.foreach {
       case ((age, sex, education, point), i) =>
         val values = Array[AnyRef](point, age.asInstanceOf[AnyRef], sex.asInstanceOf[AnyRef], education.asInstanceOf[AnyRef])
         val simpleFeature = writer.next()
