@@ -78,7 +78,6 @@ object generation {
         reader.iterator.drop(6).map { line =>
           val men = line.drop(36).take(7).map(toDouble).toVector
           val women = line.drop(44).take(7).map(toDouble).toVector
-          //line(0) -> line.drop(35).take(16).grouped(8).map(_.toVector.map(toDouble)).toVector
           line(0) -> Vector(men, women)
         }.toMap
       }
