@@ -17,12 +17,11 @@
   */
 package eighties
 
-import better.files.File
-import com.vividsolutions.jts.geom.Point
-import eighties.population.Individual
-
+import better.files._
+import population._
 import scala.util.Random
 import space._
+import dynamic._
 
 object Meatic extends App {
 
@@ -32,14 +31,24 @@ object Meatic extends App {
   def individuals =
     for {
       features <- generation.generateFeatures(path, rng)
-    } yield features.flatMap(f => Individual(f)).toVector
+    } yield features.flatMap(f => Individual(f, Behaviour.random(0.5), rng)).toVector
 
-  val grid = World(individuals.get)
+  def simulation(world: World, step: Int): World =
+    if(step <= 0) world
+    else {
+      println(step)
+      def day = move(world, randomMove(0.5), rng)
+      def afterDay = localConviction(day, rng)
+      def night = move(afterDay, backHome, rng)
+      def afterNight = localConviction(night, rng)
+      simulation(afterNight, step - 1)
+    }
 
-  val begin = System.currentTimeMillis()
-  Index(grid)
-  println(System.currentTimeMillis() - begin)
+  val world = World(individuals.get)
+  println(simulation(world, 100))
 
-
+  /*for {
+    e <- Education.all
+  } println(e -> grid.individuals.count(_.education == e))*/
 
 }
