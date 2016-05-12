@@ -83,6 +83,12 @@ object dynamic {
     (World.allIndividuals modify assign)(world)
   }
 
+  /*def randomiseLocation(world: World) = {
+    val reach = reachable(Index(world))
+    Index(world)
+  }*/
+
+
 
   def logistic(l: Double, k: Double, x0: Double)(x: Double) = l / (1.0 +  math.exp(-k * (x - x0)))
 

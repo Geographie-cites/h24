@@ -76,7 +76,6 @@ object population {
   }
 
 
-
   object Education {
     object Schol extends Education
     object Dipl0 extends Education
@@ -163,6 +162,7 @@ object population {
 
     def i = Individual.location composeLens first
     def j = Individual.location composeLens second
+
   }
 
 

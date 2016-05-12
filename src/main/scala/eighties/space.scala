@@ -61,6 +61,7 @@ object space {
     }
 
     def allIndividuals = World.individuals composeTraversal each
+
   }
 
   /* Définition d'une classe Grid, composé de vecteurs, de edges et de side*/
