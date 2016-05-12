@@ -24,7 +24,7 @@ import com.vividsolutions.jts.geom.{Coordinate, _}
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
 import org.geotools.data.{DataUtilities, Transaction}
 import org.geotools.data.shapefile.{ShapefileDataStore, ShapefileDataStoreFactory}
-import org.geotools.geometry.jts.JTS
+import org.geotools.geometry.jts.{JTS, JTSFactoryFinder}
 import org.geotools.referencing.CRS
 
 import scala.collection.mutable.ArrayBuffer
@@ -72,9 +72,9 @@ object generation {
     val result =
       Try {
         featureReader
-          .filter(feature =>feature.getAttribute("DCOMIRIS").toString.startsWith("75113"))
+          //.filter(feature =>feature.getAttribute("DCOMIRIS").toString.startsWith("75"))
           .map { feature =>
-            val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon].getGeometryN(0).asInstanceOf[Polygon]
+            val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon]//.getGeometryN(0).asInstanceOf[Polygon]
             val iris = feature.getAttribute("DCOMIRIS").toString
             iris -> geom
           }.toMap
@@ -126,16 +126,17 @@ object generation {
   def readEquipment(file: File) = withCSVReader(file){ reader =>
     Try {
       reader.iterator.drop(1).map { line =>
+        val iris = line(4).trim.replaceAll("_","").replaceAll("0000$","")
         val typeEquipment = line(5)
         val x = line(6)
         val y = line(7)
         val quality = line(8)
-        line(4).replaceAll("_","") -> Vector(typeEquipment,x,y,quality)
+        iris -> Vector(typeEquipment,x,y,quality)
       }.toMap
     }
   }
 
-  def generatePopulation(rnd: Random, geometry: Map[IrisID, Polygon], ageSex: Map[IrisID, Vector[Double]],
+  def generatePopulation(rnd: Random, geometry: Map[IrisID, MultiPolygon], ageSex: Map[IrisID, Vector[Double]],
                          schoolAge: Map[IrisID, Vector[Double]], educationSex: Map[IrisID, Vector[Vector[Double]]]) = {
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
@@ -213,7 +214,7 @@ object generation {
     } yield generatePopulation(rng, geom, ageSex, schoolAge, educationSex).toIterator.flatten
   }
 
-  def generateEquipment(rnd: Random, eq: Map[IrisID, Vector[String]], geometry: Map[IrisID, Polygon]) = {
+  def generateEquipment(rnd: Random, eq: Map[IrisID, Vector[String]], geometry: Map[IrisID, MultiPolygon]) = {
     val l93CRS = CRS.decode("EPSG:2154")
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
@@ -225,7 +226,7 @@ object generation {
         val typeEquipment = vec(0)
         val x = vec(1)
         val y = vec(2)
-        val quality = vec(3)
+        val quality = vec(3).trim
         if (quality.equalsIgnoreCase("bonne") || quality.equalsIgnoreCase("acceptable")) {
           val coordinate = new Coordinate(x.toDouble, y.toDouble)
           val transformed = JTS.transform(coordinate, null, transformL2E)
@@ -238,46 +239,47 @@ object generation {
             iris = id
           )
         } else {
-          geometry.get(id) match {
-            case Some(geom) => {
-              val sampler = new PolygonSampler(geom)
-              val coordinate = sampler.apply(rnd)
-              val transformed = JTS.transform(coordinate, null, transformL93)
-              val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
-              Equipment(
-                typeEquipment = typeEquipment,
-                point = point,
-                location = (point.getX, point.getY),
-                quality = quality,
-                iris = id
-              )
+          val irises = geometry.filter{case (key,g)=>key.startsWith(id)}
+          val size = irises.size
+          if (size == 0) {
+            println(s"Could Not find IRIS $id")
+            Equipment(
+              typeEquipment = typeEquipment,
+              point = JTS.toGeometry(JTS.toDirectPosition(new Coordinate(0.0,0.0), outCRS)),
+              location = (0.0, 0.0),
+              quality = quality,
+              iris = id
+            )
+          } else {
+            if (size > 1) {
+              println(s"union of $size irises for $id")
             }
-            case None => {
-              println(s"Could Not find IRIS $id")
-              Equipment(
-                typeEquipment = typeEquipment,
-                point = JTS.toGeometry(JTS.toDirectPosition(new Coordinate(0.0,0.0), outCRS)),
-                location = (0.0, 0.0),
-                quality = quality,
-                iris = id
-              )
-            }
+            val geom = union(irises.values)
+            val sampler = new PolygonSampler(geom.get)
+            val coordinate = sampler.apply(rnd)
+            val transformed = JTS.transform(coordinate, null, transformL93)
+            val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
+            Equipment(
+              typeEquipment = typeEquipment,
+              point = point,
+              location = (point.getX, point.getY),
+              quality = quality,
+              iris = id
+            )
           }
-//          val geom = geometry.get(id).get
-//          val sampler = new PolygonSampler(geom)
-//          val coordinate = sampler.apply(rnd)
-//          val transformed = JTS.transform(coordinate, null, transform)
-//          val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
-//          Equipment(
-//            typeEquipment = typeEquipment,
-//            point = point,
-//            location = (point.getX, point.getY)
-//          )
         }
       }
     }
   }
-
+  def union(polygons: Iterable[MultiPolygon]) = {
+    val geometryFactory = JTSFactoryFinder.getGeometryFactory()
+    val union = geometryFactory.createGeometryCollection(polygons.toArray).union
+    union match {
+      case p: Polygon => Some(geometryFactory.createMultiPolygon(Array(p)))
+      case mp: MultiPolygon => Some(mp)
+      case _ => None
+    }
+  }
   def generateEquipments(inputDirectory: File, rng: Random) = {
     val BPEFile = inputDirectory / "bpe14-IDF.csv.lzma"
     val contourIRISFile = inputDirectory / "CONTOURS-IRIS_FE_IDF.shp"
@@ -319,7 +321,7 @@ object generation {
     }
 
   }
-  class PolygonSampler(val polygon: Polygon, val tolerance: Double = 0.1) {
+  class PolygonSampler(val polygon: MultiPolygon, val tolerance: Double = 0.1) {
     val triangles = {
       val builder = new ConformingDelaunayTriangulationBuilder
       builder.setSites(polygon)
@@ -363,6 +365,5 @@ object generation {
       new Coordinate(x,y)
     }
   }
-
 }
 
