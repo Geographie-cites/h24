@@ -129,6 +129,7 @@ object population {
           education,
           behaviour(age, sex, education, random),
           home,
+          None,
           home
         )
       }
@@ -144,6 +145,7 @@ object population {
     education: Education,
     behaviour: Behaviour,
     home: Location,
+    work: Option[Location],
     location: Location)
 
 

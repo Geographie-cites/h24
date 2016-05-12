@@ -27,30 +27,26 @@ object Meatic extends App {
 
   val path = File("data")
   val rng = new Random(42)
+  val steps = 1000
+  val stuburness = 0.0
+  val workers = 0.6
 
   def individuals =
     for {
       features <- generation.generateFeatures(path, rng)
-    } yield features.flatMap(f => Individual(f, Behaviour.random(0.5), rng)).toVector
-
-
+    } yield features.flatMap(f => Individual(f, Behaviour.random(0.75), rng)).toVector
 
   def simulation(world: World, step: Int): World =
     if(step <= 0) world
     else {
-      println(s"$step ${observable.ratioOfPopulation(world, Behaviour.Meat)}")
-      def day = move(world, randomMove(0.5), rng)
-      def afterDay = localConviction(day, rng)
-      def night = move(afterDay, backHome, rng)
-      def afterNight = localConviction(night, rng)
+      println(s"${steps - step} ${observable.ratioOfPopulation(world, Behaviour.Meat)}")
+      def afterWork = localConviction(stuburness, goToWork(world), rng)
+      def afterActivity = localConviction(stuburness, randomMove(afterWork, rng), rng)
+      def afterNight = localConviction(stuburness, goBackHome(afterActivity), rng)
       simulation(afterNight, step - 1)
     }
 
-  val world = World(individuals.get)
-  println(simulation(world, 100))
-
-  /*for {
-    e <- Education.all
-  } println(e -> grid.individuals.count(_.education == e))*/
+  val world = assignWork(_ => rng.nextDouble() < workers, World(individuals.get), rng)
+  simulation(world, steps)
 
 }

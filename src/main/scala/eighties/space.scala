@@ -59,6 +59,8 @@ object space {
 
       World(relocated, sideI + 1, sideJ + 1)
     }
+
+    def allIndividuals = World.individuals composeTraversal each
   }
 
   /* Définition d'une classe Grid, composé de vecteurs, de edges et de side*/
@@ -68,18 +70,20 @@ object space {
   object Index {
 
     def apply(world: World): Index = {
-      import world._
-      val cellBuffer: Array[Array[ArrayBuffer[Individual]]] = Array.fill(sideI, sideJ) { ArrayBuffer[Individual]() }
+      val cellBuffer: Array[Array[ArrayBuffer[Individual]]] = Array.fill(world.sideI, world.sideJ) { ArrayBuffer[Individual]() }
 
       for {
         individual <- world.individuals
       } cellBuffer(Individual.i.get(individual))(Individual.j.get(individual)) += individual
 
-      Index(cellBuffer.toVector.map(_.toVector.map(_.toVector)))
+      Index(cellBuffer.toVector.map(_.toVector.map(_.toVector)), world.sideI, world.sideJ)
     }
+
+    def allCells = cells composeTraversal each composeTraversal each
+    def allIndividuals = allCells composeTraversal each
 
   }
 
-  @Lenses case class Index(cells: Vector[Vector[Vector[Individual]]])
+  @Lenses case class Index(cells: Vector[Vector[Vector[Individual]]], sideI: Int, sideJ: Int)
   //@Lenses case class Cell(location: Location, individuals: Vector[Individual])
 }
