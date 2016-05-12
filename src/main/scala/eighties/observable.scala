@@ -17,12 +17,29 @@
   */
 package eighties
 
-import eighties.population.Behaviour
+import eighties.population.{AggregatedEducation, Behaviour, Education}
 import space._
 
 object observable {
 
   def ratioOfPopulation(world: World, behaviour: Behaviour) =
     world.individuals.count(_.behaviour == behaviour).toDouble / world.individuals.size
+
+
+  def ratioByEducation(world: World, behaviour: Behaviour) =
+    for {
+      ed <- Education.all
+      level = world.individuals.filter(i => i.education == ed)
+      behave = level.filter(i => i.behaviour == behaviour)
+    } yield ed -> (behave.size.toDouble / level.size)
+
+
+  def ratioByAggregatedEducation(world: World, behaviour: Behaviour) =
+    for {
+      ed <- AggregatedEducation.all
+      level = world.individuals.filter(i => AggregatedEducation(i.education).map(_ == ed).getOrElse(false))
+      behave = level.filter(i => i.behaviour == behaviour)
+    } yield ed -> (behave.size.toDouble / level.size)
+
 
 }

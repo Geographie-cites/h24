@@ -71,7 +71,10 @@ object population {
       }
   }
 
-  sealed trait Education
+  sealed trait Education {
+    override def toString = getClass.getName
+  }
+
 
   object Education {
     object Schol extends Education
@@ -99,19 +102,42 @@ object population {
       }
   }
 
-  sealed trait Behaviour
+  sealed trait AggregatedEducation {
+    override def toString = getClass.getName
+  }
+
+  object AggregatedEducation {
+    object Low extends AggregatedEducation
+    object Middle extends AggregatedEducation
+    object High extends AggregatedEducation
+
+    def all = Vector(Low, Middle, High)
+
+    def apply(education: Education) =
+      education match {
+        case Education.Dipl0 | Education.BEPC | Education.CAPBEP | Education.CEP => Some(Low)
+        case Education.BAC | Education.BACP2 => Some(Middle)
+        case Education.SUP => Some(High)
+        case _ => None
+      }
+
+  }
+
+  sealed trait Behaviour {
+    override def toString = getClass.getName
+  }
 
   object Behaviour {
     object Meat extends Behaviour
-    object Vegi extends Behaviour
+    object Veggie extends Behaviour
 
-    def all = Vector(Meat, Vegi)
+    def all = Vector(Meat, Veggie)
 
     def random(ratio: Double) =
       (age: Age, sex: Sex, education: Education, rng: Random) =>
         rng.nextDouble() < ratio match {
           case true => Meat
-          case false => Vegi
+          case false => Veggie
         }
   }
 
@@ -136,6 +162,7 @@ object population {
 
     def i = Individual.location composeLens first
     def j = Individual.location composeLens second
+
   }
 
 
