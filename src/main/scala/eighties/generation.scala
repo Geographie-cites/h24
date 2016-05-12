@@ -75,9 +75,9 @@ object generation {
     val result =
       Try {
         featureReader
-          //.filter(feature =>feature.getAttribute("DCOMIRIS").toString.startsWith("75"))
+          .filter(feature =>feature.getAttribute("DCOMIRIS").toString.startsWith("75"))
           .map { feature =>
-            val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon]//.getGeometryN(0).asInstanceOf[Polygon]
+            val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon]
             val iris = feature.getAttribute("DCOMIRIS").toString
             iris -> geom
           }.toMap
@@ -283,6 +283,7 @@ object generation {
       case _ => None
     }
   }
+
   def generateEquipments(inputDirectory: File, rng: Random) = {
     val BPEFile = inputDirectory / "bpe14-IDF.csv.lzma"
     val contourIRISFile = inputDirectory / "CONTOURS-IRIS_FE_IDF.shp"
@@ -293,8 +294,8 @@ object generation {
     } yield generateEquipment(rng, equipment, geom).toIterator
   }
 
-  def sampleActivity(feature: Feature, rnd: RandomGenerator) = {
-    val poisson = new PoissonDistribution(rnd, 10000.0, PoissonDistribution.DEFAULT_EPSILON, PoissonDistribution.DEFAULT_MAX_ITERATIONS)
+  def sampleActivity(feature: Feature, rnd: RandomGenerator, distance: Double = 10000) = {
+    val poisson = new PoissonDistribution(rnd, distance, PoissonDistribution.DEFAULT_EPSILON, PoissonDistribution.DEFAULT_MAX_ITERATIONS)
     val dist = poisson.sample.toDouble
     val angle = rnd.nextDouble * Math.PI * 2.0
     val p = feature.point
