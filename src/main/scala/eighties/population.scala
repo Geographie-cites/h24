@@ -24,6 +24,8 @@ import monocle.macros.Lenses
 import monocle.function.all._
 import monocle.std.all._
 
+import scala.util.Random
+
 object population {
 
   sealed trait Age {
@@ -81,6 +83,8 @@ object population {
     object BACP2 extends Education
     object SUP extends Education
 
+    def all = Vector(Schol, Dipl0, CEP, BEPC, CAPBEP, BAC, BACP2, SUP)
+
     def apply(code: Int) =
       code match {
         case 0 => Some(Schol)
@@ -95,33 +99,53 @@ object population {
       }
   }
 
+  sealed trait Behaviour
+
+  object Behaviour {
+    object Meat extends Behaviour
+    object Vegi extends Behaviour
+
+    def all = Vector(Meat, Vegi)
+
+    def random(ratio: Double) =
+      (age: Age, sex: Sex, education: Education, rng: Random) =>
+        rng.nextDouble() < ratio match {
+          case true => Meat
+          case false => Vegi
+        }
+  }
+
   object Individual {
-    def apply(feature: Feature): Option[Individual] =
+    def apply(feature: Feature, behaviour: (Age, Sex, Education, Random) => Behaviour, random: Random): Option[Individual] =
       for {
         age <- Age(feature.ageCategory)
         sex <- Sex(feature.sex)
         education <- Education(feature.education)
         point = feature.point
-      } yield
+      } yield {
+        val home = space.project(point)
         Individual(
           age,
           sex,
           education,
-          (point.getX, point.getY),
-          space.project(point)
+          behaviour(age, sex, education, random),
+          home,
+          home
         )
+      }
 
     def i = Individual.location composeLens first
     def j = Individual.location composeLens second
-    def x = Individual.location composeLens first
-    def y = Individual.location composeLens second
   }
+
 
   @Lenses case class Individual(
     age: Age,
     sex: Sex,
     education: Education,
-    home: Coordinate,
+    behaviour: Behaviour,
+    home: Location,
     location: Location)
+
 
 }

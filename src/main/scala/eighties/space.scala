@@ -19,7 +19,8 @@ package eighties
 
 import com.vividsolutions.jts.geom.Point
 import eighties.population.Individual
-import monocle.macros.Lenses
+import monocle.Monocle._
+import monocle.macros._
 import org.geotools.geometry.jts.JTS
 import org.geotools.referencing.CRS
 
@@ -49,8 +50,7 @@ object space {
     val transform = CRS.findMathTransform(inCRS, outCRS, true)
     def cell(v:Double) = (v / 200.0).toInt
     val transformedPoint = JTS.transform(p, transform)
-    (cell(transformedPoint.getCoordinate.x),
-      cell(transformedPoint.getCoordinate.y))
+    (cell(transformedPoint.getCoordinate.x), cell(transformedPoint.getCoordinate.y))
   }
 
 
@@ -63,7 +63,8 @@ object space {
       val sideI = maxI - minI
       val sideJ = maxJ - minJ
 
-      def relocate = Individual.i.modify(_ - minI) andThen Individual.j.modify(_ - minJ)
+      def translate(location: Location) = (location._1 - minI, location._2 -minJ)
+      def relocate = Individual.home.modify(translate) andThen Individual.location.modify(translate)
       def relocated = individuals.map(relocate)
 
       World(relocated, sideI + 1, sideJ + 1)
