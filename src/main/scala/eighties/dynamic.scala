@@ -27,7 +27,7 @@ object dynamic {
 
   type Move = (World, Random) => Individual => Individual
 
-  def reachable(index: Index) =
+  def reachable[T](index: Index[T]) =
     for {
       i <- 0 until index.sideI
       j <- 0 until index.sideJ
@@ -35,7 +35,7 @@ object dynamic {
     } yield (i, j)
 
   def randomMove(world: World, random: Random) = {
-    val reach = reachable(Index(world))
+    val reach = reachable(Index.indexIndividuals(world))
     val rSize = reach.size
     def randomLocation = Individual.location.modify(_ => reach(random.nextInt(rSize)))
     (World.allIndividuals modify randomLocation) (world)
@@ -56,7 +56,7 @@ object dynamic {
 
   def localConviction(proba: Double => Double, world: World, random: Random) = {
     def newCells =
-      Index.allCells.modify { cell =>
+      Index.allCells[Individual].modify { cell =>
         if (cell.isEmpty) cell
         else {
           val probaByGroup = cell.groupBy(_.behaviour).mapValues(_.size.toDouble / cell.size).mapValues(proba).withDefaultValue(0.0)
@@ -69,26 +69,51 @@ object dynamic {
         }
       }
 
-    def newIndividuals = Index.allIndividuals.getAll(newCells(Index(world)))
+    def newIndividuals =
+      Index.allIndividuals.getAll(newCells(Index.indexIndividuals(world)))
+
     World.individuals.set(newIndividuals.toVector)(world)
   }
 
-  def assignWork(worker: Individual => Boolean, world: World, random: Random) = {
-    val reach = reachable(Index(world))
-    val reachSize = reach.size
+  def assignWork(proportion: Double, world: World, random: Random) = {
+
+    val attractions =
+      AggregatedEducation.all.map {ed =>
+        ed -> world.attractions.filter(_.education == ed)
+      }.toMap.withDefaultValue(Seq.empty)
+
     def assign(individual: Individual): Individual =
-      if(worker(individual)) Individual.work.set(Some(reach(random.nextInt(reachSize)))) (individual)
-      else individual
+      if(random.nextDouble() < proportion) {
+        val individualAttractions = attractions(AggregatedEducation(individual.education).get)
+        if (individualAttractions.isEmpty) individual
+        else Individual.work.set(Some(individualAttractions.randomElement(random).location)) (individual)
+      } else individual
 
     (World.allIndividuals modify assign)(world)
   }
 
-  /*def randomiseLocation(world: World) = {
-    val reach = reachable(Index(world))
-    Index(world)
-  }*/
+  def randomiseLocation(world: World, random: Random) = {
+    val reach = reachable(Index[Individual](world, World.individuals.get(_), Individual.location.get(_)))
+    val reachSize = reach.size
 
+    def assign(individual: Individual): Individual =
+      Individual.home.set(reach(random.nextInt(reachSize))) (individual)
 
+    (World.allIndividuals modify assign)(world)
+  }
+
+  def generateAttractions(world: World, proportion: Double, random: Random) = {
+    val reach = reachable(Index.indexIndividuals(world))
+
+    def attraction = {
+      val location = reach.randomElement(random)
+      val education = AggregatedEducation.all.randomElement(random)
+      Attraction(location, education)
+    }
+
+    def attractions = (0 until (reach.size * proportion).toInt).map(_ => attraction)
+    World.attractions.set(attractions.toVector)(world)
+  }
 
   def logistic(l: Double, k: Double, x0: Double)(x: Double) = l / (1.0 +  math.exp(-k * (x - x0)))
 

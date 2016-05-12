@@ -36,4 +36,11 @@ package object eighties {
 
     multinomial0(values.toList)(drawn)
   }
+
+  implicit class SeqDecorator[T](s: Seq[T]) {
+    def randomElement(random: Random) = {
+      val size = s.size
+      s(random.nextInt(size))
+    }
+  }
 }

@@ -18,7 +18,7 @@
 package eighties
 
 import com.vividsolutions.jts.geom.Point
-import eighties.population.Individual
+import eighties.population.{AggregatedEducation, Individual}
 import monocle.Monocle._
 import monocle.macros._
 
@@ -45,7 +45,8 @@ object space {
   def cell(p: Coordinate) = ((p._1 / 200.0).toInt, (p._2 / 200.0).toInt)
 
   object World {
-    def apply(individuals: Vector[Individual]): World = {
+
+    def apply(individuals: Vector[Individual], attractions: Vector[Attraction]): World = {
       val minI = individuals.map(Individual.i.get).min
       val maxI = individuals.map(Individual.i.get).max
       val minJ = individuals.map(Individual.j.get).min
@@ -57,7 +58,7 @@ object space {
       def relocate = Individual.home.modify(translate) andThen Individual.location.modify(translate)
       def relocated = individuals.map(relocate)
 
-      World(relocated, sideI + 1, sideJ + 1)
+      World(relocated, attractions, sideI + 1, sideJ + 1)
     }
 
     def allIndividuals = World.individuals composeTraversal each
@@ -65,26 +66,32 @@ object space {
   }
 
   /* Définition d'une classe Grid, composé de vecteurs, de edges et de side*/
-  @Lenses case class World(individuals: Vector[Individual], sideI: Int, sideJ: Int)
-
+  @Lenses case class World(individuals: Vector[Individual], attractions: Vector[Attraction], sideI: Int, sideJ: Int)
+  @Lenses case class Attraction(location: Location, education: AggregatedEducation)
 
   object Index {
 
-    def apply(world: World): Index = {
-      val cellBuffer: Array[Array[ArrayBuffer[Individual]]] = Array.fill(world.sideI, world.sideJ) { ArrayBuffer[Individual]() }
+    def indexIndividuals(world: World) =
+      Index[Individual](world, World.individuals.get(_), Individual.location.get(_))
+
+    def indexAttraction(world: World) =
+      Index[Attraction](world, World.attractions.get(_), Attraction.location.get(_))
+
+    def apply[T](world: World, select: World => Vector[T], location: T => Location): Index[T] = {
+      val cellBuffer: Array[Array[ArrayBuffer[T]]] = Array.fill(world.sideI, world.sideJ) { ArrayBuffer[T]() }
 
       for {
-        individual <- world.individuals
-      } cellBuffer(Individual.i.get(individual))(Individual.j.get(individual)) += individual
+        s <- select(world)
+        (i, j) = location(s)
+      } cellBuffer(i)(j) += s
 
-      Index(cellBuffer.toVector.map(_.toVector.map(_.toVector)), world.sideI, world.sideJ)
+      Index[T](cellBuffer.toVector.map(_.toVector.map(_.toVector)), world.sideI, world.sideJ)
     }
 
-    def allCells = cells composeTraversal each composeTraversal each
-    def allIndividuals = allCells composeTraversal each
-
+    def allCells[T] = cells[T] composeTraversal each composeTraversal each
+    def allIndividuals[T] = allCells[T] composeTraversal each
   }
 
-  @Lenses case class Index(cells: Vector[Vector[Vector[Individual]]], sideI: Int, sideJ: Int)
+  @Lenses case class Index[T](cells: Vector[Vector[Vector[T]]], sideI: Int, sideJ: Int)
   //@Lenses case class Cell(location: Location, individuals: Vector[Individual])
 }
