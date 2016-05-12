@@ -121,15 +121,15 @@ object population {
         age <- Age(feature.ageCategory)
         sex <- Sex(feature.sex)
         education <- Education(feature.education)
-        point = feature.point
       } yield {
-        val home = space.project(point)
+        val home = space.cell(feature.location)
         Individual(
           age,
           sex,
           education,
           behaviour(age, sex, education, random),
           home,
+          None,
           home
         )
       }
@@ -145,6 +145,7 @@ object population {
     education: Education,
     behaviour: Behaviour,
     home: Location,
+    work: Option[Location],
     location: Location)
 
 

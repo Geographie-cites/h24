@@ -21,8 +21,6 @@ import com.vividsolutions.jts.geom.Point
 import eighties.population.Individual
 import monocle.Monocle._
 import monocle.macros._
-import org.geotools.geometry.jts.JTS
-import org.geotools.referencing.CRS
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -44,15 +42,7 @@ object space {
     } yield (i + di, j + dj)
   }
 
-  def project(p: Point) = {
-    val inCRS = CRS.decode("EPSG:2154")
-    val outCRS = CRS.decode("EPSG:3035")
-    val transform = CRS.findMathTransform(inCRS, outCRS, true)
-    def cell(v:Double) = (v / 200.0).toInt
-    val transformedPoint = JTS.transform(p, transform)
-    (cell(transformedPoint.getCoordinate.x), cell(transformedPoint.getCoordinate.y))
-  }
-
+  def cell(p: Coordinate) = ((p._1 / 200.0).toInt, (p._2 / 200.0).toInt)
 
   object World {
     def apply(individuals: Vector[Individual]): World = {
@@ -69,6 +59,8 @@ object space {
 
       World(relocated, sideI + 1, sideJ + 1)
     }
+
+    def allIndividuals = World.individuals composeTraversal each
   }
 
   /* Définition d'une classe Grid, composé de vecteurs, de edges et de side*/
@@ -78,18 +70,20 @@ object space {
   object Index {
 
     def apply(world: World): Index = {
-      import world._
-      val cellBuffer: Array[Array[ArrayBuffer[Individual]]] = Array.fill(sideI, sideJ) { ArrayBuffer[Individual]() }
+      val cellBuffer: Array[Array[ArrayBuffer[Individual]]] = Array.fill(world.sideI, world.sideJ) { ArrayBuffer[Individual]() }
 
       for {
         individual <- world.individuals
       } cellBuffer(Individual.i.get(individual))(Individual.j.get(individual)) += individual
 
-      Index(cellBuffer.toVector.map(_.toVector.map(_.toVector)))
+      Index(cellBuffer.toVector.map(_.toVector.map(_.toVector)), world.sideI, world.sideJ)
     }
+
+    def allCells = cells composeTraversal each composeTraversal each
+    def allIndividuals = allCells composeTraversal each
 
   }
 
-  @Lenses case class Index(cells: Vector[Vector[Vector[Individual]]])
+  @Lenses case class Index(cells: Vector[Vector[Vector[Individual]]], sideI: Int, sideJ: Int)
   //@Lenses case class Cell(location: Location, individuals: Vector[Individual])
 }

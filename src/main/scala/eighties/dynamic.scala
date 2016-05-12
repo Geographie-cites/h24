@@ -27,32 +27,57 @@ object dynamic {
 
   type Move = (World, Random) => Individual => Individual
 
-  def randomLocation(i: Int, j: Int, random: Random) =
-    ((i * random.nextDouble()).toInt, (j * random.nextDouble()).toInt)
+  def reachable(index: Index) =
+    for {
+      i <- 0 until index.sideI
+      j <- 0 until index.sideJ
+      if !index.cells(i)(j).isEmpty
+    } yield (i, j)
 
-  def randomMove(ratio: Double)(world: World, random: Random) =
-    Individual.location.set(randomLocation(world.sideI, world.sideJ, random))
+  def randomMove(world: World, random: Random) = {
+    val reach = reachable(Index(world))
+    val rSize = reach.size
+    def randomLocation = Individual.location.modify(_ => reach(random.nextInt(rSize)))
+    (World.allIndividuals modify randomLocation) (world)
+  }
 
-  def backHome(world: World, random: Random) =
-    (individual: Individual) => Individual.location.set(individual.home)(individual)
+  def goBackHome(world: World) = {
+    def m = (individual: Individual) => Individual.location.set(individual.home)(individual)
+    (World.allIndividuals modify m)(world)
+  }
 
-  def move(world: World, move: Move, random: Random) =
-    (World.individuals composeTraversal each).modify(move(world, random))(world)
+  def goToWork(world: World) = {
+    def m = (individual: Individual) =>
+      Individual.location.set(individual.work.getOrElse(individual.location))(individual)
+    (World.allIndividuals modify m)(world)
+  }
 
   type Conviction = Vector[Individual] => Vector[Individual]
 
-  def localConviction(world: World, random: Random) = {
+  def localConviction(stuburness: Double, world: World, random: Random) = {
     def newCells =
-      Index(world).cells.map { line =>
-        line.map { cell =>
-          if(cell.isEmpty) cell
-          else {
-            val ratios = cell.groupBy(i => i.behaviour).mapValues(_.size.toDouble).toSeq
-            cell applyTraversal (each[Vector[Individual], Individual] composeLens Individual.behaviour) set (multinomial(ratios)(random))
+      Index.allCells.modify { cell =>
+        if (cell.isEmpty) cell
+        else {
+          val ratios = cell.groupBy(_.behaviour).mapValues(_.size.toDouble).toSeq
+          cell applyTraversal (each[Vector[Individual], Individual] composeLens Individual.behaviour) modify { b =>
+            if (random.nextDouble() < stuburness) b else multinomial(ratios)(random)
           }
         }
       }
-    World.individuals.set(newCells.flatten.flatten)(world)
+
+    def newIndividuals = Index.allIndividuals.getAll(newCells(Index(world)))
+    World.individuals.set(newIndividuals.toVector)(world)
+  }
+
+  def assignWork(worker: Individual => Boolean, world: World, random: Random) = {
+    val reach = reachable(Index(world))
+    val reachSize = reach.size
+    def assign(individual: Individual): Individual =
+      if(worker(individual)) Individual.work.set(Some(reach(random.nextInt(reachSize)))) (individual)
+      else individual
+
+    (World.allIndividuals modify assign)(world)
   }
 
 }
