@@ -54,14 +54,17 @@ object dynamic {
 
   type Conviction = Vector[Individual] => Vector[Individual]
 
-  def localConviction(stuburness: Double, world: World, random: Random) = {
+  def localConviction(proba: Double => Double, world: World, random: Random) = {
     def newCells =
       Index.allCells.modify { cell =>
         if (cell.isEmpty) cell
         else {
-          val ratios = cell.groupBy(_.behaviour).mapValues(_.size.toDouble).toSeq
+          val probaByGroup = cell.groupBy(_.behaviour).mapValues(_.size.toDouble / cell.size).mapValues(proba).withDefaultValue(0.0)
           cell applyTraversal (each[Vector[Individual], Individual] composeLens Individual.behaviour) modify { b =>
-            if (random.nextDouble() < stuburness) b else multinomial(ratios)(random)
+            b match {
+              case Behaviour.Meat => if(random.nextDouble() < probaByGroup(Behaviour.Veggie)) Behaviour.Veggie else b
+              case Behaviour.Veggie => if(random.nextDouble() < probaByGroup(Behaviour.Meat)) Behaviour.Meat else b
+            }
           }
         }
       }
@@ -79,5 +82,10 @@ object dynamic {
 
     (World.allIndividuals modify assign)(world)
   }
+
+
+  def logistic(l: Double, k: Double, x0: Double)(x: Double) = l / (1.0 +  math.exp(-k * (x - x0)))
+
+  //def contact(teta: Double)(x: Double) = if(x < teta) 0.0 else 1.0
 
 }

@@ -72,7 +72,7 @@ object generation {
     val result =
       Try {
         featureReader
-          .filter(feature =>feature.getAttribute("DCOMIRIS").toString.startsWith("75113"))
+          .filter(feature =>feature.getAttribute("DCOMIRIS").toString.startsWith("75"))
           .map { feature =>
             val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon].getGeometryN(0).asInstanceOf[Polygon]
             val iris = feature.getAttribute("DCOMIRIS").toString
