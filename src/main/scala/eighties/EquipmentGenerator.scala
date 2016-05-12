@@ -18,6 +18,7 @@
 package eighties
 
 import better.files._
+import org.apache.commons.math3.random.JDKRandomGenerator
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataUtilities, Transaction}
 
@@ -39,7 +40,7 @@ object EquipmentGenerator extends App {
   dataStore.createSchema(featureType)
   val typeName = dataStore.getTypeNames()(0)
   val writer = dataStore.getFeatureWriterAppend(typeName, Transaction.AUTO_COMMIT)
-  val rng = new Random(42)
+  val rng = new JDKRandomGenerator(42)
 
   for {
     (feature, i) <- generation.generateEquipments(path, rng).get.zipWithIndex

@@ -34,6 +34,8 @@ import better.files._
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
 import eighties.population.Age
 import eighties.population.Age.AgeValue
+import org.apache.commons.math3.distribution.PoissonDistribution
+import org.apache.commons.math3.random.RandomGenerator
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
@@ -58,6 +60,7 @@ object generation {
   type IrisID = String
   case class Feature(ageCategory: Int, age: Option[Double], sex: Int, education: Int, point: Point, location: space.Coordinate)
   case class Equipment(typeEquipment: String, point: Point, location:space.Coordinate, quality:String, iris:String)
+  case class Activity(point: Point, location: space.Coordinate)
 
   def toDouble(s: String) =
     s.filter(_ != '"').replace(',', '.') match {
@@ -288,6 +291,19 @@ object generation {
       equipment <- readEquipment(BPEFile)
       geom <- readGeometry(contourIRISFile)
     } yield generateEquipment(rng, equipment, geom).toIterator
+  }
+
+  def sampleActivity(feature: Feature, rnd: RandomGenerator) = {
+    val poisson = new PoissonDistribution(rnd, 10000.0, PoissonDistribution.DEFAULT_EPSILON, PoissonDistribution.DEFAULT_MAX_ITERATIONS)
+    val dist = poisson.sample.toDouble
+    val angle = rnd.nextDouble * Math.PI * 2.0
+    val p = feature.point
+    val factory = p.getFactory
+    val point = factory.createPoint(new Coordinate(p.getX + Math.cos(angle) * dist, p.getY + Math.sin(angle) * dist))
+    Activity(
+      point = point,
+      location = (point.getX, point.getY)
+    )
   }
 
   class RasterVariate(pdf: Seq[Double], val m_size: Seq[Int]) {
