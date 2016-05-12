@@ -31,7 +31,7 @@ object dynamic {
     ((i * random.nextDouble()).toInt, (j * random.nextDouble()).toInt)
 
   def randomMove(ratio: Double)(world: World, random: Random) =
-    Individual.location.set(randomLocation(world.sideI, world.sideJ, random))
+    Individual.location.modify(_ => randomLocation(world.sideI, world.sideJ, random))
 
   def backHome(world: World, random: Random) =
     (individual: Individual) => Individual.location.set(individual.home)(individual)
@@ -47,7 +47,7 @@ object dynamic {
         line.map { cell =>
           if(cell.isEmpty) cell
           else {
-            val ratios = cell.groupBy(i => i.behaviour).mapValues(_.size.toDouble).toSeq
+            val ratios = cell.groupBy(_.behaviour).mapValues(_.size.toDouble).toSeq
             cell applyTraversal (each[Vector[Individual], Individual] composeLens Individual.behaviour) set (multinomial(ratios)(random))
           }
         }

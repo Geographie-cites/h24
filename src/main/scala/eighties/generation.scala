@@ -56,7 +56,7 @@ object generation {
   }
 
   type IrisID = String
-  case class Feature(ageCategory: Int, age: Option[Double], sex: Int, education: Int, point: Point, location:space.Coordinate)
+  case class Feature(ageCategory: Int, age: Option[Double], sex: Int, education: Int, point: Point, location: space.Coordinate)
 
   def toDouble(s: String) =
     s.filter(_ != '"').replace(',', '.') match {
@@ -71,7 +71,7 @@ object generation {
     val result =
       Try {
         featureReader
-          .filter(feature =>feature.getAttribute("DCOMIRIS").toString.startsWith("75"))
+          .filter(feature =>feature.getAttribute("DCOMIRIS").toString.startsWith("75113"))
           .map { feature =>
             val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon].getGeometryN(0).asInstanceOf[Polygon]
             val iris = feature.getAttribute("DCOMIRIS").toString

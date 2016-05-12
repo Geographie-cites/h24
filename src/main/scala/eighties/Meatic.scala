@@ -33,10 +33,12 @@ object Meatic extends App {
       features <- generation.generateFeatures(path, rng)
     } yield features.flatMap(f => Individual(f, Behaviour.random(0.5), rng)).toVector
 
+
+
   def simulation(world: World, step: Int): World =
     if(step <= 0) world
     else {
-      println(step)
+      println(s"$step ${observable.ratioOfPopulation(world, Behaviour.Meat)}")
       def day = move(world, randomMove(0.5), rng)
       def afterDay = localConviction(day, rng)
       def night = move(afterDay, backHome, rng)

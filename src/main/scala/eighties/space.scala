@@ -21,8 +21,6 @@ import com.vividsolutions.jts.geom.Point
 import eighties.population.Individual
 import monocle.Monocle._
 import monocle.macros._
-import org.geotools.geometry.jts.JTS
-import org.geotools.referencing.CRS
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -44,15 +42,7 @@ object space {
     } yield (i + di, j + dj)
   }
 
-  def project(p: Point) = {
-    val inCRS = CRS.decode("EPSG:2154")
-    val outCRS = CRS.decode("EPSG:3035")
-    val transform = CRS.findMathTransform(inCRS, outCRS, true)
-    def cell(v:Double) = (v / 200.0).toInt
-    val transformedPoint = JTS.transform(p, transform)
-    (cell(transformedPoint.getCoordinate.x), cell(transformedPoint.getCoordinate.y))
-  }
-
+  def cell(p: Coordinate) = ((p._1 / 200.0).toInt, (p._2 / 200.0).toInt)
 
   object World {
     def apply(individuals: Vector[Individual]): World = {
