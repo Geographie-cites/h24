@@ -57,6 +57,7 @@ object generation {
 
   type IrisID = String
   case class Feature(ageCategory: Int, age: Option[Double], sex: Int, education: Int, point: Point, location:space.Coordinate)
+  case class Equipment(typeEquipment: String, point: Point, location:space.Coordinate, quality:String, iris:String)
 
   def toDouble(s: String) =
     s.filter(_ != '"').replace(',', '.') match {
@@ -87,7 +88,7 @@ object generation {
   def withCSVReader[T](file: File)(f: CSVReader => T) = {
     val in = new BufferedInputStream(new FileInputStream(file.toJava))
     val stream = new LZMACompressorInputStream(in)
-    val reader = CSVReader.open(Source.fromInputStream(stream))
+    val reader = CSVReader.open(Source.fromInputStream(stream,"ISO-8859-1"))
     try f(reader)
     finally reader.close
   }
@@ -118,6 +119,18 @@ object generation {
         val men = line.drop(34).take(6).map(toDouble).toVector
         val women = line.drop(44).take(6).map(toDouble).toVector
         line(0) -> (men ++ women)
+      }.toMap
+    }
+  }
+
+  def readEquipment(file: File) = withCSVReader(file){ reader =>
+    Try {
+      reader.iterator.drop(1).map { line =>
+        val typeEquipment = line(5)
+        val x = line(6)
+        val y = line(7)
+        val quality = line(8)
+        line(4).replaceAll("_","") -> Vector(typeEquipment,x,y,quality)
       }.toMap
     }
   }
@@ -198,6 +211,81 @@ object generation {
       schoolAge <- readAgeSchool(baseICDiplomesFormationPopFileName)
       educationSex <- readEducationSex(baseICDiplomesFormationPopFileName)
     } yield generatePopulation(rng, geom, ageSex, schoolAge, educationSex).toIterator.flatten
+  }
+
+  def generateEquipment(rnd: Random, eq: Map[IrisID, Vector[String]], geometry: Map[IrisID, Polygon]) = {
+    val l93CRS = CRS.decode("EPSG:2154")
+    val l2eCRS = CRS.decode("EPSG:27572")
+    val outCRS = CRS.decode("EPSG:3035")
+    val transformL93 = CRS.findMathTransform(l93CRS, outCRS, true)
+    val transformL2E = CRS.findMathTransform(l2eCRS, outCRS, true)
+
+    eq.toSeq.map {
+      case (id, vec) => {
+        val typeEquipment = vec(0)
+        val x = vec(1)
+        val y = vec(2)
+        val quality = vec(3)
+        if (quality.equalsIgnoreCase("bonne") || quality.equalsIgnoreCase("acceptable")) {
+          val coordinate = new Coordinate(x.toDouble, y.toDouble)
+          val transformed = JTS.transform(coordinate, null, transformL2E)
+          val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
+          Equipment(
+            typeEquipment = typeEquipment,
+            point = point,
+            location = (point.getX, point.getY),
+            quality = quality,
+            iris = id
+          )
+        } else {
+          geometry.get(id) match {
+            case Some(geom) => {
+              val sampler = new PolygonSampler(geom)
+              val coordinate = sampler.apply(rnd)
+              val transformed = JTS.transform(coordinate, null, transformL93)
+              val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
+              Equipment(
+                typeEquipment = typeEquipment,
+                point = point,
+                location = (point.getX, point.getY),
+                quality = quality,
+                iris = id
+              )
+            }
+            case None => {
+              println(s"Could Not find IRIS $id")
+              Equipment(
+                typeEquipment = typeEquipment,
+                point = JTS.toGeometry(JTS.toDirectPosition(new Coordinate(0.0,0.0), outCRS)),
+                location = (0.0, 0.0),
+                quality = quality,
+                iris = id
+              )
+            }
+          }
+//          val geom = geometry.get(id).get
+//          val sampler = new PolygonSampler(geom)
+//          val coordinate = sampler.apply(rnd)
+//          val transformed = JTS.transform(coordinate, null, transform)
+//          val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
+//          Equipment(
+//            typeEquipment = typeEquipment,
+//            point = point,
+//            location = (point.getX, point.getY)
+//          )
+        }
+      }
+    }
+  }
+
+  def generateEquipments(inputDirectory: File, rng: Random) = {
+    val BPEFile = inputDirectory / "bpe14-IDF.csv.lzma"
+    val contourIRISFile = inputDirectory / "CONTOURS-IRIS_FE_IDF.shp"
+
+    for {
+      equipment <- readEquipment(BPEFile)
+      geom <- readGeometry(contourIRISFile)
+    } yield generateEquipment(rng, equipment, geom).toIterator
   }
 
   class RasterVariate(pdf: Seq[Double], val m_size: Seq[Int]) {

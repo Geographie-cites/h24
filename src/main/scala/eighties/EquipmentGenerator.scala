@@ -17,26 +17,21 @@
   */
 package eighties
 
-import java.io.{BufferedInputStream, FileInputStream}
-
-import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
-import org.geotools.data.{DataUtilities, Transaction}
-import org.geotools.data.shapefile.ShapefileDataStoreFactory
-import org.geotools.geometry.jts.JTS
-import org.geotools.referencing.CRS
 import better.files._
+import org.geotools.data.shapefile.ShapefileDataStoreFactory
+import org.geotools.data.{DataUtilities, Transaction}
 
 import scala.util.Random
 
-object TestGenerator extends App {
+object EquipmentGenerator extends App {
 
   val path = File("data")
   val outputPath = File("results")
   outputPath.createDirectories()
 
-  val outFile = outputPath / "generated-population-75-bis.shp"
+  val outFile = outputPath / "generated-equipment-75.shp"
 
-  val specs = "geom:Point:srid=3035,cellX:Integer,cellY:Integer,ageCat:Integer,age:Double,sex:Integer,education:Integer"
+  val specs = "geom:Point:srid=3035,cellX:Integer,cellY:Integer,type:String,quality:String,iris:String"
   val factory = new ShapefileDataStoreFactory
   val dataStore = factory.createDataStore(outFile.toJava.toURI.toURL)
   val featureTypeName = "Object"
@@ -47,22 +42,20 @@ object TestGenerator extends App {
   val rng = new Random(42)
 
   for {
-    (feature, i) <- generation.generateFeatures(path, rng).get.zipWithIndex
+    (feature, i) <- generation.generateEquipments(path, rng).get.zipWithIndex
   } {
     import feature._
-    def discrete(v:Double) = (v / 200.0).toInt * 200
+    def discrete(v:Double) = (v / 200.0).toInt
     val values = Array[AnyRef](
       point,
-      discrete(point.getCoordinate.x).asInstanceOf[AnyRef],
-      discrete(point.getCoordinate.y).asInstanceOf[AnyRef],
-      ageCategory.asInstanceOf[AnyRef],
-      age.getOrElse(75).asInstanceOf[AnyRef],
-      sex.asInstanceOf[AnyRef],
-      education.asInstanceOf[AnyRef])
+      discrete(location._1).asInstanceOf[AnyRef],
+      discrete(location._2).asInstanceOf[AnyRef],
+      typeEquipment.asInstanceOf[AnyRef],
+      quality.asInstanceOf[AnyRef],
+      iris.asInstanceOf[AnyRef])
     val simpleFeature = writer.next
     simpleFeature.setAttributes(values)
     writer.write
   }
-
   writer.close
 }
