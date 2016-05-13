@@ -35,9 +35,9 @@ object PopulationGenerator extends App {
   val outputPath = File("results")
   outputPath.createDirectories()
 
-  val outFile = outputPath / "generated-population-75-ter.shp"
+  val outFile = outputPath / "generated-population-75-work.shp"
 
-  val specs = "geom:Point:srid=3035,cellX:Integer,cellY:Integer,ageCat:Integer,age:Double,sex:Integer,education:Integer"
+  val specs = "geom:Point:srid=3035,cellX:Integer,cellY:Integer,ageCat:Integer,age:Double,sex:Integer,education:Integer,work:Point:srid=3035"
   val factory = new ShapefileDataStoreFactory
   val dataStore = factory.createDataStore(outFile.toJava.toURI.toURL)
   val featureTypeName = "Object"
@@ -51,6 +51,7 @@ object PopulationGenerator extends App {
     (feature, i) <- generation.generateFeatures(path, rng).get.zipWithIndex
   } {
     import feature._
+    val activity = generation.sampleActivity(feature, rng, 10000)
     def discrete(v:Double) = (v / 200.0).toInt
     val values = Array[AnyRef](
       point,
@@ -59,7 +60,9 @@ object PopulationGenerator extends App {
       ageCategory.asInstanceOf[AnyRef],
       age.getOrElse(75).asInstanceOf[AnyRef],
       sex.asInstanceOf[AnyRef],
-      education.asInstanceOf[AnyRef])
+      education.asInstanceOf[AnyRef],
+      activity.point
+    )
     val simpleFeature = writer.next
     simpleFeature.setAttributes(values)
     writer.write

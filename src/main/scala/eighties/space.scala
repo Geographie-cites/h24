@@ -58,7 +58,7 @@ object space {
       def relocate = Individual.home.modify(translate) andThen Individual.location.modify(translate)
       def relocated = individuals.map(relocate)
 
-      World(relocated, attractions, sideI + 1, sideJ + 1)
+      World(relocated, attractions, minI, minJ, sideI + 1, sideJ + 1)
     }
 
     def allIndividuals = World.individuals composeTraversal each
@@ -66,7 +66,7 @@ object space {
   }
 
   /* Définition d'une classe Grid, composé de vecteurs, de edges et de side*/
-  @Lenses case class World(individuals: Vector[Individual], attractions: Vector[Attraction], sideI: Int, sideJ: Int)
+  @Lenses case class World(individuals: Vector[Individual], attractions: Vector[Attraction], originI: Int, originJ: Int, sideI: Int, sideJ: Int)
   @Lenses case class Attraction(location: Location, education: AggregatedEducation)
 
   object Index {

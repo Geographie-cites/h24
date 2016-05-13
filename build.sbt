@@ -10,7 +10,8 @@ val geotoolsVersion = "14.3"
 val jtsVersion = "1.13"
 
 resolvers ++= Seq(
-  "osgeo" at "http://download.osgeo.org/webdav/geotools/"
+  "osgeo" at "http://download.osgeo.org/webdav/geotools/",
+  "geosolutions" at "http://maven.geo-solutions.it/"
 )
 
 libraryDependencies ++= Seq (
@@ -22,6 +23,9 @@ libraryDependencies ++= Seq (
   "org.geotools" % "gt-shapefile" % geotoolsVersion,
   "org.geotools" % "gt-epsg-wkt" % geotoolsVersion,
   "org.geotools" % "gt-cql" % geotoolsVersion,
+  "org.geotools" % "gt-geotiff" % geotoolsVersion,
+  "org.geotools" % "gt-image" % geotoolsVersion,
+  "org.geotools" % "gt-coverage" % geotoolsVersion,
   "com.vividsolutions" % "jts" % jtsVersion,
   "com.github.tototoshi" %% "scala-csv" % "1.3.1",
   "org.apache.commons" % "commons-compress" % "1.11",
@@ -31,6 +35,3 @@ libraryDependencies ++= Seq (
 )
  
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
-
-
-
