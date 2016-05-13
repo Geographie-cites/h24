@@ -62,6 +62,6 @@ object MapPopulation extends App {
       )
     }
     val world = World(features, Vector[Attraction]())
-    WorldMapper.map(world, File("results") / "test.tiff")
+    WorldMapper.mapRGB(world, File("results") / "test.tiff")
   }
 }
