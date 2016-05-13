@@ -123,7 +123,9 @@ object population {
 
   }
 
-  sealed trait Behaviour {
+  type Behaviour = Double
+
+  /*sealed trait Behaviour {
     override def toString = getClass.getName
   }
 
@@ -139,7 +141,7 @@ object population {
           case true => Meat
           case false => Veggie
         }
-  }
+  }*/
 
   object Individual {
     def apply(feature: Feature, behaviour: (Age, Sex, Education, Random) => Behaviour, random: Random): Option[Individual] =

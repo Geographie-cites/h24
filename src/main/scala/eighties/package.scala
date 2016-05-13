@@ -43,4 +43,12 @@ package object eighties {
       s(random.nextInt(size))
     }
   }
+
+  implicit class SeqDoubleDecorator(s: Seq[Double]) {
+    def average = s.sum / s.size
+    def meanSquaredError = {
+      val avg = s.average
+      s.map { v ⇒ math.pow(v - avg, 2) }.average
+    }
+  }
 }

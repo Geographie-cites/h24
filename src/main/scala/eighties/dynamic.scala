@@ -54,7 +54,7 @@ object dynamic {
 
   type Conviction = Vector[Individual] => Vector[Individual]
 
-  def localConviction(proba: Double => Double, world: World, random: Random) = {
+  /*def localConviction(sigma: Double => Double, world: World, random: Random) = {
     def newCells =
       Index.allCells[Individual].modify { cell =>
         if (cell.isEmpty) cell
@@ -73,7 +73,26 @@ object dynamic {
       Index.allIndividuals.getAll(newCells(Index.indexIndividuals(world)))
 
     World.individuals.set(newIndividuals.toVector)(world)
+  }*/
+
+  def localConviction(sigma: Double, world: World, random: Random) = {
+    def newCells =
+      Index.allCells[Individual].modify { cell =>
+        if (cell.isEmpty) cell
+        else {
+          val cellBehaviours = cell.map(_.behaviour)
+          cell applyTraversal (each[Vector[Individual], Individual] composeLens Individual.behaviour) modify { b: Double =>
+            Opinion.sigmaAdoption(b, cellBehaviours, sigma, random)
+          }
+        }
+      }
+
+    def newIndividuals =
+      Index.allIndividuals.getAll(newCells(Index.indexIndividuals(world)))
+
+    World.individuals.set(newIndividuals.toVector)(world)
   }
+
 
   def assignWork(proportion: Double, world: World, random: Random) = {
 

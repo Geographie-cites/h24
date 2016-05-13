@@ -32,24 +32,21 @@ object Meatic extends App {
   val rng = new Random(42)
   val steps = 1000
   val workers = 1.0
+  val sigma = 0.15
 
   def included(individual: Individual) =
     individual.education != Education.Schol && individual.age != Age.From0To14
 
   def byEducation = {
-    def proportions(ed: Education) =
+    def behaviour(ed: Education, random: Random) =
       AggregatedEducation(ed) match {
-        case Some(AggregatedEducation.Low) => 0.30
-        case Some(AggregatedEducation.Middle) => 0.40
-        case Some(AggregatedEducation.High) => 0.90
+        case Some(AggregatedEducation.Low) => -0.30
+        case Some(AggregatedEducation.Middle) => 0.00
+        case Some(AggregatedEducation.High) => 0.30
         case  _ => Double.NaN
       }
 
-    (age: Age, sex: Sex, education: Education, rng: Random) =>
-      (rng.nextDouble() < proportions(education)) match {
-        case true => Behaviour.Meat
-        case false => Behaviour.Veggie
-      }
+    (age: Age, sex: Sex, education: Education, rng: Random) => behaviour(education, rng)
   }
 
   //def randomBehaviour = Behaviour.random(0.75)
@@ -62,7 +59,6 @@ object Meatic extends App {
         flatMap(f => Individual(f, byEducation, rng)).
         filter(included).toVector
 
-
   /*def equipements =
     for {
       equipments <- generation.generateEquipments(path, rng)
@@ -71,14 +67,20 @@ object Meatic extends App {
   def simulation(world: World, step: Int): World =
     if(step <= 0) world
     else {
-      println(s"""${steps - step},${observable.ratioByAggregatedEducation(world, Behaviour.Meat).map(_._2).mkString(",")}""")
-      val fileName = "world"+step+".tiff"
-      WorldMapper.map(world, outputPath / fileName, i => Behaviour.all.indexOf(i.behaviour))
-      val convict = logistic(0.3, 10.0, 0.5)(_)
-      def afterWork = localConviction(convict, goToWork(world), rng)
+      def individualOpinions =
+        World.allIndividuals.getAll(world).groupBy {
+          i => AggregatedEducation(i.education).get
+        }.mapValues { is =>
+          val bs = is.map(_.behaviour)
+          (bs.average, bs.meanSquaredError)
+        }.toSeq
+
+      println(s"""${steps - step},${individualOpinions.mkString(",")}""")
+      //val convict = logistic(0.3, 10.0, 0.5)(_)
+      //def afterWork = localConviction(sigma, goToWork(world), rng)
       //def afterActivity = localConviction(convict, randomMove(world, rng), rng)
       //def changeCurve(meat: Double) = contact(0.8)(meat) //logistic(1.0, 2.0, 0.50)(meat)
-      def afterNight = localConviction(convict, goBackHome(afterWork), rng)
+      def afterNight = localConviction(sigma, goBackHome(world), rng)
       simulation(afterNight, step - 1)
     }
 
