@@ -68,12 +68,11 @@ object Meatic extends App {
     if(step <= 0) world
     else {
       def individualOpinions =
-        World.allIndividuals.getAll(world).groupBy {
-          i => AggregatedEducation(i.education).get
-        }.mapValues { is =>
+       AggregatedEducation.all.map { ed =>
+          val is = World.allIndividuals.getAll(world).filter(i => AggregatedEducation(i.education).get == ed)
           val bs = is.map(_.behaviour)
-          (bs.average, bs.meanSquaredError)
-        }.toSeq
+          (bs.average, bs.meanSquaredError).productIterator.mkString(",")
+        }
 
       println(s"""${steps - step},${individualOpinions.mkString(",")}""")
       val name = "world"+step+".tiff"
