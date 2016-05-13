@@ -28,6 +28,7 @@ import eighties.generation.Feature
 object Meatic extends App {
 
   val path = File("data")
+  val outputPath = File("results")
   val rng = new Random(42)
   val steps = 1000
   val workers = 1.0
@@ -71,6 +72,8 @@ object Meatic extends App {
     if(step <= 0) world
     else {
       println(s"""${steps - step},${observable.ratioByAggregatedEducation(world, Behaviour.Meat).map(_._2).mkString(",")}""")
+      val fileName = "world"+step+".tiff"
+      WorldMapper.map(world, outputPath / fileName, i => Behaviour.all.indexOf(i.behaviour))
       val convict = logistic(0.3, 10.0, 0.5)(_)
       def afterWork = localConviction(convict, goToWork(world), rng)
       //def afterActivity = localConviction(convict, randomMove(world, rng), rng)

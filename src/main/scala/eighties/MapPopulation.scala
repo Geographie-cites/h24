@@ -1,18 +1,10 @@
 package eighties
 
-import java.awt.image.BufferedImage
-
 import better.files.File
-import com.vividsolutions.jts.geom.{MultiPolygon, Point}
-import eighties.generation.Feature
-import eighties.population.Individual
+import com.vividsolutions.jts.geom.Point
 import eighties.space.{Attraction, World}
-import org.geotools.coverage.grid.GridCoverageFactory
-import org.geotools.coverage.grid.io.GridFormatFinder
 import org.geotools.data.shapefile.ShapefileDataStore
 import org.geotools.gce.geotiff.GeoTiffFormat
-import org.geotools.geometry.jts.ReferencedEnvelope
-import org.geotools.referencing.CRS
 
 import scala.util.{Random, Try}
 
@@ -40,6 +32,7 @@ object MapPopulation extends App {
     store.dispose
     result
   }
+
   val path = File("results")
   val inputFile = path / "generated-population.shp"
   val outFile = path / "generated-population-75-work.tiff"
@@ -68,7 +61,7 @@ object MapPopulation extends App {
         home
       )
     }
-    val world = World(features,Vector[Attraction]())
+    val world = World(features, Vector[Attraction]())
     WorldMapper.map(world, File("results") / "test.tiff")
   }
 }
