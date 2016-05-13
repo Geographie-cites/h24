@@ -75,6 +75,8 @@ object Meatic extends App {
         }
 
       println(s"""${steps - step},${individualOpinions.mkString(",")}""")
+      val name = "world"+step+".tiff"
+      WorldMapper.mapGray(world, outputPath / name)
       //val convict = logistic(0.3, 10.0, 0.5)(_)
       //def afterWork = localConviction(sigma, goToWork(world), rng)
       //def afterActivity = localConviction(convict, randomMove(world, rng), rng)
