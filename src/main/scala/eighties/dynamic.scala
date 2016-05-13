@@ -76,8 +76,13 @@ object dynamic {
   }*/
 
   def localConviction(sigma: Double, world: World, random: Random) = {
-    def newCells =
-      Index.allCells[Individual].modify { cell =>
+    def seeds = Iterator.continually(random.nextLong)
+    def seedCells =
+      (Index.allCells[Individual].getAll(Index.indexIndividuals(world)).toIterator zip seeds).toSeq
+
+    def newIndividuals =
+      seedCells.par.map { case (cell, seed) =>
+        val random = new Random(seed)
         if (cell.isEmpty) cell
         else {
           val cellBehaviours = cell.map(_.behaviour)
@@ -87,10 +92,7 @@ object dynamic {
         }
       }
 
-    def newIndividuals =
-      Index.allIndividuals.getAll(newCells(Index.indexIndividuals(world)))
-
-    World.individuals.set(newIndividuals.toVector)(world)
+    World.individuals.set(newIndividuals.flatten.toVector)(world)
   }
 
 
