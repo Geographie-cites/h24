@@ -80,8 +80,8 @@ object WorldMapper {
   }
   def mapColorRGB(world: space.World, file: File,
                   geValue: (Individual=>Double) = i=>i.behaviour,
-                  minValue: Double = -1.0,
-                  maxValue: Double = 1.0,
+                  minValue: Double = -0.5,
+                  maxValue: Double = 0.5,
                   cellSize: Int = 200, crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
     val minX = world.originI
     val minY = world.originJ
@@ -91,7 +91,18 @@ object WorldMapper {
     val maxY = minY + height
     val rangeValues = maxValue - minValue
     val pixelSize = 10
-    val colors = Vector((255.0,0.0,0.0),(255.0,255.0,0.0),(0.0,255.0,0.0),(0.0,255.0,255.0),(0.0,0.0,255.0))
+    val colors = Vector(
+      (127.0,0.0,0.0),//dark red
+      (255.0,0.0,0.0),//red
+      (255.0,127.0,0.0),//orange
+      (255.0,255.0,0.0),//yellow
+      (127.0,255.0,0.0),//yellow-green
+      (0.0,255.0,0.0),//green
+      (0.0,255.0,255.0),//green-blue
+      (0.0,255.0,255.0),//cyan
+      (0.0,127.0,255.0),//cyan-blue
+      (0.0,0.0,255.0)//blue
+    )
     val bufferedImage = new BufferedImage(width*pixelSize, height*pixelSize, BufferedImage.TYPE_INT_RGB)
     val raster = bufferedImage.getRaster
     val index = space.Index.indexIndividuals(world)

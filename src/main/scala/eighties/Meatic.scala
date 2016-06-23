@@ -31,7 +31,8 @@ import org.apache.commons.math3.random.JDKRandomGenerator
 object Meatic extends App {
 
   val path = File("data")
-  val outputPath = File("results")
+  val outputPath = File("results")/"paris"
+  outputPath.createDirectories()
   val rng = new Random(42)
   val steps = 1000
   val workers = 1.0
@@ -80,7 +81,7 @@ object Meatic extends App {
         }
 
       println(s"""${steps - step},${individualOpinions.mkString(",")}""")
-      val name = s"paris-13-with-random-mobility-with-initial-gaussian${steps - step}.tiff"
+      val name = s"paris-with-random-mobility-with-initial-gaussian${steps - step}.tiff"
       WorldMapper.mapColorRGB(world, outputPath / name)
       //val convict = logistic(0.3, 10.0, 0.5)(_)
       //def afterWork = localConviction(sigma, goToWork(world), rng)
