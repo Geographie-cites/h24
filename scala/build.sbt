@@ -1,5 +1,5 @@
 
-name := "meatyc"
+name := "h24"
 
 scalaVersion := "2.11.8"
 
