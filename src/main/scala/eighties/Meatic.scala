@@ -29,6 +29,7 @@ object Meatic extends App {
 
   val path = File("data")
   val outputPath = File("results")
+  outputPath.createDirectories()
   val rng = new Random(42)
   val steps = 1000
   val workers = 1.0
@@ -79,9 +80,9 @@ object Meatic extends App {
       WorldMapper.mapGray(world, outputPath / name)
       //val convict = logistic(0.3, 10.0, 0.5)(_)
       //def afterWork = localConviction(sigma, goToWork(world), rng)
-      //def afterActivity = localConviction(convict, randomMove(world, rng), rng)
+      def afterActivity = localConviction(sigma, randomMove(world, rng), rng)
       //def changeCurve(meat: Double) = contact(0.8)(meat) //logistic(1.0, 2.0, 0.50)(meat)
-      def afterNight = localConviction(sigma, goBackHome(world), rng)
+      def afterNight = localConviction(sigma, goBackHome(afterActivity), rng)
       simulation(afterNight, step - 1)
     }
 
