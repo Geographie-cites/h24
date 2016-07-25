@@ -85,9 +85,9 @@ object Meatic extends App {
       WorldMapper.mapColorRGB(world, outputPath / name)
       //val convict = logistic(0.3, 10.0, 0.5)(_)
       //def afterWork = localConviction(sigma, goToWork(world), rng)
-      def afterActivity = localConviction(sigma, randomMove(world, rng), rng)
+      def afterActivity = localConviction(sigmaOpinion, randomMove(world, rng), rng)
       //def changeCurve(meat: Double) = contact(0.8)(meat) //logistic(1.0, 2.0, 0.50)(meat)
-      def afterNight = localConviction(sigma, goBackHome(afterActivity), rng)
+      def afterNight = localConviction(sigmaOpinion, goBackHome(afterActivity), rng)
       simulation(afterNight, step - 1)
     }
 
