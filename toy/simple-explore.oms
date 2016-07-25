@@ -1,0 +1,54 @@
+val probMeat = Val[Double] // 0.1 1.0 0.1
+val k = Val[Double] // 0.1 2.0
+val EquipmentPerPerson = Val[Double] // 0.5
+val nPeople = Val[Double] // 2000
+val seed = Val[Int]
+val index = Val[Int]
+
+val switchers = Val[Double]
+val meatersA1 = Val[Double]
+val meatersA2 = Val[Double]
+val meatersA1A2 = Val[Double]
+val meatersImmo = Val[Double]
+
+def kRang = (0.01 until 0.1 by 0.01) ++ (0.1 until 2.0 by 0.1)
+def nPeopleRang = (500.0 until 5000.0 by 500.0)
+
+val exploration =
+  ExplorationTask(
+    (((probMeat in (0.1 to 0.9 by 0.1)) x
+    (k in kRang) x
+    (nPeople in nPeopleRang)) withIndex index) x
+    (seed in (UniformDistribution[Int]() take 20))
+  )
+
+val env = EGIEnvironment("vo.complex-systems.eu")
+
+
+val cmds =
+  List(
+    "random-seed ${seed}",
+    "go-openmole"
+  )
+
+val meatTask =
+  NetLogo5Task(workDirectory / "MeatModel.nlogo", cmds) set (
+    EquipmentPerPerson := 0.5,
+    outputs += (probMeat, k, EquipmentPerPerson, nPeople ),
+    (inputs, outputs) += (index, seed),
+    netLogoInputs += (probMeat, "probMeat"),
+    netLogoInputs += (k, "k"),
+    netLogoInputs += (EquipmentPerPerson, "EquipmentPerPerson"),
+    netLogoInputs += (nPeople, "nPeople"),
+
+    netLogoOutputs += ("switchers", switchers),
+    netLogoOutputs += ("meatersA1", meatersA1),
+    netLogoOutputs += ("meatersA2", meatersA2),
+    netLogoOutputs += ("meatersA1A2", meatersA1A2),
+    netLogoOutputs += ("meatersImmo", meatersImmo)
+
+  )
+
+val csvHook = AppendToCSVFileHook(workDirectory / "result2.csv", index, seed, probMeat, k,EquipmentPerPerson, nPeople,switchers,meatersA1, meatersA2, meatersA1A2, meatersImmo )
+
+exploration -< ((meatTask on env by 10) hook csvHook)
