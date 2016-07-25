@@ -17,5 +17,9 @@ Assymptotic behaviour with 2 opinions:
  - The majority opinion gets a 100% adoption
  - 50-50 random 100% adoption of 1 side
 
+Assymptotic behaviour with 3 opinions:
+ - The central opinion gets a 100% adoption
+ - Extrem opinions get a part of the opinion (after that, it should converge to the same as the 2 opinion dynamic but very slowly due to thediference between the value sigma and the opinions delta)
+
 
 
