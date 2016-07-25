@@ -24,29 +24,34 @@ import scala.util.Random
 import space._
 import dynamic._
 import eighties.generation.Feature
+import org.apache.commons.math3.analysis.function.Gaussian
+import org.apache.commons.math3.distribution.NormalDistribution
+import org.apache.commons.math3.random.JDKRandomGenerator
 
 object Meatic extends App {
 
   val path = File("data")
-  val outputPath = File("results")
+  val outputPath = File("results") / "paris"
   outputPath.createDirectories()
   val rng = new Random(42)
   val steps = 1000
   val workers = 1.0
-  val sigma = 0.15
+  val sigmaOpinion = 0.15
+  val sigmaInitialOpinion = 0.05
 
   def included(individual: Individual) =
     individual.education != Education.Schol && individual.age != Age.From0To14
+  def clamp(v: Double, min: Double = -1.0, max: Double = 1.0) = math.min(math.max(v, min), max)
+
 
   def byEducation = {
     def behaviour(ed: Education, random: Random) =
       AggregatedEducation(ed) match {
-        case Some(AggregatedEducation.Low) => -0.30
-        case Some(AggregatedEducation.Middle) => 0.00
-        case Some(AggregatedEducation.High) => 0.30
-        case  _ => Double.NaN
+        case Some(AggregatedEducation.Low) => clamp(-0.30 + random.nextGaussian() * sigmaInitialOpinion)
+        case Some(AggregatedEducation.Middle) => clamp(0.00 + random.nextGaussian() * sigmaInitialOpinion)
+        case Some(AggregatedEducation.High) => clamp(0.30 + random.nextGaussian() * sigmaInitialOpinion)
+        case _ => Double.NaN
       }
-
     (age: Age, sex: Sex, education: Education, rng: Random) => behaviour(education, rng)
   }
 
@@ -76,8 +81,8 @@ object Meatic extends App {
         }
 
       println(s"""${steps - step},${individualOpinions.mkString(",")}""")
-      val name = "world"+step+".tiff"
-      WorldMapper.mapGray(world, outputPath / name)
+      val name = s"paris-with-random-mobility-with-initial-gaussian${steps - step}.tiff"
+      WorldMapper.mapColorRGB(world, outputPath / name)
       //val convict = logistic(0.3, 10.0, 0.5)(_)
       //def afterWork = localConviction(sigma, goToWork(world), rng)
       def afterActivity = localConviction(sigma, randomMove(world, rng), rng)
