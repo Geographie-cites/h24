@@ -81,7 +81,7 @@ object dynamic {
       (Index.allCells[Individual].getAll(Index.indexIndividuals(world)).toIterator zip seeds).toSeq
 
     def newIndividuals =
-      seedCells.par.map { case (cell, seed) =>
+      seedCells.map { case (cell, seed) =>
         val random = new Random(seed)
         if (cell.isEmpty) cell
         else {

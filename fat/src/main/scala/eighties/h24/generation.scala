@@ -302,7 +302,7 @@ object generation {
   class RasterVariate(pdf: Seq[Double], val m_size: Seq[Int]) {
     val N = m_size.size
     val m_totalsSize = m_size.product
-    val m_cdf = buildCdf(m_totalsSize, pdf, m_size).toParArray
+    val m_cdf = buildCdf(m_totalsSize, pdf, m_size)
     val m_sum = pdf.foldLeft(0.0)((a, b) => a + b)
 
     def buildCdf(totsize: Int, pdf: Seq[Double], size: Seq[Int]) = {

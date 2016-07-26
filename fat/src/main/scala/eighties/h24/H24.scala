@@ -30,7 +30,7 @@ class H24(sigmaOpinion: Double) {
 
   def simulation(world: World, steps: Int, rng: Random): World = {
     def simulation0(world: World, step: Int): World =
-      if (step <= 0) world
+      if (step >= steps) world
       else {
         /*def individualOpinions =
          AggregatedEducation.all.map { ed =>
@@ -45,7 +45,7 @@ class H24(sigmaOpinion: Double) {
         def afterActivity = localConviction(sigmaOpinion, randomMove(world, rng), rng)
         //def changeCurve(meat: Double) = contact(0.8)(meat) //logistic(1.0, 2.0, 0.50)(meat)
         def afterNight = localConviction(sigmaOpinion, goBackHome(afterActivity), rng)
-        simulation0(afterNight, step - 1)
+        simulation0(afterNight, step + 1)
       }
 
     simulation0(world, 0)
