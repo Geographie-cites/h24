@@ -53,7 +53,7 @@ OsgiKeys.exportPackage := Seq("eighties.h24.*")
 
 OsgiKeys.importPackage := Seq("*;resolution:=optional")
 
-OsgiKeys.privatePackage := Seq("!scala.*","*")
+OsgiKeys.privatePackage := Seq("!scala.*","**")
 
 OsgiKeys.requireCapability := ""
 
