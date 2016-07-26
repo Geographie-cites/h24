@@ -196,10 +196,10 @@ object generation {
     }
   }
 
-  def generateFeatures(inputDirectory: File, rng: Random) = {
-    val contourIRISFile = inputDirectory / "CONTOURS-IRIS_FE_IDF.shp"
-    val baseICEvolStructPopFileName = inputDirectory / "base-ic-evol-struct-pop-2012-IDF.csv.lzma"
-    val baseICDiplomesFormationPopFileName = inputDirectory / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
+  def generateFeatures(inputDirectory: java.io.File, rng: Random) = {
+    val contourIRISFile = inputDirectory.toScala / "CONTOURS-IRIS_FE_IDF.shp"
+    val baseICEvolStructPopFileName = inputDirectory.toScala / "base-ic-evol-struct-pop-2012-IDF.csv.lzma"
+    val baseICDiplomesFormationPopFileName = inputDirectory.toScala / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
 
     for {
       geom <- readGeometry(contourIRISFile)

@@ -38,11 +38,11 @@ object Simulation extends App {
 
 
   val h24 = new H24(sigmaOpinion)
-  val world = generateWorld(path, sigmaInitialOpinion, workers, rng)
+  val world = generateWorld(path.toJava, sigmaInitialOpinion, workers, rng)
 
   def save(w: World, s: Int) = {
     val name = s"paris-with-random-mobility-with-initial-gaussian${s}.tiff"
-    WorldMapper.mapColorRGB(w, outputPath / name)
+    WorldMapper.mapColorRGB(w, outputPath / name toJava)
   }
 
   save(world, 0)
