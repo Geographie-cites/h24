@@ -24,17 +24,17 @@ import scala.util.Random
 import space._
 import dynamic._
 
-object Meatic extends App {
+object Simulation extends App {
 
   val path = File("data")
   val outputPath = File("results") / "paris"
   outputPath.createDirectories()
+
   val rng = new Random(42)
   val steps = 1000
   val workers = 1.0
   val sigmaOpinion = 0.15
   val sigmaInitialOpinion = 0.05
-  val encounterProbability = 0.1
 
   def included(individual: Individual) =
     individual.education != Education.Schol && individual.age != Age.From0To14
@@ -67,32 +67,25 @@ object Meatic extends App {
       equipments <- generation.generateEquipments(path, rng)
     } yield equipments.flatMap(_.)*/
 
-  def simulation(world: World, step: Int): World =
-    if(step <= 0) world
-    else {
-      /*def individualOpinions =
-       AggregatedEducation.all.map { ed =>
-          val is = World.allIndividuals.getAll(world).filter(i => AggregatedEducation(i.education).get == ed)
-          val bs = is.map(_.behaviour)
-          (bs.average, bs.meanSquaredError).productIterator.mkString(",")
-        }*/
-
-      //println(s"""${steps - step},${individualOpinions.mkString(",")}""")
-      val name = s"paris-with-random-mobility-with-initial-gaussian${steps - step}.tiff"
-      WorldMapper.mapColorRGB(world, outputPath / name)
-      //val convict = logistic(0.3, 10.0, 0.5)(_)
-      //def afterWork = localConviction(sigma, goToWork(world), rng)
-      def afterActivity = localConviction(sigmaOpinion, encounterProbability, randomMove(world, rng), rng)
-      //def changeCurve(meat: Double) = contact(0.8)(meat) //logistic(1.0, 2.0, 0.50)(meat)
-      def afterNight = localConviction(sigmaOpinion, encounterProbability, goBackHome(afterActivity), rng)
-      simulation(afterNight, step - 1)
-    }
-
-  //val world = assignWork(_ => rng.nextDouble() < workers, , rng)
-
   val world =
     assignWork(workers, generateAttractions(World(individuals.get, Vector.empty), 0.01, rng), rng)
-  //randomiseLocation(world, rng)
-  simulation(world, steps)
+
+  val h24 = new H24(sigmaOpinion)
+
+  def save(w: World, s: Int) = {
+     val name = s"paris-with-random-mobility-with-initial-gaussian${s}.tiff"
+        WorldMapper.mapColorRGB(w, outputPath / name)
+  }
+
+  save(world, 0)
+
+  (1 to 100).foldLeft(world) {
+    (w, s) =>
+      val nw = h24.simulation(world, 10, rng)
+      save(w, s)
+      nw
+  }
+
+
 
 }

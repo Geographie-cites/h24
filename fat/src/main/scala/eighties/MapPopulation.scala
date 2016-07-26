@@ -55,7 +55,7 @@ object MapPopulation extends App {
         age = age,
         sex = sex,
         education = education,
-        Meatic.byEducation(age, sex, education, random),
+        Simulation.byEducation(age, sex, education, random),
         home,
         None,
         home
