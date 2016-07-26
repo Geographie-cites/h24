@@ -75,7 +75,7 @@ object dynamic {
     World.individuals.set(newIndividuals.toVector)(world)
   }*/
 
-  def localConviction(sigma: Double, world: World, random: Random) = {
+  def localConviction(sigma: Double, encounterProbability: Double, world: World, random: Random) = {
     def seeds = Iterator.continually(random.nextLong)
     def seedCells =
       (Index.allCells[Individual].getAll(Index.indexIndividuals(world)).toIterator zip seeds).toSeq
@@ -87,7 +87,7 @@ object dynamic {
         else {
           val cellBehaviours = cell.map(_.behaviour)
           cell applyTraversal (each[Vector[Individual], Individual] composeLens Individual.behaviour) modify { b: Double =>
-            Opinion.sigmaAdoption(b, cellBehaviours, sigma, random)
+            if(encounterProbability < random.nextDouble()) Opinion.sigmaAdoption(b, cellBehaviours, sigma, random) else b
           }
         }
       }

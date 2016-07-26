@@ -23,10 +23,6 @@ import population._
 import scala.util.Random
 import space._
 import dynamic._
-import eighties.generation.Feature
-import org.apache.commons.math3.analysis.function.Gaussian
-import org.apache.commons.math3.distribution.NormalDistribution
-import org.apache.commons.math3.random.JDKRandomGenerator
 
 object Meatic extends App {
 
@@ -38,6 +34,7 @@ object Meatic extends App {
   val workers = 1.0
   val sigmaOpinion = 0.15
   val sigmaInitialOpinion = 0.05
+  val encounterProbability = 0.1
 
   def included(individual: Individual) =
     individual.education != Education.Schol && individual.age != Age.From0To14
@@ -73,21 +70,21 @@ object Meatic extends App {
   def simulation(world: World, step: Int): World =
     if(step <= 0) world
     else {
-      def individualOpinions =
+      /*def individualOpinions =
        AggregatedEducation.all.map { ed =>
           val is = World.allIndividuals.getAll(world).filter(i => AggregatedEducation(i.education).get == ed)
           val bs = is.map(_.behaviour)
           (bs.average, bs.meanSquaredError).productIterator.mkString(",")
-        }
+        }*/
 
-      println(s"""${steps - step},${individualOpinions.mkString(",")}""")
+      //println(s"""${steps - step},${individualOpinions.mkString(",")}""")
       val name = s"paris-with-random-mobility-with-initial-gaussian${steps - step}.tiff"
       WorldMapper.mapColorRGB(world, outputPath / name)
       //val convict = logistic(0.3, 10.0, 0.5)(_)
       //def afterWork = localConviction(sigma, goToWork(world), rng)
-      def afterActivity = localConviction(sigmaOpinion, randomMove(world, rng), rng)
+      def afterActivity = localConviction(sigmaOpinion, encounterProbability, randomMove(world, rng), rng)
       //def changeCurve(meat: Double) = contact(0.8)(meat) //logistic(1.0, 2.0, 0.50)(meat)
-      def afterNight = localConviction(sigmaOpinion, goBackHome(afterActivity), rng)
+      def afterNight = localConviction(sigmaOpinion, encounterProbability, goBackHome(afterActivity), rng)
       simulation(afterNight, step - 1)
     }
 
