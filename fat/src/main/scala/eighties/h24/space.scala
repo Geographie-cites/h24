@@ -15,14 +15,16 @@
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-package eighties
+package eighties.h24
 
-import com.vividsolutions.jts.geom.Point
-import eighties.population.{AggregatedEducation, Individual}
+import population._
+import dynamic._
 import monocle.Monocle._
 import monocle.macros._
+import better.files._
 
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Random
 
 object space {
   type Coordinate = (Double, Double)
@@ -94,4 +96,33 @@ object space {
 
   @Lenses case class Index[T](cells: Vector[Vector[Vector[T]]], sideI: Int, sideJ: Int)
   //@Lenses case class Cell(location: Location, individuals: Vector[Individual])
+
+
+  def generateWorld(path: File, sigmaInitialOpinion: Double, workerRatio: Double, rng: Random) = {
+    def included(individual: Individual) = individual.education != Education.Schol && individual.age != Age.From0To14
+
+    def byEducation = {
+      def behaviour(ed: Education, random: Random) =
+        AggregatedEducation(ed) match {
+          case Some(AggregatedEducation.Low) => clamp(-0.30 + random.nextGaussian() * sigmaInitialOpinion)
+          case Some(AggregatedEducation.Middle) => clamp(0.00 + random.nextGaussian() * sigmaInitialOpinion)
+          case Some(AggregatedEducation.High) => clamp(0.30 + random.nextGaussian() * sigmaInitialOpinion)
+          case _ => Double.NaN
+        }
+      (age: Age, sex: Sex, education: Education, rng: Random) => behaviour(education, rng)
+    }
+
+    def individuals =
+      for {
+        features <- generation.generateFeatures(path, rng)
+      } yield features.flatMap(f => Individual(f, byEducation, rng)).filter(included).toVector
+
+    /*def equipements =
+      for {
+        equipments <- generation.generateEquipments(path, rng)
+      } yield equipments.flatMap(_.)*/
+
+    assignWork(workerRatio, generateAttractions(World(individuals.get, Vector.empty), 0.01, rng), rng)
+
+  }
 }

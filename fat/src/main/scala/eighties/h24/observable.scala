@@ -15,10 +15,10 @@
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-package eighties
+package eighties.h24
 
-import eighties.population.{AggregatedEducation, Behaviour, Education}
-import space._
+import eighties.h24.population._
+import eighties.h24.space._
 
 object observable {
 

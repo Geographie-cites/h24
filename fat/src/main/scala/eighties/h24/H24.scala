@@ -15,11 +15,10 @@
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-package eighties
+package eighties.h24
 
-import space._
-import opinion._
-import dynamic._
+import eighties.h24.dynamic._
+import eighties.h24.space._
 
 import scala.util.Random
 

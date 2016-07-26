@@ -15,24 +15,22 @@
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-package eighties
+package eighties.h24
 
 import better.files._
 import org.apache.commons.math3.random.JDKRandomGenerator
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataUtilities, Transaction}
 
-import scala.util.Random
-
-object EquipmentGenerator extends App {
+object PopulationGenerator extends App {
 
   val path = File("data")
   val outputPath = File("results")
   outputPath.createDirectories()
 
-  val outFile = outputPath / "generated-equipment-75.shp"
+  val outFile = outputPath / "generated-population-75-work.shp"
 
-  val specs = "geom:Point:srid=3035,cellX:Integer,cellY:Integer,type:String,quality:String,iris:String"
+  val specs = "geom:Point:srid=3035,cellX:Integer,cellY:Integer,ageCat:Integer,age:Double,sex:Integer,education:Integer,work:Point:srid=3035"
   val factory = new ShapefileDataStoreFactory
   val dataStore = factory.createDataStore(outFile.toJava.toURI.toURL)
   val featureTypeName = "Object"
@@ -43,17 +41,21 @@ object EquipmentGenerator extends App {
   val rng = new JDKRandomGenerator(42)
 
   for {
-    (feature, i) <- generation.generateEquipments(path, rng).get.zipWithIndex
+    (feature, i) <- generation.generateFeatures(path, rng).get.zipWithIndex
   } {
     import feature._
+    val activity = generation.sampleActivity(feature, rng, 10000)
     def discrete(v:Double) = (v / 200.0).toInt
     val values = Array[AnyRef](
       point,
       discrete(location._1).asInstanceOf[AnyRef],
       discrete(location._2).asInstanceOf[AnyRef],
-      typeEquipment.asInstanceOf[AnyRef],
-      quality.asInstanceOf[AnyRef],
-      iris.asInstanceOf[AnyRef])
+      ageCategory.asInstanceOf[AnyRef],
+      age.getOrElse(75).asInstanceOf[AnyRef],
+      sex.asInstanceOf[AnyRef],
+      education.asInstanceOf[AnyRef],
+      activity.point
+    )
     val simpleFeature = writer.next
     simpleFeature.setAttributes(values)
     writer.write

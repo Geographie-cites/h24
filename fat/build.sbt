@@ -1,5 +1,9 @@
 
+organization := "eighties"
+
 name := "h24"
+
+version := "1.0.0-SNAPSHOT"
 
 scalaVersion := "2.11.8"
 
@@ -40,3 +44,17 @@ libraryDependencies ++= Seq (
 )
  
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+
+enablePlugins(SbtOsgi)
+
+osgiSettings
+
+OsgiKeys.exportPackage := Seq("eighties.h24.*")
+
+OsgiKeys.importPackage := Seq("*;resolution:=optional")
+
+OsgiKeys.privatePackage := Seq("!scala.*","*")
+
+OsgiKeys.requireCapability := ""
+
+

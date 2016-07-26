@@ -1,3 +1,5 @@
+package eighties
+
 import scala.annotation.tailrec
 import scala.util.Random
 
@@ -19,7 +21,7 @@ import scala.util.Random
   *
   */
 
-package object eighties {
+package object h24 {
   def multinomial[T](values: Seq[(T, Double)])(implicit random: Random): T = {
     @tailrec def multinomial0[T](values: List[(T, Double)])(draw: Double): T = {
       values match {
@@ -51,4 +53,7 @@ package object eighties {
       s.map { v ⇒ math.pow(v - avg, 2) }.average
     }
   }
+
+  def clamp(v: Double, min: Double = -1.0, max: Double = 1.0) = math.min(math.max(v, min), max)
+
 }

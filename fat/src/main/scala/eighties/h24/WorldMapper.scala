@@ -1,14 +1,14 @@
-package eighties
+package eighties.h24
 
 import java.awt.image.BufferedImage
 
 import better.files.File
-import eighties.population.{AggregatedEducation, Individual}
 import org.geotools.coverage.grid.GridCoverageFactory
 import org.geotools.gce.geotiff.GeoTiffFormat
 import org.geotools.geometry.jts.ReferencedEnvelope
 import org.geotools.referencing.CRS
 import org.opengis.referencing.crs.CoordinateReferenceSystem
+import population._
 
 object WorldMapper {
   val format = new GeoTiffFormat()
