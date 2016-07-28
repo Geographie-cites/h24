@@ -20,6 +20,8 @@ resolvers ++= Seq(
   "geosolutions" at "http://maven.geo-solutions.it/"
 )
 
+
+
 libraryDependencies ++= Seq (
   "com.github.julien-truffaut"  %%  "monocle-core"    % monocleVersion,
   "com.github.julien-truffaut"  %%  "monocle-generic" % monocleVersion,
@@ -40,7 +42,8 @@ libraryDependencies ++= Seq (
   "com.github.pathikrit" %% "better-files" % "2.15.0",
   "org.scalanlp" %% "breeze" % breezeVersion,
   "org.scalanlp" %% "breeze-natives" % breezeVersion,
-  "org.scalanlp" %% "breeze-viz" % breezeVersion
+  "org.scalanlp" %% "breeze-viz" % breezeVersion,
+  "org.scala-saddle" %% "saddle-core" % "1.3.4"
 )
  
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)

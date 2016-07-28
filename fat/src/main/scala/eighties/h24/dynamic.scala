@@ -34,10 +34,12 @@ object dynamic {
       if !index.cells(i)(j).isEmpty
     } yield (i, j)
 
-  def randomMove(world: World, random: Random) = {
+  def randomMove(world: World, ratio: Double, random: Random) = {
     val reach = reachable(Index.indexIndividuals(world))
     val rSize = reach.size
-    def randomLocation = Individual.location.modify(_ => reach(random.nextInt(rSize)))
+    def randomLocation =
+      Individual.location.modify(l => if(random.nextDouble() < ratio) reach(random.nextInt(rSize)) else l)
+
     (World.allIndividuals modify randomLocation) (world)
   }
 
@@ -54,38 +56,16 @@ object dynamic {
 
   type Conviction = Vector[Individual] => Vector[Individual]
 
-  /*def localConviction(sigma: Double => Double, world: World, random: Random) = {
-    def newCells =
-      Index.allCells[Individual].modify { cell =>
-        if (cell.isEmpty) cell
-        else {
-          val probaByGroup = cell.groupBy(_.behaviour).mapValues(_.size.toDouble / cell.size).mapValues(proba).withDefaultValue(0.0)
-          cell applyTraversal (each[Vector[Individual], Individual] composeLens Individual.behaviour) modify { b =>
-            b match {
-              case Behaviour.Meat => if(random.nextDouble() < probaByGroup(Behaviour.Veggie)) Behaviour.Veggie else b
-              case Behaviour.Veggie => if(random.nextDouble() < probaByGroup(Behaviour.Meat)) Behaviour.Meat else b
-            }
-          }
-        }
-      }
-
-    def newIndividuals =
-      Index.allIndividuals.getAll(newCells(Index.indexIndividuals(world)))
-
-    World.individuals.set(newIndividuals.toVector)(world)
-  }*/
-
   def localConviction(sigma: Double, world: World, random: Random) = {
-    def seeds = Iterator.continually(random.nextLong)
-    def seedCells =
-      (Index.allCells[Individual].getAll(Index.indexIndividuals(world)).toIterator zip seeds).toSeq
+    def cs = Index.allCells[Individual].getAll(Index.indexIndividuals(world))
 
     def newIndividuals =
-      seedCells.map { case (cell, seed) =>
-        val random = new Random(seed)
-        if (cell.isEmpty) cell
+      cs.map { cell =>
+        val size = cell.size
+        if (size == 0) cell
         else {
-          val cellBehaviours = cell.map(_.behaviour)
+          //val cellBehaviours = random.shuffle(cell.map(_.behaviour)).take((size * 0.01).toInt + 1).toArray
+          val cellBehaviours = random.shuffle(cell.map(_.behaviour)).toArray
           cell applyTraversal (each[Vector[Individual], Individual] composeLens Individual.behaviour) modify { b: Double =>
             opinion.sigmaAdoption(b, cellBehaviours, sigma, random)
           }

@@ -1,7 +1,11 @@
 package eighties
 
+import monocle.Traversal
+import monocle.function.Each
+
 import scala.annotation.tailrec
 import scala.util.Random
+import scalaz.Applicative
 
 /**
   * Created by Romain Reuillon on 11/05/16.
@@ -22,6 +26,7 @@ import scala.util.Random
   */
 
 package object h24 {
+
   def multinomial[T](values: Seq[(T, Double)])(implicit random: Random): T = {
     @tailrec def multinomial0[T](values: List[(T, Double)])(draw: Double): T = {
       values match {
@@ -55,5 +60,6 @@ package object h24 {
   }
 
   def clamp(v: Double, min: Double = -1.0, max: Double = 1.0) = math.min(math.max(v, min), max)
+
 
 }

@@ -35,25 +35,29 @@ object Simulation extends App {
   val workers = 1.0
   val sigmaOpinion = 0.15
   val sigmaInitialOpinion = 0.05
+  val activityRatio = 0.3
 
-
-  val h24 = new H24(sigmaOpinion)
+  val h24 = new H24(sigmaOpinion, activityRatio)
   val world = generateWorld(path.toJava, sigmaInitialOpinion, workers, rng)
+
+ println(observable.resume(world))
 
   def save(w: World, s: Int) = {
     val name = s"paris-with-random-mobility-with-initial-gaussian${s}.tiff"
     WorldMapper.mapColorRGB(w, outputPath / name toJava)
   }
 
-  save(world, 0)
+  //save(world, 0)
 
-  (1 to 100).foldLeft(world) {
-    (w, s) =>
-      val nw = h24.simulation(world, 10, rng)
-      save(w, s)
-      nw
-  }
+  val last =
+    (1 to 1).foldLeft(world) {
+      (w, s) =>
+        val nw = h24.simulation(world, 10, rng)
+        //save(w, s)
+        nw
+    }
 
 
+  println(observable.resume(last))
 
 }

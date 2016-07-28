@@ -67,7 +67,7 @@ object generation {
     val featureReader = Iterator.continually(reader.next).takeWhile(_ => reader.hasNext)
     val result =
       Try {
-        featureReader.filter(feature =>feature.getAttribute("DCOMIRIS").toString.startsWith("75"))
+        featureReader.filter(feature =>feature.getAttribute("DCOMIRIS").toString.startsWith("75113"))
           .map { feature =>
             val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon]
             val iris = feature.getAttribute("DCOMIRIS").toString
@@ -147,12 +147,12 @@ object generation {
         val total = ageSexV.sum
 
         val ageSexSizes = Seq(6,2)
-        val ageSexVariate = new RasterVariate(ageSexV, ageSexSizes)
+        val ageSexVariate = new RasterVariate(ageSexV.toArray, ageSexSizes)
 
         val educationSexSizes = Seq(7)
         val educationSexVariates = ArrayBuffer(
-          new RasterVariate(educationSexV(0), educationSexSizes),
-          new RasterVariate(educationSexV(1), educationSexSizes))
+          new RasterVariate(educationSexV(0).toArray, educationSexSizes),
+          new RasterVariate(educationSexV(1).toArray, educationSexSizes))
 
         def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
         val res = (0 until total.toInt).map{_=>
@@ -299,28 +299,31 @@ object generation {
     )
   }
 
-  class RasterVariate(pdf: Seq[Double], val m_size: Seq[Int]) {
+  class RasterVariate(pdf: Array[Double], val m_size: Seq[Int]) {
     val N = m_size.size
     val m_totalsSize = m_size.product
-    val m_cdf = buildCdf(m_totalsSize, pdf, m_size)
-    val m_sum = pdf.foldLeft(0.0)((a, b) => a + b)
+    val m_cdf = buildCdf(pdf, m_size)
+    val m_sum = pdf.sum //foldLeft(0.0)((a, b) => a + b)
 
-    def buildCdf(totsize: Int, pdf: Seq[Double], size: Seq[Int]) = {
+    def buildCdf(pdf: Array[Double], size: Seq[Int]) = {
       var sum = 0.0
-      var cdf = ArrayBuffer(sum)
-      for (i <- 0 until totsize) {
-        sum = sum + pdf(i)
-        cdf.append(sum)
+      val cdf = Array.ofDim[Double](pdf.size + 1)
+      cdf(0) = 0.0
+
+      for (i <- 1 to m_totalsSize) {
+        sum = sum + pdf(i - 1)
+        cdf(i) = sum
       }
-      cdf = cdf.map(_ / sum)
-      cdf.toIndexedSeq
+
+      cdf.map(_ / sum)
     }
 
     def compute(rng: Random): Vector[Double] = {
+      import collection.Searching._
+
       val x = rng.nextDouble()
-      var offset = m_cdf.indexWhere(p => p > x) - 1
-      //assert(offset>=0, s"$x within $m_cdf gives $offset")
-      val output = ArrayBuffer.fill(N)(0.0)
+      var offset = search(m_cdf).search(x).insertionPoint - 1
+      val output = Array.ofDim[Double](N)
       for (i <- 0 until N) {
         val ix = offset % m_size(i)
         output(i) = (ix + rng.nextDouble()) / m_size(i)
