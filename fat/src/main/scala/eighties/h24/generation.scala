@@ -23,7 +23,6 @@ import better.files._
 import com.github.tototoshi.csv.CSVReader
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
-import population._
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
 import org.apache.commons.math3.distribution.PoissonDistribution
 import org.apache.commons.math3.random.RandomGenerator
@@ -31,10 +30,12 @@ import org.geotools.data.shapefile.ShapefileDataStore
 import org.geotools.geometry.jts.{JTS, JTSFactoryFinder}
 import org.geotools.referencing.CRS
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 import scala.util.{Random, Try}
 
+import eighties.h24.population._
 
 object generation {
   object SchoolAge {
@@ -70,8 +71,7 @@ object generation {
         featureReader.filter(feature => filter(feature.getAttribute("DCOMIRIS").toString.trim))
           .map { feature =>
             val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon]
-            val iris = feature.getAttribute("DCOMIRIS").toString.trim
-            println(s"geometry $iris")
+            val iris = feature.getAttribute("DCOMIRIS").toString.replaceAll("0000$","").trim
             iris -> geom
           }.toMap
       }
@@ -83,14 +83,11 @@ object generation {
   }
 
   def withCSVReader[T](file: File)(f: CSVReader => T) = {
-    //val in = new BufferedInputStream(new FileInputStream(file.toJava))
-    val stream = new LZMAInputStream(new FileInputStream(file.toJava))
+    val in = new BufferedInputStream(new FileInputStream(file.toJava))
+    val stream = new LZMACompressorInputStream(in)
     val reader = CSVReader.open(Source.fromInputStream(stream,"ISO-8859-1"))
     try f(reader)
-    finally {
-      println("i'm closing now")
-      reader.close
-    }
+    finally reader.close
   }
 
   def readEducationSex(file: File) = withCSVReader(file){ reader =>
@@ -126,20 +123,11 @@ object generation {
   def readEquipment(file: File) = withCSVReader(file){ reader =>
     Try {
       reader.iterator.drop(1).map { line =>
-        println(line)
-        val iris = line(4).trim.replaceAll("_","").replaceAll("0000$","")
-        println(s"iris = $iris")
+        val iris = line(4).trim.replaceAll("_","").replaceAll("0000$","").trim
         val typeEquipment = line(5)
-        println(s"type = $typeEquipment")
         val x = line(6)
         val y = line(7)
-        println(s"xy = $x, $y")
         val quality = line(8)
-        println(s"quality = $quality")
-        if ((x eq null) || (y eq null)) {
-          println("null x or y for " + iris + " " + typeEquipment)
-        }
-        println(s"$iris => $typeEquipment, $x, $y, $quality")
         iris -> Vector(typeEquipment,x,y,quality)
       }.toVector
     }
@@ -253,7 +241,7 @@ object generation {
             case None => {
               val irises = geometry.filter{case (key,g)=>key.startsWith(id)}
               val size = irises.size
-              println(s"union of $size irises for $id")
+              if (size != 1) println(s"union of $size irises for $id")
               val unionGeom = union(irises.values)
               unionGeom match {
                 case Some(mp) =>
@@ -320,12 +308,16 @@ object generation {
     }.filter (e => e.point.intersects(transformedArea))
   }
   def union(polygons: Iterable[MultiPolygon]) = {
-    val geometryFactory = JTSFactoryFinder.getGeometryFactory()
-    val union = geometryFactory.createGeometryCollection(polygons.toArray).union
-    union match {
-      case p: Polygon => Some(geometryFactory.createMultiPolygon(Array(p)))
-      case mp: MultiPolygon => Some(mp)
-      case _ => None
+    if (polygons.size == 1) {
+      Some(polygons.head)
+    } else {
+      val geometryFactory = JTSFactoryFinder.getGeometryFactory()
+      val union = geometryFactory.createGeometryCollection(polygons.toArray).union
+      union match {
+        case p: Polygon => Some(geometryFactory.createMultiPolygon(Array(p)))
+        case mp: MultiPolygon => Some(mp)
+        case _ => None
+      }
     }
   }
 
