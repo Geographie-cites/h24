@@ -1,10 +1,9 @@
-package eighties
-
-import eighties.population.{AggregatedEducation, Education}
-
-import scala.util.Random
+package eighties.h24
 
 import breeze.plot._
+import eighties.h24.population._
+
+import scala.util.Random
 
 object OpinionMapper extends App {
   val sigmaOpinion = 0.15

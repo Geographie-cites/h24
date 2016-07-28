@@ -15,43 +15,37 @@
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-package eighties
+package eighties.h24
 
 import java.io.{BufferedInputStream, FileInputStream}
 
+import better.files._
 import com.github.tototoshi.csv.CSVReader
 import com.vividsolutions.jts.geom.{Coordinate, _}
-import org.tukaani.xz.LZMAInputStream
-import org.geotools.data.{DataUtilities, Transaction}
-import org.geotools.data.shapefile.{ShapefileDataStore, ShapefileDataStoreFactory}
+import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
+import population._
+import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
+import org.apache.commons.math3.distribution.PoissonDistribution
+import org.apache.commons.math3.random.RandomGenerator
+import org.geotools.data.shapefile.ShapefileDataStore
 import org.geotools.geometry.jts.{JTS, JTSFactoryFinder}
 import org.geotools.referencing.CRS
 
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
-import scala.util.{Failure, Random, Success, Try}
-import better.files._
-import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
-import eighties.population.Age
-import eighties.population.Age.AgeValue
-import org.apache.commons.math3.distribution.PoissonDistribution
-import org.apache.commons.math3.random.RandomGenerator
-
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
-import scala.util.Random
+import scala.util.{Random, Try}
 
 
 object generation {
   object SchoolAge {
-    val From0To1 = AgeValue(0, Some(1))
-    val From2To5 = AgeValue(2, Some(5))
-    val From6To10 = AgeValue(6, Some(10))
-    val From11To14 = AgeValue(11, Some(14))
-    val From15To17 = AgeValue(15, Some(17))
-    val From18To24 = AgeValue(18, Some(24))
-    val From25To29 = AgeValue(25, Some(29))
-    val Above30 = AgeValue(30, None)
+    val From0To1 = Age.AgeValue(0, Some(1))
+    val From2To5 = Age.AgeValue(2, Some(5))
+    val From6To10 = Age.AgeValue(6, Some(10))
+    val From11To14 = Age.AgeValue(11, Some(14))
+    val From15To17 = Age.AgeValue(15, Some(17))
+    val From18To24 = Age.AgeValue(18, Some(24))
+    val From25To29 = Age.AgeValue(25, Some(29))
+    val Above30 = Age.AgeValue(30, None)
     def all = Vector(From0To1, From2To5, From6To10, From11To14, From15To17, From18To24, From25To29, Above30)
     def index(age: Double) = SchoolAge.all.lastIndexWhere(value => age > value.from)
   }
@@ -216,10 +210,10 @@ object generation {
     }
   }
 
-  def generateFeatures(inputDirectory: File, rng: Random) = {
-    val contourIRISFile = inputDirectory / "CONTOURS-IRIS_FE_IDF.shp"
-    val baseICEvolStructPopFileName = inputDirectory / "base-ic-evol-struct-pop-2012-IDF.csv.lzma"
-    val baseICDiplomesFormationPopFileName = inputDirectory / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
+  def generateFeatures(inputDirectory: java.io.File, rng: Random) = {
+    val contourIRISFile = inputDirectory.toScala / "CONTOURS-IRIS_FE_IDF.shp"
+    val baseICEvolStructPopFileName = inputDirectory.toScala / "base-ic-evol-struct-pop-2012-IDF.csv.lzma"
+    val baseICDiplomesFormationPopFileName = inputDirectory.toScala / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
 
     for {
       geom <- readGeometry(contourIRISFile)
@@ -361,7 +355,7 @@ object generation {
   class RasterVariate(pdf: Seq[Double], val m_size: Seq[Int]) {
     val N = m_size.size
     val m_totalsSize = m_size.product
-    val m_cdf = buildCdf(m_totalsSize, pdf, m_size).toParArray
+    val m_cdf = buildCdf(m_totalsSize, pdf, m_size)
     val m_sum = pdf.foldLeft(0.0)((a, b) => a + b)
 
     def buildCdf(totsize: Int, pdf: Seq[Double], size: Seq[Int]) = {

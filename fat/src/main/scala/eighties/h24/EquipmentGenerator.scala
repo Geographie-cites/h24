@@ -15,7 +15,7 @@
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-package eighties
+package eighties.h24
 
 import java.io.{BufferedWriter, FileWriter}
 
@@ -23,8 +23,6 @@ import better.files._
 import org.apache.commons.math3.random.JDKRandomGenerator
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataUtilities, Transaction}
-
-import scala.util.Random
 
 object EquipmentGenerator extends App {
 

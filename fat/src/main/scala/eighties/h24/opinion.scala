@@ -1,6 +1,6 @@
-package eighties
+package eighties.h24
 
-import eighties.generation.RasterVariate
+import eighties.h24.generation._
 import org.apache.commons.math3.analysis.function.Gaussian
 
 import scala.util.Random

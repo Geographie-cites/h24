@@ -1,14 +1,14 @@
-package eighties
+package eighties.h24
 
 import java.awt.image.BufferedImage
 
 import better.files.File
-import eighties.population.{AggregatedEducation, Individual}
 import org.geotools.coverage.grid.GridCoverageFactory
 import org.geotools.gce.geotiff.GeoTiffFormat
 import org.geotools.geometry.jts.ReferencedEnvelope
 import org.geotools.referencing.CRS
 import org.opengis.referencing.crs.CoordinateReferenceSystem
+import population._
 
 object WorldMapper {
   val format = new GeoTiffFormat()
@@ -78,7 +78,7 @@ object WorldMapper {
     val coverage = factory.create("GridCoverage", bufferedImage, referencedEnvelope)
     format.getWriter(file.toJava).write(coverage, null)
   }
-  def mapColorRGB(world: space.World, file: File,
+  def mapColorRGB(world: space.World, file: java.io.File,
                   geValue: (Individual=>Double) = i=>i.behaviour,
                   minValue: Double = -0.5,
                   maxValue: Double = 0.5,
@@ -136,6 +136,6 @@ object WorldMapper {
     val referencedEnvelope = new ReferencedEnvelope(minX * cellSize, maxX * cellSize, minY * cellSize, maxY * cellSize, crs)
     val factory = new GridCoverageFactory
     val coverage = factory.create("GridCoverage", bufferedImage, referencedEnvelope)
-    format.getWriter(file.toJava).write(coverage, null)
+    format.getWriter(file).write(coverage, null)
   }
 }

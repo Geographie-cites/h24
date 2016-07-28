@@ -1,5 +1,9 @@
 
+organization := "eighties"
+
 name := "h24"
+
+version := "1.0.0-SNAPSHOT"
 
 scalaVersion := "2.11.8"
 
@@ -40,3 +44,39 @@ libraryDependencies ++= Seq (
 )
  
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+
+assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false)
+
+assemblyMergeStrategy in assembly := {
+  case x if x.startsWith("META_INF/services") => MergeStrategy.concat
+  case x if x.endsWith(".jaiext") || x.endsWith(".jai") => MergeStrategy.discard
+  case x =>
+    val oldStrategy = (assemblyMergeStrategy in assembly).value
+    oldStrategy(x)
+}
+
+/*packageOptions :=
+  Seq(
+    sbt.Package.ManifestAttributes(
+      ("Export-Package", "eighties.h24,eighties.h24.population,eighties.h24.dynamic,eighties.h24.space"),
+      ("Implementation-Title", "myLib")
+    )
+  )*/
+
+
+enablePlugins(SbtOsgi)
+
+
+osgiSettings
+
+OsgiKeys.exportPackage := Seq("eighties.h24.*")
+
+OsgiKeys.importPackage := Seq("*;resolution:=optional")
+
+OsgiKeys.privatePackage := Seq("!scala.*","**")
+
+OsgiKeys.embeddedJars := (Keys.externalDependencyClasspath in Compile).value map (_.data) filter (_.name.startsWith("gt-"))
+
+OsgiKeys.requireCapability := ""
+
+

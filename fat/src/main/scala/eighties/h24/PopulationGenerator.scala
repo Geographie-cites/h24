@@ -15,19 +15,12 @@
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-package eighties
+package eighties.h24
 
-import java.io.{BufferedInputStream, FileInputStream}
-
-import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
-import org.geotools.data.{DataUtilities, Transaction}
-import org.geotools.data.shapefile.ShapefileDataStoreFactory
-import org.geotools.geometry.jts.JTS
-import org.geotools.referencing.CRS
 import better.files._
 import org.apache.commons.math3.random.JDKRandomGenerator
-
-import scala.util.Random
+import org.geotools.data.shapefile.ShapefileDataStoreFactory
+import org.geotools.data.{DataUtilities, Transaction}
 
 object PopulationGenerator extends App {
 
@@ -48,7 +41,7 @@ object PopulationGenerator extends App {
   val rng = new JDKRandomGenerator(42)
 
   for {
-    (feature, i) <- generation.generateFeatures(path, rng).get.zipWithIndex
+    (feature, i) <- generation.generateFeatures(path.toJava, rng).get.zipWithIndex
   } {
     import feature._
     val activity = generation.sampleActivity(feature, rng, 10000)

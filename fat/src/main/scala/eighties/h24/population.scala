@@ -15,13 +15,12 @@
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-package eighties
+package eighties.h24
 
-import com.vividsolutions.jts.geom.Point
-import eighties.generation.Feature
+import generation._
 import space._
-import monocle.macros.Lenses
 import monocle.function.all._
+import monocle.macros.Lenses
 import monocle.std.all._
 
 import scala.util.Random
