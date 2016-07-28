@@ -62,7 +62,7 @@ object generation {
       case x => x.toDouble
     }
 
-  def readGeometry(aFile: File, filter: String => Boolean = _=>true) = {
+  def readGeometry(aFile: File, filter: String => Boolean) = {
     val store = new ShapefileDataStore(aFile.toJava.toURI.toURL)
     val reader = store.getFeatureReader
     val featureReader = Iterator.continually(reader.next).takeWhile(_ => reader.hasNext)
@@ -198,13 +198,13 @@ object generation {
     }
   }
 
-  def generateFeatures(inputDirectory: java.io.File, rng: Random) = {
+  def generateFeatures(inputDirectory: java.io.File, filter: String => Boolean, rng: Random) = {
     val contourIRISFile = inputDirectory.toScala / "CONTOURS-IRIS_FE_IDF.shp"
     val baseICEvolStructPopFileName = inputDirectory.toScala / "base-ic-evol-struct-pop-2012-IDF.csv.lzma"
     val baseICDiplomesFormationPopFileName = inputDirectory.toScala / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
 
     for {
-      geom <- readGeometry(contourIRISFile)
+      geom <- readGeometry(contourIRISFile, filter)
       ageSex <- readAgeSex(baseICEvolStructPopFileName)
       schoolAge <- readAgeSchool(baseICDiplomesFormationPopFileName)
       educationSex <- readEducationSex(baseICDiplomesFormationPopFileName)
@@ -321,11 +321,11 @@ object generation {
     }
   }
 
-  def generateEquipments(inputDirectory: File, rng: Random) = {
+  def generateEquipments(inputDirectory: File, filter: String => Boolean, rng: Random) = {
     val BPEFile = inputDirectory / "bpe14-IDF.csv.lzma"
     val contourIRISFile = inputDirectory / "CONTOURS-IRIS_FE_IDF.shp"
     for {
-      geom <- readGeometry(contourIRISFile).toOption
+      geom <- readGeometry(contourIRISFile, filter).toOption
       completeArea <- union(geom.values)
       equipment <- readEquipment(BPEFile).toOption
     } yield generateEquipment(rng, equipment, geom, completeArea)//.toIterator

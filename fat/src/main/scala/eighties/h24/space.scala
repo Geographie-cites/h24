@@ -98,7 +98,7 @@ object space {
   //@Lenses case class Cell(location: Location, individuals: Vector[Individual])
 
 
-  def generateWorld(path: java.io.File, sigmaInitialOpinion: Double, workerRatio: Double, rng: Random) = {
+  def generateWorld(path: java.io.File, filter: String => Boolean, sigmaInitialOpinion: Double, workerRatio: Double, rng: Random) = {
     def included(individual: Individual) = individual.education != Education.Schol && individual.age != Age.From0To14
 
     def byEducation = {
@@ -114,7 +114,7 @@ object space {
 
     def individuals =
       for {
-        features <- generation.generateFeatures(path, rng)
+        features <- generation.generateFeatures(path, filter, rng)
       } yield features.flatMap(f => Individual(f, byEducation, rng)).filter(included).toVector
 
     /*def equipements =

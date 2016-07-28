@@ -38,7 +38,7 @@ object Simulation extends App {
   val activityRatio = 0.3
 
   val h24 = new H24(sigmaOpinion, activityRatio)
-  val world = generateWorld(path.toJava, sigmaInitialOpinion, workers, rng)
+  val world = generateWorld(path.toJava, _.startsWith("75113"), sigmaInitialOpinion, workers, rng)
 
  println(observable.resume(world))
 

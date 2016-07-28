@@ -45,7 +45,7 @@ object EquipmentGenerator extends App {
 
   val bw = new BufferedWriter(new FileWriter(outFileCSV.toJava))
 
-  for ((feature, i) <- generation.generateEquipments(path, rng).get.zipWithIndex) {
+  for ((feature, i) <- generation.generateEquipments(path, _ => true, rng).get.zipWithIndex) {
     import feature._
     def discrete(v:Double) = (v / 200.0).toInt
     val cellX = discrete(location._1)

@@ -41,7 +41,7 @@ object PopulationGenerator extends App {
   val rng = new JDKRandomGenerator(42)
 
   for {
-    (feature, i) <- generation.generateFeatures(path.toJava, rng).get.zipWithIndex
+    (feature, i) <- generation.generateFeatures(path.toJava, _ => true, rng).get.zipWithIndex
   } {
     import feature._
     val activity = generation.sampleActivity(feature, rng, 10000)

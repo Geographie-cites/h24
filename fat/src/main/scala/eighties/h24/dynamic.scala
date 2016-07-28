@@ -65,7 +65,7 @@ object dynamic {
         if (size == 0) cell
         else {
           //val cellBehaviours = random.shuffle(cell.map(_.behaviour)).take((size * 0.01).toInt + 1).toArray
-          val cellBehaviours = random.shuffle(cell.map(_.behaviour)).toArray
+          val cellBehaviours = cell.map(_.behaviour).toArray
           cell applyTraversal (each[Vector[Individual], Individual] composeLens Individual.behaviour) modify { b: Double =>
             opinion.sigmaAdoption(b, cellBehaviours, sigma, random)
           }
