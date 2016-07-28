@@ -17,11 +17,11 @@
   */
 package eighties
 
-import java.io.{BufferedInputStream, FileInputStream, InputStream}
+import java.io.{BufferedInputStream, FileInputStream}
 
 import com.github.tototoshi.csv.CSVReader
 import com.vividsolutions.jts.geom.{Coordinate, _}
-import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
+import org.tukaani.xz.LZMAInputStream
 import org.geotools.data.{DataUtilities, Transaction}
 import org.geotools.data.shapefile.{ShapefileDataStore, ShapefileDataStoreFactory}
 import org.geotools.geometry.jts.{JTS, JTSFactoryFinder}
@@ -29,7 +29,7 @@ import org.geotools.referencing.CRS
 
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
-import scala.util.{Random, Try}
+import scala.util.{Failure, Random, Success, Try}
 import better.files._
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
 import eighties.population.Age
@@ -37,10 +37,9 @@ import eighties.population.Age.AgeValue
 import org.apache.commons.math3.distribution.PoissonDistribution
 import org.apache.commons.math3.random.RandomGenerator
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
-import scalaz._
-import Scalaz._
 
 
 object generation {
@@ -68,31 +67,36 @@ object generation {
       case x => x.toDouble
     }
 
-  def readGeometry(aFile: File) = {
+  def readGeometry(aFile: File, filter: String => Boolean = _=>true) = {
     val store = new ShapefileDataStore(aFile.toJava.toURI.toURL)
     val reader = store.getFeatureReader
     val featureReader = Iterator.continually(reader.next).takeWhile(_ => reader.hasNext)
     val result =
       Try {
-        featureReader.filter(feature =>feature.getAttribute("DCOMIRIS").toString.startsWith("75"))
+        featureReader.filter(feature => filter(feature.getAttribute("DCOMIRIS").toString.trim))
           .map { feature =>
             val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon]
-            val iris = feature.getAttribute("DCOMIRIS").toString
+            val iris = feature.getAttribute("DCOMIRIS").toString.trim
+            println(s"geometry $iris")
             iris -> geom
           }.toMap
       }
     reader.close
     store.dispose
-
-    result
+    val map = new scala.collection.mutable.HashMap[IrisID, MultiPolygon]()
+    result.map(m=>m.map(v=>map+=v))
+    Try(map)
   }
 
   def withCSVReader[T](file: File)(f: CSVReader => T) = {
-    val in = new BufferedInputStream(new FileInputStream(file.toJava))
-    val stream = new LZMACompressorInputStream(in)
+    //val in = new BufferedInputStream(new FileInputStream(file.toJava))
+    val stream = new LZMAInputStream(new FileInputStream(file.toJava))
     val reader = CSVReader.open(Source.fromInputStream(stream,"ISO-8859-1"))
     try f(reader)
-    finally reader.close
+    finally {
+      println("i'm closing now")
+      reader.close
+    }
   }
 
   def readEducationSex(file: File) = withCSVReader(file){ reader =>
@@ -128,17 +132,26 @@ object generation {
   def readEquipment(file: File) = withCSVReader(file){ reader =>
     Try {
       reader.iterator.drop(1).map { line =>
+        println(line)
         val iris = line(4).trim.replaceAll("_","").replaceAll("0000$","")
+        println(s"iris = $iris")
         val typeEquipment = line(5)
+        println(s"type = $typeEquipment")
         val x = line(6)
         val y = line(7)
+        println(s"xy = $x, $y")
         val quality = line(8)
+        println(s"quality = $quality")
+        if ((x eq null) || (y eq null)) {
+          println("null x or y for " + iris + " " + typeEquipment)
+        }
+        println(s"$iris => $typeEquipment, $x, $y, $quality")
         iris -> Vector(typeEquipment,x,y,quality)
-      }.toMap
+      }.toVector
     }
   }
 
-  def generatePopulation(rnd: Random, geometry: Map[IrisID, MultiPolygon], ageSex: Map[IrisID, Vector[Double]],
+  def generatePopulation(rnd: Random, geometry: mutable.HashMap[IrisID, MultiPolygon], ageSex: Map[IrisID, Vector[Double]],
                          schoolAge: Map[IrisID, Vector[Double]], educationSex: Map[IrisID, Vector[Vector[Double]]]) = {
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
@@ -216,14 +229,14 @@ object generation {
     } yield generatePopulation(rng, geom, ageSex, schoolAge, educationSex).toIterator.flatten
   }
 
-  def generateEquipment(rnd: Random, eq: Map[IrisID, Vector[String]], geometry: Map[IrisID, MultiPolygon]) = {
+  def generateEquipment(rnd: Random, eq: Vector[(IrisID, Vector[String])], geometry: mutable.HashMap[IrisID, MultiPolygon], completeArea: MultiPolygon) = {
     val l93CRS = CRS.decode("EPSG:2154")
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
     val transformL93 = CRS.findMathTransform(l93CRS, outCRS, true)
     val transformL2E = CRS.findMathTransform(l2eCRS, outCRS, true)
-
-    eq.toSeq.map {
+    val transformedArea = JTS.transform(completeArea, transformL93)
+    eq.map {
       case (id, vec) => {
         val typeEquipment = vec(0)
         val x = vec(1)
@@ -241,7 +254,45 @@ object generation {
             iris = id
           )
         } else {
-          val irises = geometry.filter{case (key,g)=>key.startsWith(id)}
+          val geom = geometry.get(id) match {
+            case Some(mp) => Some(mp)
+            case None => {
+              val irises = geometry.filter{case (key,g)=>key.startsWith(id)}
+              val size = irises.size
+              println(s"union of $size irises for $id")
+              val unionGeom = union(irises.values)
+              unionGeom match {
+                case Some(mp) =>
+                  geometry+=(id->mp)
+                  Some(mp)
+                case None => None
+              }
+            }
+          }
+          geom match {
+            case Some(g) => {
+              val sampler = new PolygonSampler(g)
+              val coordinate = sampler(rnd)
+              val transformed = JTS.transform(coordinate, null, transformL93)
+              val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
+              Equipment(
+                typeEquipment = typeEquipment,
+                point = point,
+                location = (point.getX, point.getY),
+                quality = quality,
+                iris = id
+              )
+            }
+            case None => Equipment(
+              typeEquipment = typeEquipment,
+              point = JTS.toGeometry(JTS.toDirectPosition(new Coordinate(0.0,0.0), outCRS)),
+              location = (0.0, 0.0),
+              quality = quality,
+              iris = id
+            )
+          }
+          /*
+          val irises = geometry.filter{case (key,g)=>key.equalsIgnoreCase(id)||key.startsWith(id)}
           val size = irises.size
           if (size == 0) {
             println(s"Could Not find IRIS $id")
@@ -258,7 +309,7 @@ object generation {
             }
             val geom = union(irises.values)
             val sampler = new PolygonSampler(geom.get)
-            val coordinate = sampler.apply(rnd)
+            val coordinate = sampler(rnd)
             val transformed = JTS.transform(coordinate, null, transformL93)
             val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
             Equipment(
@@ -269,9 +320,10 @@ object generation {
               iris = id
             )
           }
+          */
         }
       }
-    }
+    }.filter (e => e.point.intersects(transformedArea))
   }
   def union(polygons: Iterable[MultiPolygon]) = {
     val geometryFactory = JTSFactoryFinder.getGeometryFactory()
@@ -286,11 +338,11 @@ object generation {
   def generateEquipments(inputDirectory: File, rng: Random) = {
     val BPEFile = inputDirectory / "bpe14-IDF.csv.lzma"
     val contourIRISFile = inputDirectory / "CONTOURS-IRIS_FE_IDF.shp"
-
     for {
-      equipment <- readEquipment(BPEFile)
-      geom <- readGeometry(contourIRISFile)
-    } yield generateEquipment(rng, equipment, geom).toIterator
+      geom <- readGeometry(contourIRISFile).toOption
+      completeArea <- union(geom.values)
+      equipment <- readEquipment(BPEFile).toOption
+    } yield generateEquipment(rng, equipment, geom, completeArea)//.toIterator
   }
 
   def sampleActivity(feature: Feature, rnd: RandomGenerator, distance: Double = 10000) = {

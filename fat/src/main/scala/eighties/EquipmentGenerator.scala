@@ -17,6 +17,8 @@
   */
 package eighties
 
+import java.io.{BufferedWriter, FileWriter}
+
 import better.files._
 import org.apache.commons.math3.random.JDKRandomGenerator
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
@@ -30,7 +32,8 @@ object EquipmentGenerator extends App {
   val outputPath = File("results")
   outputPath.createDirectories()
 
-  val outFile = outputPath / "generated-equipment-75.shp"
+  val outFile = outputPath / "generated-equipment-IDF.shp"
+  val outFileCSV = outputPath / "generated-equipment-IDF.csv"
 
   val specs = "geom:Point:srid=3035,cellX:Integer,cellY:Integer,type:String,quality:String,iris:String"
   val factory = new ShapefileDataStoreFactory
@@ -42,21 +45,25 @@ object EquipmentGenerator extends App {
   val writer = dataStore.getFeatureWriterAppend(typeName, Transaction.AUTO_COMMIT)
   val rng = new JDKRandomGenerator(42)
 
-  for {
-    (feature, i) <- generation.generateEquipments(path, rng).get.zipWithIndex
-  } {
+  val bw = new BufferedWriter(new FileWriter(outFileCSV.toJava))
+
+  for ((feature, i) <- generation.generateEquipments(path, rng).get.zipWithIndex) {
     import feature._
     def discrete(v:Double) = (v / 200.0).toInt
+    val cellX = discrete(location._1)
+    val cellY = discrete(location._2)
     val values = Array[AnyRef](
       point,
-      discrete(location._1).asInstanceOf[AnyRef],
-      discrete(location._2).asInstanceOf[AnyRef],
+      cellX.asInstanceOf[AnyRef],
+      cellY.asInstanceOf[AnyRef],
       typeEquipment.asInstanceOf[AnyRef],
       quality.asInstanceOf[AnyRef],
       iris.asInstanceOf[AnyRef])
     val simpleFeature = writer.next
     simpleFeature.setAttributes(values)
     writer.write
+    bw.write(s"$cellX, $cellY\n")
   }
   writer.close
+  bw.close
 }
