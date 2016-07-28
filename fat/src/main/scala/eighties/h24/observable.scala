@@ -19,27 +19,23 @@ package eighties.h24
 
 import eighties.h24.population._
 import eighties.h24.space._
+import org.saddle._
 
 object observable {
 
-  def ratioOfPopulation(world: World, behaviour: Behaviour) =
-    world.individuals.count(_.behaviour == behaviour).toDouble / world.individuals.size
+  def byEducation[T](b: Vec[Behaviour] => T) =
+    (world: World) =>
+      for {
+        ed <- AggregatedEducation.all
+        level = world.individuals.filter(i => AggregatedEducation(i.education).map(_ == ed).getOrElse(false))
+      } yield ed -> b(level.map(_.behaviour).toVec)
 
+  def medianByEducation = byEducation(_.median)
+  def mseByEducation = byEducation(b => math.sqrt(b.variance))
+  def meanByEducation = byEducation(_.mean)
 
-  def ratioByEducation(world: World, behaviour: Behaviour) =
-    for {
-      ed <- Education.all
-      level = world.individuals.filter(i => i.education == ed)
-      behave = level.filter(i => i.behaviour == behaviour)
-    } yield ed -> (behave.size.toDouble / level.size)
-
-
-  def ratioByAggregatedEducation(world: World, behaviour: Behaviour) =
-    for {
-      ed <- AggregatedEducation.all
-      level = world.individuals.filter(i => AggregatedEducation(i.education).map(_ == ed).getOrElse(false))
-      behave = level.filter(i => i.behaviour == behaviour)
-    } yield ed -> (behave.size.toDouble / level.size)
+  def resume =
+    byEducation(b => Seq(b.mean, math.sqrt(b.variance), b.median))
 
 
 }

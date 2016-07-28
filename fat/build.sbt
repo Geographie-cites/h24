@@ -20,6 +20,8 @@ resolvers ++= Seq(
   "geosolutions" at "http://maven.geo-solutions.it/"
 )
 
+
+
 libraryDependencies ++= Seq (
   "com.github.julien-truffaut"  %%  "monocle-core"    % monocleVersion,
   "com.github.julien-truffaut"  %%  "monocle-generic" % monocleVersion,
@@ -40,32 +42,13 @@ libraryDependencies ++= Seq (
   "com.github.pathikrit" %% "better-files" % "2.15.0",
   "org.scalanlp" %% "breeze" % breezeVersion,
   "org.scalanlp" %% "breeze-natives" % breezeVersion,
-  "org.scalanlp" %% "breeze-viz" % breezeVersion
+  "org.scalanlp" %% "breeze-viz" % breezeVersion,
+  "org.scala-saddle" %% "saddle-core" % "1.3.4"
 )
  
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 
-assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false)
-
-assemblyMergeStrategy in assembly := {
-  case x if x.startsWith("META_INF/services") => MergeStrategy.concat
-  case x if x.endsWith(".jaiext") || x.endsWith(".jai") => MergeStrategy.discard
-  case x =>
-    val oldStrategy = (assemblyMergeStrategy in assembly).value
-    oldStrategy(x)
-}
-
-/*packageOptions :=
-  Seq(
-    sbt.Package.ManifestAttributes(
-      ("Export-Package", "eighties.h24,eighties.h24.population,eighties.h24.dynamic,eighties.h24.space"),
-      ("Implementation-Title", "myLib")
-    )
-  )*/
-
-
 enablePlugins(SbtOsgi)
-
 
 osgiSettings
 
