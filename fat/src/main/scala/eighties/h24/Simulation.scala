@@ -48,6 +48,7 @@ object Simulation extends App {
     WorldMapper.mapColorRGB(w, outputPath / name toJava)
   }
 
+
   //save(world, 0)
 
   val last =
