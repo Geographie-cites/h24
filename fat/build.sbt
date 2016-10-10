@@ -17,7 +17,8 @@ val breezeVersion = "0.12"
 
 resolvers ++= Seq(
   "osgeo" at "http://download.osgeo.org/webdav/geotools/",
-  "geosolutions" at "http://maven.geo-solutions.it/"
+  "geosolutions" at "http://maven.geo-solutions.it/",
+  "geotoolkit" at "http://maven.geotoolkit.org/"
 )
 
 
@@ -26,7 +27,7 @@ libraryDependencies ++= Seq (
   "com.github.julien-truffaut"  %%  "monocle-core"    % monocleVersion,
   "com.github.julien-truffaut"  %%  "monocle-generic" % monocleVersion,
   "com.github.julien-truffaut"  %%  "monocle-macro"   % monocleVersion,
-  "javax.media" % "jai_core" % "1.1.3" from "http://download.osgeo.org/webdav/geotools/javax/media/jai_core/1.1.3/jai_core-1.1.3.jar",
+  //"javax.media" % "jai_core" % "1.1.3" from "http://download.osgeo.org/webdav/geotools/javax/media/jai_core/1.1.3/jai_core-1.1.3.jar",
   "org.geotools" % "gt-referencing" % geotoolsVersion,
   "org.geotools" % "gt-shapefile" % geotoolsVersion,
   "org.geotools" % "gt-epsg-wkt" % geotoolsVersion,
