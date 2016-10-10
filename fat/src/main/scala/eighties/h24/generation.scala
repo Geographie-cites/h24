@@ -140,14 +140,7 @@ object generation {
     }
   }
 
-<<<<<<< HEAD
-  def generatePopulation(
-    rnd: Random,
-    geometry: mutable.HashMap[IrisID, MultiPolygon],
-    ageSex: Map[IrisID, Vector[Double]],
-    schoolAge: Map[IrisID, Vector[Double]],
-    educationSex: Map[IrisID, Vector[Vector[Double]]]) = {
-=======
+
   def readMobilityFlows(file: File)(commune:String) = withCSVReader(file) { reader =>
     Try {
       reader.iterator.drop(1).filter(l=>l(0)==commune).map { line =>
@@ -158,9 +151,12 @@ object generation {
     }
   }
 
-  def generatePopulation(rnd: Random, geometry: Map[AreaID, MultiPolygon], ageSex: Map[AreaID, Vector[Double]],
-                         schoolAge: Map[AreaID, Vector[Double]], educationSex: Map[AreaID, Vector[Vector[Double]]]) = {
->>>>>>> 0b13bf957d27a1642bfa487240bfc56fb04cad8b
+  def generatePopulation(
+    rnd: Random, geometry: Map[AreaID, MultiPolygon],
+    ageSex: Map[AreaID, Vector[Double]],
+    schoolAge: Map[AreaID, Vector[Double]],
+    educationSex: Map[AreaID, Vector[Vector[Double]]]) = {
+    
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(inCRS, outCRS, true)
