@@ -60,7 +60,4 @@ object Simulation extends App {
         println(observable.resume(nw))
         nw
     }
-
-
-
 }

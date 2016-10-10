@@ -33,7 +33,6 @@ object space {
   /* définition d'un voisinage*/
   def neighbours(side: Int, location: Location, size: Int) = {
     val (i, j) = location
-
     for {
       di <- (-size to size)
       dj <- (-size to size)
@@ -126,6 +125,7 @@ object space {
         equipments <- generation.generateEquipments(path, rng)
       } yield equipments.flatMap(_.)*/
 
+    //def mobilityFlows = generation.readMobilityFlows(path)("")
     assignWork(workerRatio, generateAttractions(World(individuals.get, Vector.empty), 0.01, rng), rng)
 
   }
