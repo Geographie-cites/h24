@@ -95,10 +95,14 @@ object space {
   }
 
   @Lenses case class Index[T](cells: Vector[Vector[Vector[T]]], sideI: Int, sideJ: Int)
-  //@Lenses case class Cell(location: Location, individuals: Vector[Individual])
 
+  def generateWorld(
+    path: java.io.File,
+    filter: String => Boolean,
+    sigmaInitialOpinion: Double,
+    workerRatio: Double,
+    rng: Random) = {
 
-  def generateWorld(path: java.io.File, filter: String => Boolean, sigmaInitialOpinion: Double, workerRatio: Double, rng: Random) = {
     def included(individual: Individual) = individual.education != Education.Schol && individual.age != Age.From0To14
 
     def byEducation = {

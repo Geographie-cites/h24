@@ -21,6 +21,7 @@ import better.files._
 import eighties.h24.dynamic._
 import eighties.h24.population._
 import eighties.h24.space._
+import shapeless.Lazy
 
 import scala.util.Random
 

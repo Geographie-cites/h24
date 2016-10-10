@@ -52,7 +52,15 @@ object generation {
   }
 
   type IrisID = String
-  case class Feature(ageCategory: Int, age: Option[Double], sex: Int, education: Int, point: Point, location: space.Coordinate)
+
+  case class Feature(
+    ageCategory: Int,
+    age: Option[Double],
+    sex: Int,
+    education: Int,
+    point: Point,
+    location: space.Coordinate)
+
   case class Equipment(typeEquipment: String, point: Point, location:space.Coordinate, quality:String, iris:String)
   case class Activity(point: Point, location: space.Coordinate)
 
@@ -133,8 +141,12 @@ object generation {
     }
   }
 
-  def generatePopulation(rnd: Random, geometry: mutable.HashMap[IrisID, MultiPolygon], ageSex: Map[IrisID, Vector[Double]],
-                         schoolAge: Map[IrisID, Vector[Double]], educationSex: Map[IrisID, Vector[Vector[Double]]]) = {
+  def generatePopulation(
+    rnd: Random,
+    geometry: mutable.HashMap[IrisID, MultiPolygon],
+    ageSex: Map[IrisID, Vector[Double]],
+    schoolAge: Map[IrisID, Vector[Double]],
+    educationSex: Map[IrisID, Vector[Vector[Double]]]) = {
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(inCRS, outCRS, true)
