@@ -56,7 +56,7 @@ object dynamic {
 
   type Conviction = Vector[Individual] => Vector[Individual]
 
-  def localConviction(sigma: Double, world: World, random: Random) = {
+  def localConviction(gama: Double, world: World, random: Random) = {
     def cs = Index.allCells[Individual].getAll(Index.indexIndividuals(world))
 
     def newIndividuals =
@@ -67,7 +67,7 @@ object dynamic {
           //val cellBehaviours = random.shuffle(cell.map(_.behaviour)).take((size * 0.01).toInt + 1).toArray
           val cellBehaviours = cell.map(_.behaviour).toArray
           cell applyTraversal (each[Vector[Individual], Individual] composeLens Individual.behaviour) modify { b: Double =>
-            opinion.sigmaAdoption(b, cellBehaviours, sigma, random)
+            opinion.binomialAdoption(b, cellBehaviours, gama, random)
           }
         }
       }

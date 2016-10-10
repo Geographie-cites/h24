@@ -104,9 +104,9 @@ object space {
     def byEducation = {
       def behaviour(ed: Education, random: Random) =
         AggregatedEducation(ed) match {
-          case Some(AggregatedEducation.Low) => clamp(-0.30 + random.nextGaussian() * sigmaInitialOpinion)
-          case Some(AggregatedEducation.Middle) => clamp(0.00 + random.nextGaussian() * sigmaInitialOpinion)
-          case Some(AggregatedEducation.High) => clamp(0.30 + random.nextGaussian() * sigmaInitialOpinion)
+          case Some(AggregatedEducation.Low) => (-1.0 + random.nextGaussian() * sigmaInitialOpinion)
+          case Some(AggregatedEducation.Middle) => (0.0 + random.nextGaussian() * sigmaInitialOpinion)
+          case Some(AggregatedEducation.High) => (1.0 + random.nextGaussian() * sigmaInitialOpinion)
           case _ => Double.NaN
         }
       (age: Age, sex: Sex, education: Education, rng: Random) => behaviour(education, rng)

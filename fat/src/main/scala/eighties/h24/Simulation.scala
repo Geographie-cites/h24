@@ -31,14 +31,14 @@ object Simulation extends App {
   outputPath.createDirectories()
 
   val rng = new Random(42)
-  val steps = 1000
+  val steps = 10
   val workers = 1.0
-  val sigmaOpinion = 0.15
   val sigmaInitialOpinion = 0.05
+  val gamaOpinion = 2
   val activityRatio = 0.3
 
-  val h24 = new H24(sigmaOpinion, activityRatio)
-  val world = generateWorld(path.toJava, _.startsWith("75113"), sigmaInitialOpinion, workers, rng)
+  val h24 = new H24(gamaOpinion, activityRatio)
+  val world = generateWorld(path.toJava, _.startsWith("75"), sigmaInitialOpinion, workers, rng)
 
  println(observable.resume(world))
 
@@ -50,14 +50,16 @@ object Simulation extends App {
   //save(world, 0)
 
   val last =
-    (1 to 1).foldLeft(world) {
+    (1 to steps).foldLeft(world) {
       (w, s) =>
+        println(s)
         val nw = h24.simulation(world, 10, rng)
         //save(w, s)
+
+        println(observable.resume(nw))
         nw
     }
 
 
-  println(observable.resume(last))
 
 }

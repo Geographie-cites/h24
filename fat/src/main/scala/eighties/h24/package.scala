@@ -61,5 +61,4 @@ package object h24 {
 
   def clamp(v: Double, min: Double = -1.0, max: Double = 1.0) = math.min(math.max(v, min), max)
 
-
 }
