@@ -53,13 +53,14 @@ object generation {
   }
 
   case class AreaID(id: String) extends AnyVal
-  case class Feature(
+  case class IndividualFeature(
     ageCategory: Int,
     age: Option[Double],
     sex: Int,
     education: Int,
     point: Point,
-    location: space.Coordinate)
+    location: space.Coordinate,
+    iris: AreaID)
 
   case class Equipment(typeEquipment: String, point: Point, location:space.Coordinate, quality: String, iris: AreaID)
   case class Activity(point: Point, location: space.Coordinate)
@@ -71,18 +72,29 @@ object generation {
     }
 
   def readGeometry(aFile: File, filter: String => Boolean) = {
+    def aggregated(geometry: Map[AreaID, MultiPolygon]) = scalaz.Memo.mutableHashMapMemo { (id: AreaID) =>
+      geometry.get(id) match {
+        case Some(mp) => Some(mp)
+        case None =>
+          val irises = geometry.filter { case (key, g) => key.id.startsWith(id.id) }
+          union(irises.values)
+      }
+    }
+
+
     val store = new ShapefileDataStore(aFile.toJava.toURI.toURL)
     try {
       val reader = store.getFeatureReader
       try {
         Try {
           val featureReader = Iterator.continually(reader.next).takeWhile(_ => reader.hasNext)
-          featureReader.filter(feature => filter(feature.getAttribute("DCOMIRIS").toString.trim))
+          val irises = featureReader.filter(feature => filter(feature.getAttribute("DCOMIRIS").toString.trim))
             .map { feature =>
               val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon]
               val iris = feature.getAttribute("DCOMIRIS").toString.replaceAll("0000$", "").trim
               AreaID(iris) -> geom
             }.toMap
+          irises.map(_._1) -> aggregated(irises)
         }
       } finally reader.close
     } finally store.dispose
@@ -151,7 +163,9 @@ object generation {
   }
 
   def generatePopulation(
-    rnd: Random, geometry: Map[AreaID, MultiPolygon],
+    rnd: Random,
+    irises: Seq[AreaID],
+    geometry: AreaID => Option[MultiPolygon],
     ageSex: Map[AreaID, Vector[Double]],
     schoolAge: Map[AreaID, Vector[Double]],
     educationSex: Map[AreaID, Vector[Vector[Double]]]) = {
@@ -160,12 +174,12 @@ object generation {
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(inCRS, outCRS, true)
 
-    geometry.toSeq.map {
-      case (id, geom) => {
+    irises.map { id =>
         val ageSexV = ageSex.get(id).get
         val schoolAgeV = schoolAge.get(id).get
         val educationSexV = educationSex.get(id).get
-        val sampler = new PolygonSampler(geom)
+
+        val sampler = new PolygonSampler(geometry(id).get)
 
         val total = ageSexV.sum
 
@@ -178,7 +192,7 @@ object generation {
           new RasterVariate(educationSexV(1).toArray, educationSexSizes))
 
         def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
-        val res = (0 until total.toInt).map{_=>
+        val res = (0 until total.toInt).map{ _ =>
           val sample = ageSexVariate.compute(rnd)
           val ageIndex = (sample(0)*ageSexSizes(0)).toInt
           val ageInterval = Age.all(ageIndex)
@@ -205,18 +219,18 @@ object generation {
           val coordinate = sampler.apply(rnd)
           val transformed = JTS.transform(coordinate, null, transform)
           val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
-          Feature(
+          IndividualFeature(
             ageCategory = ageIndex,
             age = age,
             sex = sex,
             education = education,
             point = point,
-            location = (point.getX,point.getY)
+            location = (point.getX,point.getY),
+            id
           )
         }
         res
       }
-    }
   }
 
   def generateFeatures(inputDirectory: java.io.File, filter: String => Boolean, rng: Random) = {
@@ -225,21 +239,14 @@ object generation {
     val baseICDiplomesFormationPopFileName = inputDirectory.toScala / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
 
     for {
-      geom <- readGeometry(contourIRISFile, filter)
+      (irises, geom) <- readGeometry(contourIRISFile, filter)
       ageSex <- readAgeSex(baseICEvolStructPopFileName)
       schoolAge <- readAgeSchool(baseICDiplomesFormationPopFileName)
       educationSex <- readEducationSex(baseICDiplomesFormationPopFileName)
-    } yield generatePopulation(rng, geom, ageSex, schoolAge, educationSex).toIterator.flatten
+    } yield generatePopulation(rng, irises.toSeq, geom, ageSex, schoolAge, educationSex).toIterator.flatten
   }
 
-  // TODO: cache computed geometries
-  def getGeometry(geometry: Map[AreaID, MultiPolygon])(id: AreaID) =
-    geometry.get(id) match {
-      case Some(mp) => Some(mp)
-      case None =>
-        val irises = geometry.filter{ case (key, g) => key.id.startsWith(id.id) }
-        union(irises.values)
-    }
+
 
   def generatePoint(geom: MultiPolygon, inOutTransform: MathTransform, outCRS: CoordinateReferenceSystem)(rnd:Random) = {
       val sampler = new PolygonSampler(geom)
@@ -248,7 +255,7 @@ object generation {
       JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
     }
 
-  def generateEquipment(rnd: Random, eq: Vector[(AreaID, Vector[String])], geometry: Map[AreaID, MultiPolygon], completeArea: MultiPolygon) = {
+  def generateEquipment(rnd: Random, eq: Vector[(AreaID, Vector[String])], geometry: AreaID => Option[MultiPolygon], completeArea: MultiPolygon) = {
     val l93CRS = CRS.decode("EPSG:2154")
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
@@ -273,7 +280,7 @@ object generation {
             iris = id
           )
         } else {
-          val geom = getGeometry(geometry)(id)
+          val geom = geometry(id)
           geom match {
             case Some(g) => {
               val point = generatePoint(g, transformL93, outCRS)(rnd)
@@ -327,6 +334,7 @@ object generation {
       }
     }.filter (e => e.point.intersects(transformedArea))
   }
+
   def union(polygons: Iterable[MultiPolygon]) = {
     if (polygons.size == 1) {
       Some(polygons.head)
@@ -345,13 +353,13 @@ object generation {
     val BPEFile = inputDirectory / "bpe14-IDF.csv.lzma"
     val contourIRISFile = inputDirectory / "CONTOURS-IRIS_FE_IDF.shp"
     for {
-      geom <- readGeometry(contourIRISFile, filter).toOption
-      completeArea <- union(geom.values)
+      (irises, geometry) <- readGeometry(contourIRISFile, filter).toOption
+      completeArea <- union(irises.flatMap(i => geometry(i).toSeq))
       equipment <- readEquipment(BPEFile).toOption
-    } yield generateEquipment(rng, equipment, geom, completeArea)//.toIterator
+    } yield generateEquipment(rng, equipment, geometry, completeArea)//.toIterator
   }
 
-  def sampleActivity(feature: Feature, rnd: RandomGenerator, distance: Double = 10000) = {
+  def sampleActivity(feature: IndividualFeature, rnd: RandomGenerator, distance: Double = 10000) = {
     val poisson = new PoissonDistribution(rnd, distance, PoissonDistribution.DEFAULT_EPSILON, PoissonDistribution.DEFAULT_MAX_ITERATIONS)
     val dist = poisson.sample.toDouble
     val angle = rnd.nextDouble * Math.PI * 2.0

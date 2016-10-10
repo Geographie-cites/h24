@@ -143,7 +143,7 @@ object population {
   }*/
 
   object Individual {
-    def apply(feature: Feature, behaviour: (Age, Sex, Education, Random) => Behaviour, random: Random): Option[Individual] =
+    def apply(feature: IndividualFeature, behaviour: (Age, Sex, Education, Random) => Behaviour, random: Random): Option[Individual] =
       for {
         age <- Age(feature.ageCategory)
         sex <- Sex(feature.sex)
