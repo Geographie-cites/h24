@@ -30,7 +30,7 @@ import org.geotools.data.shapefile.ShapefileDataStore
 import org.geotools.geometry.jts.{JTS, JTSFactoryFinder}
 import org.geotools.referencing.CRS
 
-import scala.collection.mutable
+import scalaz._
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 import scala.util.{Random, Try}
@@ -60,7 +60,7 @@ object generation {
     education: Int,
     point: Point,
     location: space.Coordinate,
-    iris: AreaID)
+    workLocation: Point)
 
   case class Equipment(typeEquipment: String, point: Point, location:space.Coordinate, quality: String, iris: AreaID)
   case class Activity(point: Point, location: space.Coordinate)
@@ -152,13 +152,24 @@ object generation {
   }
 
 
-  def readMobilityFlows(file: File)(commune:String) = withCSVReader(file) { reader =>
+  def readMobilityFlows(file: File)(commune: AreaID) = withCSVReader(file) { reader =>
     Try {
-      reader.iterator.drop(1).filter(l=>l(0)==commune).map { line =>
+      reader.iterator.drop(1).filter(l => l(0) == commune.id).map { line =>
         val workLocation = line(2)
         val numberOfFlows = line(4).toDouble
         (workLocation, numberOfFlows)
       }
+    }
+  }
+
+  def workLocationFromMobilityFlows(file: File, geometry: AreaID => Option[MultiPolygon]) = scalaz.Memo.mutableHashMapMemo { (commune: AreaID) =>
+    val flows = readMobilityFlows(file)(commune).get.toSeq
+    (rng: Random) => {
+      val areaID = multinomial(flows)(rng)
+      val geom = geometry(AreaID(areaID)).get
+      val sampler = new PolygonSampler(geom)
+      val coordinate = sampler.apply(rng)
+      geom.getFactory.createPoint(coordinate)
     }
   }
 
@@ -168,7 +179,8 @@ object generation {
     geometry: AreaID => Option[MultiPolygon],
     ageSex: Map[AreaID, Vector[Double]],
     schoolAge: Map[AreaID, Vector[Double]],
-    educationSex: Map[AreaID, Vector[Vector[Double]]]) = {
+    educationSex: Map[AreaID, Vector[Vector[Double]]],
+    workLocation: AreaID => Random => Point) = {
 
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
@@ -219,6 +231,8 @@ object generation {
           val coordinate = sampler.apply(rnd)
           val transformed = JTS.transform(coordinate, null, transform)
           val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
+
+          val commune = id.id.take(5)
           IndividualFeature(
             ageCategory = ageIndex,
             age = age,
@@ -226,7 +240,7 @@ object generation {
             education = education,
             point = point,
             location = (point.getX,point.getY),
-            id
+            workLocation = workLocation(AreaID(commune))(rnd)
           )
         }
         res
@@ -237,13 +251,15 @@ object generation {
     val contourIRISFile = inputDirectory.toScala / "CONTOURS-IRIS_FE_IDF.shp"
     val baseICEvolStructPopFileName = inputDirectory.toScala / "base-ic-evol-struct-pop-2012-IDF.csv.lzma"
     val baseICDiplomesFormationPopFileName = inputDirectory.toScala / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
+    val workFlows = inputDirectory.toScala /"base-texte-flux-mobilite-domicile-lieu-travail-2012.txt.lzma"
 
     for {
       (irises, geom) <- readGeometry(contourIRISFile, filter)
+      workLocation = workLocationFromMobilityFlows(workFlows, geom)
       ageSex <- readAgeSex(baseICEvolStructPopFileName)
       schoolAge <- readAgeSchool(baseICDiplomesFormationPopFileName)
       educationSex <- readEducationSex(baseICDiplomesFormationPopFileName)
-    } yield generatePopulation(rng, irises.toSeq, geom, ageSex, schoolAge, educationSex).toIterator.flatten
+    } yield generatePopulation(rng, irises.toSeq, geom, ageSex, schoolAge, educationSex, workLocation).toIterator.flatten
   }
 
 

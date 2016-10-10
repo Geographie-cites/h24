@@ -125,7 +125,6 @@ object space {
         equipments <- generation.generateEquipments(path, rng)
       } yield equipments.flatMap(_.)*/
 
-    //def mobilityFlows = generation.readMobilityFlows(path)("")
     assignWork(workerRatio, generateAttractions(World(individuals.get, Vector.empty), 0.01, rng), rng)
 
   }
