@@ -52,9 +52,9 @@ object generation {
     def index(age: Double) = SchoolAge.all.lastIndexWhere(value => age > value.from)
   }
 
-  type IrisID = String
+  case class AreaID(id: String) extends AnyVal
   case class Feature(ageCategory: Int, age: Option[Double], sex: Int, education: Int, point: Point, location: space.Coordinate)
-  case class Equipment(typeEquipment: String, point: Point, location:space.Coordinate, quality:String, iris:String)
+  case class Equipment(typeEquipment: String, point: Point, location:space.Coordinate, quality: String, iris: AreaID)
   case class Activity(point: Point, location: space.Coordinate)
 
   def toDouble(s: String) =
@@ -65,22 +65,20 @@ object generation {
 
   def readGeometry(aFile: File, filter: String => Boolean) = {
     val store = new ShapefileDataStore(aFile.toJava.toURI.toURL)
-    val reader = store.getFeatureReader
-    val featureReader = Iterator.continually(reader.next).takeWhile(_ => reader.hasNext)
-    val result =
-      Try {
-        featureReader.filter(feature => filter(feature.getAttribute("DCOMIRIS").toString.trim))
-          .map { feature =>
-            val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon]
-            val iris = feature.getAttribute("DCOMIRIS").toString.replaceAll("0000$","").trim
-            iris -> geom
-          }.toMap
-      }
-    reader.close
-    store.dispose
-    val map = new scala.collection.mutable.HashMap[IrisID, MultiPolygon]()
-    result.map(m=>m.map(v=>map+=v))
-    Try(map)
+    try {
+      val reader = store.getFeatureReader
+      try {
+        Try {
+          val featureReader = Iterator.continually(reader.next).takeWhile(_ => reader.hasNext)
+          featureReader.filter(feature => filter(feature.getAttribute("DCOMIRIS").toString.trim))
+            .map { feature =>
+              val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon]
+              val iris = feature.getAttribute("DCOMIRIS").toString.replaceAll("0000$", "").trim
+              AreaID(iris) -> geom
+            }.toMap
+        }
+      } finally reader.close
+    } finally store.dispose
   }
 
   def withCSVReader[T](file: File)(f: CSVReader => T) = {
@@ -96,7 +94,7 @@ object generation {
       reader.iterator.drop(6).map { line =>
         val men = line.drop(36).take(7).map(toDouble).toVector
         val women = line.drop(44).take(7).map(toDouble).toVector
-        line(0) -> Vector(men, women)
+        AreaID(line(0)) -> Vector(men, women)
       }.toMap
     }
   }
@@ -106,7 +104,7 @@ object generation {
       reader.iterator.drop(6).map { line =>
         val totalPop = line.drop(13).take(7).map(toDouble).toVector
         val schooled = line.drop(20).take(7).map(toDouble).toVector
-        line(0) -> ((schooled zip totalPop).map { case (x,y)=> x / y })
+        AreaID(line(0)) -> ((schooled zip totalPop).map { case (x,y)=> x / y })
       }.toMap
     }
   }
@@ -116,7 +114,7 @@ object generation {
       reader.iterator.drop(6).map { line =>
         val men = line.drop(34).take(6).map(toDouble).toVector
         val women = line.drop(44).take(6).map(toDouble).toVector
-        line(0) -> (men ++ women)
+        AreaID(line(0)) -> (men ++ women)
       }.toMap
     }
   }
@@ -129,7 +127,7 @@ object generation {
         val x = line(6)
         val y = line(7)
         val quality = line(8)
-        iris -> Vector(typeEquipment,x,y,quality)
+        AreaID(iris) -> Vector(typeEquipment,x,y,quality)
       }.toVector
     }
   }
@@ -144,8 +142,8 @@ object generation {
     }
   }
 
-  def generatePopulation(rnd: Random, geometry: mutable.HashMap[IrisID, MultiPolygon], ageSex: Map[IrisID, Vector[Double]],
-                         schoolAge: Map[IrisID, Vector[Double]], educationSex: Map[IrisID, Vector[Vector[Double]]]) = {
+  def generatePopulation(rnd: Random, geometry: Map[AreaID, MultiPolygon], ageSex: Map[AreaID, Vector[Double]],
+                         schoolAge: Map[AreaID, Vector[Double]], educationSex: Map[AreaID, Vector[Vector[Double]]]) = {
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(inCRS, outCRS, true)
@@ -222,22 +220,14 @@ object generation {
     } yield generatePopulation(rng, geom, ageSex, schoolAge, educationSex).toIterator.flatten
   }
 
-  def getGeometry(geometry: mutable.HashMap[IrisID, MultiPolygon])(id:String) =
+  // TODO: cache computed geometries
+  def getGeometry(geometry: Map[AreaID, MultiPolygon])(id: AreaID) =
     geometry.get(id) match {
       case Some(mp) => Some(mp)
-      case None => {
-        val irises = geometry.filter{case (key,g)=>key.startsWith(id)}
-        val size = irises.size
-        if (size != 1) println(s"union of $size irises for $id")
-        val unionGeom = union(irises.values)
-        unionGeom match {
-          case Some(mp) =>
-            geometry+=(id->mp)
-            Some(mp)
-          case None => None
-        }
-      }
-  }
+      case None =>
+        val irises = geometry.filter{ case (key, g) => key.id.startsWith(id.id) }
+        union(irises.values)
+    }
 
   def generatePoint(geom: MultiPolygon, inOutTransform: MathTransform, outCRS: CoordinateReferenceSystem)(rnd:Random) = {
       val sampler = new PolygonSampler(geom)
@@ -246,7 +236,7 @@ object generation {
       JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
     }
 
-  def generateEquipment(rnd: Random, eq: Vector[(IrisID, Vector[String])], geometry: mutable.HashMap[IrisID, MultiPolygon], completeArea: MultiPolygon) = {
+  def generateEquipment(rnd: Random, eq: Vector[(AreaID, Vector[String])], geometry: Map[AreaID, MultiPolygon], completeArea: MultiPolygon) = {
     val l93CRS = CRS.decode("EPSG:2154")
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
