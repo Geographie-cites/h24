@@ -53,13 +53,14 @@ object generation {
   }
 
   case class AreaID(id: String) extends AnyVal
-  case class Feature(
+  case class IndividualFeature(
     ageCategory: Int,
     age: Option[Double],
     sex: Int,
     education: Int,
     point: Point,
-    location: space.Coordinate)
+    location: space.Coordinate,
+    iris: AreaID)
 
   case class Equipment(typeEquipment: String, point: Point, location:space.Coordinate, quality: String, iris: AreaID)
   case class Activity(point: Point, location: space.Coordinate)
@@ -218,13 +219,14 @@ object generation {
           val coordinate = sampler.apply(rnd)
           val transformed = JTS.transform(coordinate, null, transform)
           val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
-          Feature(
+          IndividualFeature(
             ageCategory = ageIndex,
             age = age,
             sex = sex,
             education = education,
             point = point,
-            location = (point.getX,point.getY)
+            location = (point.getX,point.getY),
+            id
           )
         }
         res
@@ -357,7 +359,7 @@ object generation {
     } yield generateEquipment(rng, equipment, geometry, completeArea)//.toIterator
   }
 
-  def sampleActivity(feature: Feature, rnd: RandomGenerator, distance: Double = 10000) = {
+  def sampleActivity(feature: IndividualFeature, rnd: RandomGenerator, distance: Double = 10000) = {
     val poisson = new PoissonDistribution(rnd, distance, PoissonDistribution.DEFAULT_EPSILON, PoissonDistribution.DEFAULT_MAX_ITERATIONS)
     val dist = poisson.sample.toDouble
     val angle = rnd.nextDouble * Math.PI * 2.0
