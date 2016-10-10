@@ -52,7 +52,6 @@ object generation {
     def index(age: Double) = SchoolAge.all.lastIndexWhere(value => age > value.from)
   }
 
-  case class Equipment(typeEquipment: String, point: Point, location:space.Coordinate, quality:String, iris:String)
   case class AreaID(id: String) extends AnyVal
   case class Feature(
     ageCategory: Int,
@@ -156,7 +155,7 @@ object generation {
     ageSex: Map[AreaID, Vector[Double]],
     schoolAge: Map[AreaID, Vector[Double]],
     educationSex: Map[AreaID, Vector[Vector[Double]]]) = {
-    
+
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(inCRS, outCRS, true)
