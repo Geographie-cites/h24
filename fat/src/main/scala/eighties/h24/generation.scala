@@ -34,8 +34,9 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 import scala.util.{Random, Try}
-
 import eighties.h24.population._
+import org.opengis.referencing.crs.CoordinateReferenceSystem
+import org.opengis.referencing.operation.MathTransform
 
 object generation {
   object SchoolAge {
@@ -133,6 +134,16 @@ object generation {
     }
   }
 
+  def readMobilityFlows(file: File)(commune:String) = withCSVReader(file) { reader =>
+    Try {
+      reader.iterator.drop(1).filter(l=>l(0)==commune).map { line =>
+        val workLocation = line(2)
+        val numberOfFlows = line(4).toDouble
+        (workLocation, numberOfFlows)
+      }
+    }
+  }
+
   def generatePopulation(rnd: Random, geometry: mutable.HashMap[IrisID, MultiPolygon], ageSex: Map[IrisID, Vector[Double]],
                          schoolAge: Map[IrisID, Vector[Double]], educationSex: Map[IrisID, Vector[Vector[Double]]]) = {
     val inCRS = CRS.decode("EPSG:2154")
@@ -211,6 +222,30 @@ object generation {
     } yield generatePopulation(rng, geom, ageSex, schoolAge, educationSex).toIterator.flatten
   }
 
+  def getGeometry(geometry: mutable.HashMap[IrisID, MultiPolygon])(id:String) =
+    geometry.get(id) match {
+      case Some(mp) => Some(mp)
+      case None => {
+        val irises = geometry.filter{case (key,g)=>key.startsWith(id)}
+        val size = irises.size
+        if (size != 1) println(s"union of $size irises for $id")
+        val unionGeom = union(irises.values)
+        unionGeom match {
+          case Some(mp) =>
+            geometry+=(id->mp)
+            Some(mp)
+          case None => None
+        }
+      }
+  }
+
+  def generatePoint(geom: MultiPolygon, inOutTransform: MathTransform, outCRS: CoordinateReferenceSystem)(rnd:Random) = {
+      val sampler = new PolygonSampler(geom)
+      val coordinate = sampler(rnd)
+      val transformed = JTS.transform(coordinate, null, inOutTransform)
+      JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
+    }
+
   def generateEquipment(rnd: Random, eq: Vector[(IrisID, Vector[String])], geometry: mutable.HashMap[IrisID, MultiPolygon], completeArea: MultiPolygon) = {
     val l93CRS = CRS.decode("EPSG:2154")
     val l2eCRS = CRS.decode("EPSG:27572")
@@ -236,27 +271,10 @@ object generation {
             iris = id
           )
         } else {
-          val geom = geometry.get(id) match {
-            case Some(mp) => Some(mp)
-            case None => {
-              val irises = geometry.filter{case (key,g)=>key.startsWith(id)}
-              val size = irises.size
-              if (size != 1) println(s"union of $size irises for $id")
-              val unionGeom = union(irises.values)
-              unionGeom match {
-                case Some(mp) =>
-                  geometry+=(id->mp)
-                  Some(mp)
-                case None => None
-              }
-            }
-          }
+          val geom = getGeometry(geometry)(id)
           geom match {
             case Some(g) => {
-              val sampler = new PolygonSampler(g)
-              val coordinate = sampler(rnd)
-              val transformed = JTS.transform(coordinate, null, transformL93)
-              val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
+              val point = generatePoint(g, transformL93, outCRS)(rnd)
               Equipment(
                 typeEquipment = typeEquipment,
                 point = point,
