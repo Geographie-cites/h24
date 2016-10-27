@@ -60,7 +60,7 @@ object generation {
     education: Int,
     point: Point,
     location: space.Coordinate,
-    workLocation: Option[Point])
+    mainActivity: Option[space.Coordinate])
 
   case class Equipment(typeEquipment: String, point: Point, location:space.Coordinate, quality: String, iris: AreaID)
   case class Activity(point: Point, location: space.Coordinate)
@@ -180,7 +180,7 @@ object generation {
     ageSex: Map[AreaID, Vector[Double]],
     schoolAge: Map[AreaID, Vector[Double]],
     educationSex: Map[AreaID, Vector[Vector[Double]]],
-    workLocation: AreaID => Random => Point) = {
+    mainActivityLocation: AreaID => Random => Point) = {
 
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
@@ -231,8 +231,10 @@ object generation {
           val coordinate = sampler.apply(rnd)
           val transformed = JTS.transform(coordinate, null, transform)
           val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
-
           val commune = id.id.take(5)
+          val mainActivityPoint = mainActivityLocation(AreaID(commune))(rnd)
+
+
           IndividualFeature(
             ageCategory = ageIndex,
             age = age,
@@ -240,7 +242,7 @@ object generation {
             education = education,
             point = point,
             location = (point.getX,point.getY),
-            workLocation = Some(workLocation(AreaID(commune))(rnd))
+            mainActivity = Some(mainActivityPoint.getX -> mainActivityPoint.getY)
           )
         }
         res

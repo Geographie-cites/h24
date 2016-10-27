@@ -50,7 +50,7 @@ object dynamic {
 
   def goToWork(world: World) = {
     def m = (individual: Individual) =>
-      Individual.location.set(individual.work.getOrElse(individual.location))(individual)
+      Individual.location.set(individual.mainActivity.getOrElse(individual.location))(individual)
     (World.allIndividuals modify m)(world)
   }
 
@@ -76,21 +76,21 @@ object dynamic {
   }
 
 
-  def assignWork(proportion: Double, world: World, random: Random) = {
-    val attractions =
-      AggregatedEducation.all.map {ed =>
-        ed -> world.attractions.filter(_.education == ed)
-      }.toMap.withDefaultValue(Seq.empty)
-
-    def assign(individual: Individual): Individual =
-      if(random.nextDouble() < proportion) {
-        val individualAttractions = attractions(AggregatedEducation(individual.education).get)
-        if (individualAttractions.isEmpty) individual
-        else Individual.work.set(Some(individualAttractions.randomElement(random).location)) (individual)
-      } else individual
-
-    (World.allIndividuals modify assign)(world)
-  }
+//  def assignWork(proportion: Double, world: World, random: Random) = {
+//    val attractions =
+//      AggregatedEducation.all.map {ed =>
+//        ed -> world.attractions.filter(_.education == ed)
+//      }.toMap.withDefaultValue(Seq.empty)
+//
+//    def assign(individual: Individual): Individual =
+//      if(random.nextDouble() < proportion) {
+//        val individualAttractions = attractions(AggregatedEducation(individual.education).get)
+//        if (individualAttractions.isEmpty) individual
+//        else Individual.work.set(Some(individualAttractions.randomElement(random).location)) (individual)
+//      } else individual
+//
+//    (World.allIndividuals modify assign)(world)
+//  }
 
   def randomiseLocation(world: World, random: Random) = {
     val reach = reachable(Index[Individual](world, World.individuals.get(_), Individual.location.get(_)))
