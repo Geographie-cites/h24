@@ -59,8 +59,8 @@ object generation {
     sex: Int,
     education: Int,
     point: Point,
-    location: space.Coordinate,
-    mainActivity: Option[space.Coordinate])
+    location: space.Location,
+    mainActivity: MainActivity)
 
   case class Equipment(typeEquipment: String, point: Point, location:space.Coordinate, quality: String, iris: AreaID)
   case class Activity(point: Point, location: space.Coordinate)
@@ -241,8 +241,8 @@ object generation {
             sex = sex,
             education = education,
             point = point,
-            location = (point.getX,point.getY),
-            mainActivity = Some(mainActivityPoint.getX -> mainActivityPoint.getY)
+            location = space.cell(point.getX, point.getY),
+            mainActivity = Active(space.cell(mainActivityPoint.getX, mainActivityPoint.getY))
           )
         }
         res
