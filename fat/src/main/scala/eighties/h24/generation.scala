@@ -162,10 +162,11 @@ object generation {
     }
   }
 
-  def workLocationFromMobilityFlows(file: File, geometry: AreaID => Option[MultiPolygon]) = scalaz.Memo.mutableHashMapMemo { (commune: AreaID) =>
-    val flows = readMobilityFlows(file)(commune).get.toSeq
-    (rng: Random) => {
-      val areaID = multinomial(flows)(rng)
+  def workLocationFromMobilityFlows(workFile: File, studyFile: File, geometry: AreaID => Option[MultiPolygon]) = scalaz.Memo.mutableHashMapMemo { (commune: AreaID) =>
+    val workFlows = readMobilityFlows(workFile)(commune).get.toSeq
+    val studyFlows = readMobilityFlows(studyFile)(commune).get.toSeq
+    (work: Boolean, rng: Random) => {
+      val areaID = multinomial(if (work) workFlows else studyFlows)(rng)
       val geom = geometry(AreaID(areaID)).get
       val sampler = new PolygonSampler(geom)
       val coordinate = sampler.apply(rng)
@@ -180,7 +181,7 @@ object generation {
     ageSex: Map[AreaID, Vector[Double]],
     schoolAge: Map[AreaID, Vector[Double]],
     educationSex: Map[AreaID, Vector[Vector[Double]]],
-    mainActivityLocation: AreaID => Random => Point) = {
+    mainActivityLocation: AreaID => (Boolean, Random) => Point) = {
 
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
@@ -231,9 +232,9 @@ object generation {
           val coordinate = sampler.apply(rnd)
           val transformed = JTS.transform(coordinate, null, transform)
           val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
+          val working = true
           val commune = id.id.take(5)
-          val mainActivityPoint = mainActivityLocation(AreaID(commune))(rnd)
-
+          val mainActivityPoint = mainActivityLocation(AreaID(commune))(working, rnd)
 
           IndividualFeature(
             ageCategory = ageIndex,
@@ -258,7 +259,7 @@ object generation {
 
     for {
       (irises, geom) <- readGeometry(contourIRISFile, filter)
-      workLocation = workLocationFromMobilityFlows(workFlows, geom)
+      workLocation = workLocationFromMobilityFlows(workFlows, studyFlows, geom)
       ageSex <- readAgeSex(baseICEvolStructPopFileName)
       schoolAge <- readAgeSchool(baseICDiplomesFormationPopFileName)
       educationSex <- readEducationSex(baseICDiplomesFormationPopFileName)
