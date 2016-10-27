@@ -252,6 +252,7 @@ object generation {
     val baseICEvolStructPopFileName = inputDirectory.toScala / "base-ic-evol-struct-pop-2012-IDF.csv.lzma"
     val baseICDiplomesFormationPopFileName = inputDirectory.toScala / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
     val workFlows = inputDirectory.toScala /"base-texte-flux-mobilite-domicile-lieu-travail-2012.txt.lzma"
+    val studyFlows = inputDirectory.toScala /"base-texte-flux-mobilite-domicile-lieu-etude-2012.txt.lzma"
 
     for {
       (irises, geom) <- readGeometry(contourIRISFile, filter)
