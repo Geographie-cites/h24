@@ -60,7 +60,7 @@ object generation {
     education: Int,
     point: Point,
     location: space.Coordinate,
-    workLocation: Point)
+    workLocation: Option[Point])
 
   case class Equipment(typeEquipment: String, point: Point, location:space.Coordinate, quality: String, iris: AreaID)
   case class Activity(point: Point, location: space.Coordinate)
@@ -240,7 +240,7 @@ object generation {
             education = education,
             point = point,
             location = (point.getX,point.getY),
-            workLocation = workLocation(AreaID(commune))(rnd)
+            workLocation = Some(workLocation(AreaID(commune))(rnd))
           )
         }
         res
