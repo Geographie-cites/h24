@@ -150,13 +150,14 @@ object population {
         education <- Education(feature.education)
       } yield {
         val home = space.cell(feature.location)
+        val mainActivity = feature.mainActivity.map(space.cell)
         Individual(
           age,
           sex,
           education,
           behaviour(age, sex, education, random),
           home,
-          None,
+          mainActivity,
           home
         )
       }
@@ -173,7 +174,7 @@ object population {
     education: Education,
     behaviour: Behaviour,
     home: Location,
-    work: Option[Location],
+    mainActivity: Option[Location],
     location: Location)
 
 

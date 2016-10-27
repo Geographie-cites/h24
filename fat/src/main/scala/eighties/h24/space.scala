@@ -125,7 +125,7 @@ object space {
         equipments <- generation.generateEquipments(path, rng)
       } yield equipments.flatMap(_.)*/
 
-    assignWork(workerRatio, generateAttractions(World(individuals.get, Vector.empty), 0.01, rng), rng)
-
+    //assignWork(workerRatio, generateAttractions(World(individuals.get, Vector.empty), 0.01, rng), rng)
+    World(individuals.get, Vector.empty)
   }
 }
