@@ -59,8 +59,8 @@ object generation {
     sex: Int,
     education: Int,
     point: Point,
-    location: space.Coordinate,
-    mainActivity: Option[space.Coordinate])
+    location: space.Location,
+    mainActivity: MainActivity)
 
   case class Equipment(typeEquipment: String, point: Point, location:space.Coordinate, quality: String, iris: AreaID)
   case class Activity(point: Point, location: space.Coordinate)
@@ -250,15 +250,17 @@ object generation {
           val working = true
           val commune = id.id.take(5)
           val mainActivityPoint = mainActivityLocation(AreaID(commune))(working, rnd)
-          val mainActivity = mainActivityPoint.map(p=>(p.getX, p.getY))
           IndividualFeature(
             ageCategory = ageIndex,
             age = age,
             sex = sex,
             education = education,
             point = point,
-            location = (point.getX,point.getY),
-            mainActivity
+            location = space.cell(point.getX, point.getY),
+            mainActivity = mainActivityPoint match {
+              case Some(p)=>Active(space.cell(p.getX, p.getY))
+              case None => Inactive
+            }
           )
         }
         res

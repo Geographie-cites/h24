@@ -50,7 +50,14 @@ object dynamic {
 
   def goToWork(world: World) = {
     def m = (individual: Individual) =>
-      Individual.location.set(individual.mainActivity.getOrElse(individual.location))(individual)
+      Individual.location.modify { current =>
+        individual.mainActivity match {
+          case Inactive => current
+          case Active(l) => l
+          //FIXME take outsider into account
+          case ActiveOutside => current
+        }
+      } (individual)
     (World.allIndividuals modify m)(world)
   }
 

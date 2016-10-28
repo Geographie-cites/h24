@@ -19,6 +19,7 @@ package eighties.h24
 
 import better.files._
 import com.vividsolutions.jts.geom.Coordinate
+import eighties.h24.population.{Active, ActiveOutside, Inactive}
 import org.apache.commons.math3.random.JDKRandomGenerator
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataUtilities, Transaction}
@@ -48,8 +49,9 @@ object PopulationGenerator extends App {
     val activity = generation.sampleActivity(feature, rng, 10000)
     def discrete(v:Double) = (v / 200.0).toInt
     val mainActivityPoint = mainActivity match {
-      case Some(p) => point.getFactory.createPoint(new Coordinate(p._1, p._2))
-      case None => null
+      case Active(p) => point.getFactory.createPoint(new Coordinate(p._1, p._2))
+      case ActiveOutside => null
+      case Inactive => null
     }
     val values = Array[AnyRef](
       point,

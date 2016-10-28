@@ -124,6 +124,11 @@ object population {
 
   type Behaviour = Double
 
+  sealed trait MainActivity
+  case object Inactive extends MainActivity
+  case class Active(location: Location) extends MainActivity
+  case object ActiveOutside extends MainActivity
+
   /*sealed trait Behaviour {
     override def toString = getClass.getName
   }
@@ -148,19 +153,17 @@ object population {
         age <- Age(feature.ageCategory)
         sex <- Sex(feature.sex)
         education <- Education(feature.education)
-      } yield {
-        val home = space.cell(feature.location)
-        val mainActivity = feature.mainActivity.map(space.cell)
+      } yield
         Individual(
           age,
           sex,
           education,
           behaviour(age, sex, education, random),
-          home,
-          mainActivity,
-          home
+          feature.location,
+          feature.mainActivity,
+          feature.location
         )
-      }
+
 
     def i = Individual.location composeLens first
     def j = Individual.location composeLens second
@@ -174,7 +177,7 @@ object population {
     education: Education,
     behaviour: Behaviour,
     home: Location,
-    mainActivity: Option[Location],
+    mainActivity: MainActivity,
     location: Location)
 
 
