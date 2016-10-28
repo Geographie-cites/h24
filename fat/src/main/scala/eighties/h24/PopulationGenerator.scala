@@ -18,6 +18,7 @@
 package eighties.h24
 
 import better.files._
+import com.vividsolutions.jts.geom.Coordinate
 import org.apache.commons.math3.random.JDKRandomGenerator
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataUtilities, Transaction}
@@ -30,7 +31,7 @@ object PopulationGenerator extends App {
 
   val outFile = outputPath / "generated-population-75-work.shp"
 
-  val specs = "geom:Point:srid=3035,cellX:Integer,cellY:Integer,ageCat:Integer,age:Double,sex:Integer,education:Integer,work:Point:srid=3035"
+  val specs = "geom:Point:srid=3035,mainactiv:Point:srid=3035,cellX:Integer,cellY:Integer,ageCat:Integer,age:Double,sex:Integer,education:Integer,work:Point:srid=3035"
   val factory = new ShapefileDataStoreFactory
   val dataStore = factory.createDataStore(outFile.toJava.toURI.toURL)
   val featureTypeName = "Object"
@@ -46,8 +47,13 @@ object PopulationGenerator extends App {
     import feature._
     val activity = generation.sampleActivity(feature, rng, 10000)
     def discrete(v:Double) = (v / 200.0).toInt
+    val mainActivityPoint = mainActivity match {
+      case Some(p) => point.getFactory.createPoint(new Coordinate(p._1, p._2))
+      case None => null
+    }
     val values = Array[AnyRef](
       point,
+      mainActivityPoint,
       discrete(location._1).asInstanceOf[AnyRef],
       discrete(location._2).asInstanceOf[AnyRef],
       ageCategory.asInstanceOf[AnyRef],
