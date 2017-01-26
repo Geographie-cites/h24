@@ -5,15 +5,15 @@ name := "h24"
 
 version := "1.0.0-SNAPSHOT"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.1"
 
-val monocleVersion = "1.2.0"
+val monocleVersion = "1.4.0"
 
 val geotoolsVersion = "14.3"
 
 val jtsVersion = "1.13"
 
-val breezeVersion = "0.12"
+val breezeVersion = "latest.integration"
 
 resolvers ++= Seq(
   "osgeo" at "http://download.osgeo.org/webdav/geotools/",
@@ -35,15 +35,14 @@ libraryDependencies ++= Seq (
   "org.geotools" % "gt-image" % geotoolsVersion,
   "org.geotools" % "gt-coverage" % geotoolsVersion,
   "com.vividsolutions" % "jts" % jtsVersion,
-  "com.github.tototoshi" %% "scala-csv" % "1.3.1",
+  "com.github.tototoshi" %% "scala-csv" % "1.3.4",
   "org.apache.commons" % "commons-compress" % "1.11",
   "org.apache.commons" % "commons-math3" % "3.6.1",
   "org.tukaani" % "xz" % "1.5",
-  "com.github.pathikrit" %% "better-files" % "2.15.0",
+  "com.github.pathikrit" %% "better-files" % "2.17.1",
   "org.scalanlp" %% "breeze" % breezeVersion,
   "org.scalanlp" %% "breeze-natives" % breezeVersion,
-  "org.scalanlp" %% "breeze-viz" % breezeVersion,
-  "org.scala-saddle" %% "saddle-core" % "1.3.4"
+  "org.scalanlp" %% "breeze-viz" % breezeVersion
 )
  
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)

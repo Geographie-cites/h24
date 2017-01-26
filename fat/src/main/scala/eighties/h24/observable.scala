@@ -19,23 +19,23 @@ package eighties.h24
 
 import eighties.h24.population._
 import eighties.h24.space._
-import org.saddle._
+import breeze.linalg._
+import breeze.stats._
 
 object observable {
 
-  def byEducation[T](b: Vec[Behaviour] => T) =
+  def byEducation[T](b: scala.Vector[Double] => T) =
     (world: World) =>
       for {
         ed <- AggregatedEducation.all
         level = world.individuals.filter(i => AggregatedEducation(i.education).map(_ == ed).getOrElse(false))
-      } yield ed -> b(level.map(_.behaviour).toVec)
+      } yield ed -> b(level.map(_.behaviour))
 
-  def medianByEducation = byEducation(_.median)
-  def mseByEducation = byEducation(b => math.sqrt(b.variance))
-  def meanByEducation = byEducation(_.mean)
+  def medianByEducation = byEducation { v => median(DenseVector(v: _*)) }
+  def mseByEducation = byEducation(b => scala.math.sqrt(variance(b)))
+  def meanByEducation = byEducation { v => mean(v) }
 
   def resume =
-    byEducation(b => Seq(b.mean, math.sqrt(b.variance), b.median))
-
+    byEducation { b => Vector(mean(b), scala.math.sqrt(variance(DenseVector(b: _*))), median(DenseVector(b: _*))) }
 
 }
