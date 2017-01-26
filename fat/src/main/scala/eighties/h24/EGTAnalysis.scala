@@ -41,14 +41,14 @@ object EGTAnalysis extends App {
   val outFileDep = outputPath / "EGT_DEP.shp"
 
   val specsRes = "geom:Point:srid=27572," +
-              "ID_pers:String," +
-              "sexe:Integer," +
-              "age:Integer," +
-              "dipl:String," +
-              "cs8:String," +
-              "cs24l:String"
+    "ID_pers:String," +
+    "sexe:Integer," +
+    "age:Integer," +
+    "dipl:String," +
+    "cs8:String," +
+    "cs24l:String"
   val specsAct = "geom:Point:srid=27572," +
-              "ID_pers:String," +
+    "ID_pers:String," +
     "sexe:Integer," +
     "age:Integer," +
     "dipl:String," +
@@ -134,7 +134,6 @@ object EGTAnalysis extends App {
     val resPoint = geomfactory.createPoint(new Coordinate(resX,resY))
     val actPoint = geomfactory.createPoint(new Coordinate(actX,actY))
     val depl = geomfactory.createLineString(Array(new Coordinate(resX,resY),new Coordinate(actX,actY)))
-    //id_pers -> Vector(motif, sexe, age, dipl, cs8, cs24l, px, py, resx, resy, dist)
     val motif = values(0)
     val sexe = values(1).toInt
     val age = values(2).toInt
