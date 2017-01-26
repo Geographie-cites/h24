@@ -43,8 +43,8 @@ class H24(gamaOpinion: Double, activityRatio: Double) {
        //val convict = logistic(0.3, 10.0, 0.5)(_)
         //def changeCurve(meat: Double) = contact(0.8)(meat) //logistic(1.0, 2.0, 0.50)(meat)
 
-        def afterWork = localConviction(gamaOpinion, goToWork(world), rng)
-        def afterActivity = localConviction(gamaOpinion, randomMove(afterWork, activityRatio, rng), rng)
+       // def afterWork = localConviction(gamaOpinion, goToWork(world), rng)
+        def afterActivity = localConviction(gamaOpinion, randomMove(world, activityRatio, rng), rng)
         def afterNight = localConviction(gamaOpinion, goBackHome(afterActivity), rng)
 
         simulation0(afterNight, step + 1)

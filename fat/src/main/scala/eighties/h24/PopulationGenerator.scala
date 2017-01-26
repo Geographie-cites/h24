@@ -18,8 +18,6 @@
 package eighties.h24
 
 import better.files._
-import com.vividsolutions.jts.geom.Coordinate
-import eighties.h24.population.{Active, ActiveOutside, Inactive}
 import org.apache.commons.math3.random.JDKRandomGenerator
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataUtilities, Transaction}
@@ -38,9 +36,7 @@ object PopulationGenerator extends App {
               "ageCat:Integer," +
               "age:Double," +
               "sex:Integer," +
-              "education:Integer," +
-              "mainactiv:Point:srid=3035," +
-              "activity:Point:srid=3035"
+              "education:Integer"
   val factory = new ShapefileDataStoreFactory
   val dataStore = factory.createDataStore(outFile.toJava.toURI.toURL)
   val featureTypeName = "Object"
@@ -56,13 +52,7 @@ object PopulationGenerator extends App {
     (feature, i) <- generation.generateFeatures(path.toJava, filter, rng).get.zipWithIndex
   } {
     import feature._
-    val activity = generation.sampleActivity(feature, rng, 10000)
     def discrete(v:Double) = (v / 200.0).toInt
-    val mainActivityPoint = mainActivity match {
-      case Active(p) => point.getFactory.createPoint(new Coordinate(p._1, p._2))
-      case ActiveOutside => null
-      case Inactive => null
-    }
     val values = Array[AnyRef](
       point,
       discrete(location._1).asInstanceOf[AnyRef],
@@ -70,9 +60,7 @@ object PopulationGenerator extends App {
       ageCategory.asInstanceOf[AnyRef],
       age.getOrElse(75).asInstanceOf[AnyRef],
       sex.asInstanceOf[AnyRef],
-      education.asInstanceOf[AnyRef],
-      mainActivityPoint,
-      activity.point
+      education.asInstanceOf[AnyRef]
     )
     val simpleFeature = writer.next
     simpleFeature.setAttributes(values)
