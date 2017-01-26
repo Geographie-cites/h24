@@ -30,9 +30,17 @@ object PopulationGenerator extends App {
   val outputPath = File("results")
   outputPath.createDirectories()
 
-  val outFile = outputPath / "generated-population-75-work.shp"
+  val outFile = outputPath / "generated-population-75113.shp"
 
-  val specs = "geom:Point:srid=3035,mainactiv:Point:srid=3035,cellX:Integer,cellY:Integer,ageCat:Integer,age:Double,sex:Integer,education:Integer,work:Point:srid=3035"
+  val specs = "geom:Point:srid=3035," +
+              "cellX:Integer," +
+              "cellY:Integer," +
+              "ageCat:Integer," +
+              "age:Double," +
+              "sex:Integer," +
+              "education:Integer," +
+              "mainactiv:Point:srid=3035," +
+              "activity:Point:srid=3035"
   val factory = new ShapefileDataStoreFactory
   val dataStore = factory.createDataStore(outFile.toJava.toURI.toURL)
   val featureTypeName = "Object"
@@ -41,9 +49,11 @@ object PopulationGenerator extends App {
   val typeName = dataStore.getTypeNames()(0)
   val writer = dataStore.getFeatureWriterAppend(typeName, Transaction.AUTO_COMMIT)
   val rng = new JDKRandomGenerator(42)
-
+  def filterParis13 (v:String) = v.startsWith("75113")
+  def filterAll (v:String) = true
+  def filter (v:String) = filterParis13(v)
   for {
-    (feature, i) <- generation.generateFeatures(path.toJava, _ => true, rng).get.zipWithIndex
+    (feature, i) <- generation.generateFeatures(path.toJava, filter, rng).get.zipWithIndex
   } {
     import feature._
     val activity = generation.sampleActivity(feature, rng, 10000)
@@ -55,13 +65,13 @@ object PopulationGenerator extends App {
     }
     val values = Array[AnyRef](
       point,
-      mainActivityPoint,
       discrete(location._1).asInstanceOf[AnyRef],
       discrete(location._2).asInstanceOf[AnyRef],
       ageCategory.asInstanceOf[AnyRef],
       age.getOrElse(75).asInstanceOf[AnyRef],
       sex.asInstanceOf[AnyRef],
       education.asInstanceOf[AnyRef],
+      mainActivityPoint,
       activity.point
     )
     val simpleFeature = writer.next
