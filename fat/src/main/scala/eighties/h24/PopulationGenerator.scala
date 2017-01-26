@@ -18,6 +18,8 @@
 package eighties.h24
 
 import better.files._
+import com.vividsolutions.jts.geom.Coordinate
+import eighties.h24.population.{Active, ActiveOutside, Inactive}
 import org.apache.commons.math3.random.JDKRandomGenerator
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataUtilities, Transaction}
@@ -28,9 +30,17 @@ object PopulationGenerator extends App {
   val outputPath = File("results")
   outputPath.createDirectories()
 
-  val outFile = outputPath / "generated-population-75-work.shp"
+  val outFile = outputPath / "generated-population-75113.shp"
 
-  val specs = "geom:Point:srid=3035,cellX:Integer,cellY:Integer,ageCat:Integer,age:Double,sex:Integer,education:Integer,work:Point:srid=3035"
+  val specs = "geom:Point:srid=3035," +
+              "cellX:Integer," +
+              "cellY:Integer," +
+              "ageCat:Integer," +
+              "age:Double," +
+              "sex:Integer," +
+              "education:Integer," +
+              "mainactiv:Point:srid=3035," +
+              "activity:Point:srid=3035"
   val factory = new ShapefileDataStoreFactory
   val dataStore = factory.createDataStore(outFile.toJava.toURI.toURL)
   val featureTypeName = "Object"
@@ -39,13 +49,20 @@ object PopulationGenerator extends App {
   val typeName = dataStore.getTypeNames()(0)
   val writer = dataStore.getFeatureWriterAppend(typeName, Transaction.AUTO_COMMIT)
   val rng = new JDKRandomGenerator(42)
-
+  def filterParis13 (v:String) = v.startsWith("75113")
+  def filterAll (v:String) = true
+  def filter (v:String) = filterParis13(v)
   for {
-    (feature, i) <- generation.generateFeatures(path.toJava, _ => true, rng).get.zipWithIndex
+    (feature, i) <- generation.generateFeatures(path.toJava, filter, rng).get.zipWithIndex
   } {
     import feature._
     val activity = generation.sampleActivity(feature, rng, 10000)
     def discrete(v:Double) = (v / 200.0).toInt
+    val mainActivityPoint = mainActivity match {
+      case Active(p) => point.getFactory.createPoint(new Coordinate(p._1, p._2))
+      case ActiveOutside => null
+      case Inactive => null
+    }
     val values = Array[AnyRef](
       point,
       discrete(location._1).asInstanceOf[AnyRef],
@@ -54,6 +71,7 @@ object PopulationGenerator extends App {
       age.getOrElse(75).asInstanceOf[AnyRef],
       sex.asInstanceOf[AnyRef],
       education.asInstanceOf[AnyRef],
+      mainActivityPoint,
       activity.point
     )
     val simpleFeature = writer.next

@@ -20,7 +20,7 @@ package eighties.h24
 import java.io.{BufferedInputStream, FileInputStream}
 
 import better.files._
-import com.github.tototoshi.csv.CSVReader
+import com.github.tototoshi.csv.{CSVFormat, CSVReader, DefaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
@@ -81,7 +81,6 @@ object generation {
       }
     }
 
-
     val store = new ShapefileDataStore(aFile.toJava.toURI.toURL)
     try {
       val reader = store.getFeatureReader
@@ -100,45 +99,51 @@ object generation {
     } finally store.dispose
   }
 
-  def withCSVReader[T](file: File)(f: CSVReader => T) = {
+  object CommaFormat extends DefaultCSVFormat {
+    override val delimiter = ','
+  }
+  object SemicolonFormat extends DefaultCSVFormat {
+    override val delimiter = ';'
+  }
+  def withCSVReader[T](file: File)(format: CSVFormat)(f: CSVReader => T) = {
     val in = new BufferedInputStream(new FileInputStream(file.toJava))
     val stream = new LZMACompressorInputStream(in)
-    val reader = CSVReader.open(Source.fromInputStream(stream,"ISO-8859-1"))
+    val reader = CSVReader.open(Source.fromInputStream(stream, "ISO-8859-1"))(format)
     try f(reader)
     finally reader.close
   }
 
-  def readEducationSex(file: File) = withCSVReader(file){ reader =>
+  def readEducationSex(file: File) = withCSVReader(file)(CommaFormat){ reader =>
     Try {
       reader.iterator.drop(6).map { line =>
         val men = line.drop(36).take(7).map(toDouble).toVector
         val women = line.drop(44).take(7).map(toDouble).toVector
-        AreaID(line(0)) -> Vector(men, women)
+        AreaID(line(0).replaceAll("0000$", "").trim) -> Vector(men, women)
       }.toMap
     }
   }
 
-  def readAgeSchool(file: File) = withCSVReader(file){ reader =>
+  def readAgeSchool(file: File) = withCSVReader(file)(CommaFormat){ reader =>
     Try {
       reader.iterator.drop(6).map { line =>
         val totalPop = line.drop(13).take(7).map(toDouble).toVector
         val schooled = line.drop(20).take(7).map(toDouble).toVector
-        AreaID(line(0)) -> ((schooled zip totalPop).map { case (x,y)=> x / y })
+        AreaID(line(0).replaceAll("0000$", "").trim) -> ((schooled zip totalPop).map { case (x,y)=> x / y })
       }.toMap
     }
   }
 
-  def readAgeSex(file: File) = withCSVReader(file){ reader =>
+  def readAgeSex(file: File) = withCSVReader(file)(CommaFormat){ reader =>
     Try {
       reader.iterator.drop(6).map { line =>
         val men = line.drop(34).take(6).map(toDouble).toVector
         val women = line.drop(44).take(6).map(toDouble).toVector
-        AreaID(line(0)) -> (men ++ women)
+        AreaID(line(0).replaceAll("0000$", "").trim) -> (men ++ women)
       }.toMap
     }
   }
 
-  def readEquipment(file: File) = withCSVReader(file){ reader =>
+  def readEquipment(file: File) = withCSVReader(file)(CommaFormat){ reader =>
     Try {
       reader.iterator.drop(1).map { line =>
         val iris = line(4).trim.replaceAll("_","").replaceAll("0000$","").trim
@@ -152,25 +157,30 @@ object generation {
   }
 
 
-  def readMobilityFlows(file: File)(commune: AreaID) = withCSVReader(file) { reader =>
+  def readMobilityFlows(file: File)(commune: AreaID) = withCSVReader(file)(SemicolonFormat) { reader =>
     Try {
-      reader.iterator.drop(1).filter(l => l(0) == commune.id).map { line =>
+      reader.iterator.drop(1).filter{ l => l(0) == commune.id }.map { line =>
         val workLocation = line(2)
         val numberOfFlows = line(4).toDouble
         (workLocation, numberOfFlows)
-      }
+      }.toVector
     }
   }
 
-  def workLocationFromMobilityFlows(workFile: File, studyFile: File, geometry: AreaID => Option[MultiPolygon]) = scalaz.Memo.mutableHashMapMemo { (commune: AreaID) =>
-    val workFlows = readMobilityFlows(workFile)(commune).get.toSeq
-    val studyFlows = readMobilityFlows(studyFile)(commune).get.toSeq
+  def mainActivityLocationFromMobilityFlows(workFile: File, studyFile: File, geometry: AreaID => Option[MultiPolygon]) = scalaz.Memo.mutableHashMapMemo { (commune: AreaID) =>
+    val workFlows = readMobilityFlows(workFile)(commune).get
+    val studyFlows = readMobilityFlows(studyFile)(commune).get
     (work: Boolean, rng: Random) => {
+      if (workFlows.isEmpty) {
+        println("Empty workflows for " + commune)
+        println("study flows " + studyFlows)
+      }
       val areaID = multinomial(if (work) workFlows else studyFlows)(rng)
-      val geom = geometry(AreaID(areaID)).get
-      val sampler = new PolygonSampler(geom)
-      val coordinate = sampler.apply(rng)
-      geom.getFactory.createPoint(coordinate)
+      geometry(AreaID(areaID)).map(geom=>{
+        val sampler = new PolygonSampler(geom)
+        val coordinate = sampler.apply(rng)
+        geom.getFactory.createPoint(coordinate)
+      })
     }
   }
 
@@ -181,13 +191,17 @@ object generation {
     ageSex: Map[AreaID, Vector[Double]],
     schoolAge: Map[AreaID, Vector[Double]],
     educationSex: Map[AreaID, Vector[Vector[Double]]],
-    mainActivityLocation: AreaID => (Boolean, Random) => Point) = {
+    mainActivityLocation: AreaID => (Boolean, Random) => Option[Point]) = {
 
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(inCRS, outCRS, true)
 
     irises.map { id =>
+      ageSex.get(id) match {
+        case Some(_) =>
+        case None => println("agesex "+id.id)
+      }
         val ageSexV = ageSex.get(id).get
         val schoolAgeV = schoolAge.get(id).get
         val educationSexV = educationSex.get(id).get
@@ -232,10 +246,10 @@ object generation {
           val coordinate = sampler.apply(rnd)
           val transformed = JTS.transform(coordinate, null, transform)
           val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
+          // Should decide first if has an activity
           val working = true
           val commune = id.id.take(5)
           val mainActivityPoint = mainActivityLocation(AreaID(commune))(working, rnd)
-
           IndividualFeature(
             ageCategory = ageIndex,
             age = age,
@@ -243,7 +257,10 @@ object generation {
             education = education,
             point = point,
             location = space.cell(point.getX, point.getY),
-            mainActivity = Active(space.cell(mainActivityPoint.getX, mainActivityPoint.getY))
+            mainActivity = mainActivityPoint match {
+              case Some(p)=>Active(space.cell(p.getX, p.getY))
+              case None => Inactive
+            }
           )
         }
         res
@@ -254,12 +271,12 @@ object generation {
     val contourIRISFile = inputDirectory.toScala / "CONTOURS-IRIS_FE_IDF.shp"
     val baseICEvolStructPopFileName = inputDirectory.toScala / "base-ic-evol-struct-pop-2012-IDF.csv.lzma"
     val baseICDiplomesFormationPopFileName = inputDirectory.toScala / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
-    val workFlows = inputDirectory.toScala /"base-texte-flux-mobilite-domicile-lieu-travail-2012.txt.lzma"
-    val studyFlows = inputDirectory.toScala /"base-texte-flux-mobilite-domicile-lieu-etude-2012.txt.lzma"
+    val workFlowsFile = inputDirectory.toScala /"base-texte-flux-mobilite-domicile-lieu-travail-2012.txt.lzma"
+    val studyFlowsFile = inputDirectory.toScala /"base-texte-flux-mobilite-domicile-lieu-etude-2012.txt.lzma"
 
     for {
       (irises, geom) <- readGeometry(contourIRISFile, filter)
-      workLocation = workLocationFromMobilityFlows(workFlows, studyFlows, geom)
+      workLocation = mainActivityLocationFromMobilityFlows(workFlowsFile, studyFlowsFile, geom)
       ageSex <- readAgeSex(baseICEvolStructPopFileName)
       schoolAge <- readAgeSchool(baseICDiplomesFormationPopFileName)
       educationSex <- readEducationSex(baseICDiplomesFormationPopFileName)
@@ -471,4 +488,3 @@ object generation {
     }
   }
 }
-
