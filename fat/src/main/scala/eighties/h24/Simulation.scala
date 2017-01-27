@@ -40,14 +40,14 @@ object Simulation extends App {
 
   val h24 = new H24(gamaOpinion, activityRatio)
 
-  val world = generateWorld(path.toJava, _.startsWith("75"), sigmaInitialOpinion, workers, rng)
+  def world = generateWorld(path.toJava, _ => true /*_.startsWith("75")*/, sigmaInitialOpinion, workers, rng)
 
- println(observable.resume(world))
-
-  def save(w: World, s: Int) = {
-    val name = s"paris-with-random-mobility-with-initial-gaussian${s}.tiff"
-    WorldMapper.mapColorRGB(w, outputPath / name toJava)
-  }
+ //println(observable.resume(world))
+//
+//  def save(w: World, s: Int) = {
+//    val name = s"paris-with-random-mobility-with-initial-gaussian${s}.tiff"
+//    WorldMapper.mapColorRGB(w, outputPath / name toJava)
+//  }
 
 
   //save(world, 0)
@@ -55,11 +55,10 @@ object Simulation extends App {
   val last =
     (1 to steps).foldLeft(world) {
       (w, s) =>
-        println(s)
-        val nw = h24.simulation(world, 10, rng)
-        //save(w, s)
-
-        println(observable.resume(nw))
+        println(s"begin $s at " + System.currentTimeMillis())
+        val nw = h24.simulation(world, 1, rng)
+        println(s"end $s at " + System.currentTimeMillis())
+        //println(observable.resume(nw))
         nw
     }
 }

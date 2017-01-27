@@ -45,9 +45,9 @@ class H24(gamaOpinion: Double, activityRatio: Double) {
 
        // def afterWork = localConviction(gamaOpinion, goToWork(world), rng)
         def afterActivity = localConviction(gamaOpinion, randomMove(world, activityRatio, rng), rng)
-        def afterNight = localConviction(gamaOpinion, goBackHome(afterActivity), rng)
+        //def afterNight = localConviction(gamaOpinion, goBackHome(afterActivity), rng)
 
-        simulation0(afterNight, step + 1)
+        simulation0(afterActivity, step + 1)
       }
 
     simulation0(world, 0)

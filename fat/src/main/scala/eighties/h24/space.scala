@@ -30,6 +30,11 @@ object space {
   type Coordinate = (Double, Double)
   type Location = (Int, Int)
 
+  object Location {
+    def lowerBound(l1: Location, l2: Location): Location = (math.min(l1._1, l2._1), math.min(l1._2, l2._2))
+    def upperBound(l1: Location, l2: Location): Location = (math.max(l1._1, l2._1), math.max(l1._2, l2._2))
+  }
+
   /* définition d'un voisinage*/
   def neighbours(side: Int, location: Location, size: Int) = {
     val (i, j) = location
@@ -43,23 +48,40 @@ object space {
     } yield (i + di, j + dj)
   }
 
-  def cell(p: Coordinate) = ((p._1 / 200.0).toInt, (p._2 / 200.0).toInt)
+  def cell(p: Coordinate) = ((p._1 / 1000.0).toInt, (p._2 / 1000.0).toInt)
+
+
+  object BoundingBox {
+    def apply[T](content: Vector[T], location: T => Location): BoundingBox = {
+      val (minI, minJ) = content.view.map(location).reduceLeft(Location.lowerBound)
+      val (maxI, maxJ) = content.view.map(location).reduceLeft(Location.upperBound)
+      BoundingBox(minI = minI, maxI = maxI, minJ = minJ, maxJ = maxJ)
+    }
+
+    def translate(boundingBox: BoundingBox)(location: Location) = (location._1 - boundingBox.minI, location._2 - boundingBox.minJ)
+  }
+
+  case class BoundingBox(minI: Int, maxI: Int, minJ: Int, maxJ: Int) {
+    def sideI = maxI - minI + 1
+    def sideJ = maxJ - minJ + 1
+  }
 
   object World {
 
     def apply(individuals: Vector[Individual], attractions: Vector[Attraction]): World = {
-      val minI = individuals.map(Individual.i.get).min
-      val maxI = individuals.map(Individual.i.get).max
-      val minJ = individuals.map(Individual.j.get).min
-      val maxJ = individuals.map(Individual.j.get).max
-      val sideI = maxI - minI
-      val sideJ = maxJ - minJ
+      val boundingBox = BoundingBox(individuals, Individual.location.get)
 
-      def translate(location: Location) = (location._1 - minI, location._2 -minJ)
-      def relocate = Individual.home.modify(translate) andThen Individual.location.modify(translate)
-      def relocated = individuals.map(relocate)
+      def relocate =
+        Individual.home.modify(BoundingBox.translate(boundingBox)) andThen
+          Individual.location.modify(BoundingBox.translate(boundingBox))
 
-      World(relocated, attractions, minI, minJ, sideI + 1, sideJ + 1)
+      World(
+        individuals.map(relocate),
+        attractions,
+        boundingBox.minI,
+        boundingBox.minJ,
+        boundingBox.sideI,
+        boundingBox.sideJ)
     }
 
     def allIndividuals = World.individuals composeTraversal each
@@ -73,20 +95,20 @@ object space {
   object Index {
 
     def indexIndividuals(world: World) =
-      Index[Individual](world, World.individuals.get(_), Individual.location.get(_))
+      Index[Individual](World.individuals.get(world).iterator, Individual.location.get(_), world.sideI, world.sideJ)
 
     def indexAttraction(world: World) =
-      Index[Attraction](world, World.attractions.get(_), Attraction.location.get(_))
+      Index[Attraction](World.attractions.get(world).iterator, Attraction.location.get(_), world.sideI, world.sideJ)
 
-    def apply[T](world: World, select: World => Vector[T], location: T => Location): Index[T] = {
-      val cellBuffer: Array[Array[ArrayBuffer[T]]] = Array.fill(world.sideI, world.sideJ) { ArrayBuffer[T]() }
+    def apply[T](content: Iterator[T], location: T => Location, sideI: Int, sideJ: Int): Index[T] = {
+      val cellBuffer: Array[Array[ArrayBuffer[T]]] = Array.fill(sideI, sideJ) { ArrayBuffer[T]() }
 
       for {
-        s <- select(world)
+        s <- content
         (i, j) = location(s)
       } cellBuffer(i)(j) += s
 
-      Index[T](cellBuffer.toVector.map(_.toVector.map(_.toVector)), world.sideI, world.sideJ)
+      Index[T](cellBuffer.toVector.map(_.toVector.map(_.toVector)), sideI, sideJ)
     }
 
     def allCells[T] = cells[T] composeTraversal each composeTraversal each
