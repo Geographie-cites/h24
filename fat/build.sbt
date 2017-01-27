@@ -42,7 +42,8 @@ libraryDependencies ++= Seq (
   "com.github.pathikrit" %% "better-files" % "2.17.1",
   "org.scalanlp" %% "breeze" % breezeVersion,
   "org.scalanlp" %% "breeze-natives" % breezeVersion,
-  "org.scalanlp" %% "breeze-viz" % breezeVersion
+  "org.scalanlp" %% "breeze-viz" % breezeVersion,
+  "org.typelevel"  %% "squants"  % "1.1.0"
 )
  
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
