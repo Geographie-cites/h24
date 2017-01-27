@@ -23,6 +23,7 @@ import better.files._
 import com.github.tototoshi.csv.{CSVFormat, CSVReader, DefaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
+import eighties.h24.population.Age
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
 import org.apache.commons.math3.distribution.PoissonDistribution
 import org.apache.commons.math3.random.RandomGenerator
@@ -30,11 +31,9 @@ import org.geotools.data.shapefile.ShapefileDataStore
 import org.geotools.geometry.jts.{JTS, JTSFactoryFinder}
 import org.geotools.referencing.CRS
 
-import scalaz._
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 import scala.util.{Random, Try}
-import eighties.h24.population._
 import org.opengis.referencing.crs.CoordinateReferenceSystem
 import org.opengis.referencing.operation.MathTransform
 
@@ -478,7 +477,7 @@ object generation {
 
   def readResidenceFromEGT(aFile: File) = withCSVReader(aFile)(SemicolonFormat){ reader =>
     Try {
-      reader.iterator.drop(1).filter(l => l(11).equalsIgnoreCase("1")).map { line =>
+      reader.iterator.drop(1).filter(l => l(11).equalsIgnoreCase("1") && !l(19).equalsIgnoreCase("NA") && !l(20).equalsIgnoreCase("NA")).map { line =>
         val carreau = line(1).trim
         val x = line(19).trim.replaceAll(",",".").toDouble
         val y = line(20).trim.replaceAll(",",".").toDouble
@@ -487,17 +486,19 @@ object generation {
     }
   }
 
-  def generateFlowsFromEGT(inputDirectory: File,tolerance: Double = 1.0) = {
+  def generateFlowsFromEGT(inputDirectory: File,tolerance: Double = 1.0): Try[GeometryCollection]= {
     val presenceFile = inputDirectory / "presence_semaine_GLeRoux.csv.lzma"
-    for {
+    val r = for {
       m <- readResidenceFromEGT(presenceFile)
     } yield {
-      var builder = new ConformingDelaunayTriangulationBuilder
-      val v = m.map{case (carreau, coord) => coord}
+      val builder = new ConformingDelaunayTriangulationBuilder
+      val v = m.values
       val geomFactory = new GeometryFactory
-      builder.setSites(geomFactory.createMultiPoint(v.toArray))
+      val mp = geomFactory.createMultiPoint(v.toArray)
+      builder.setSites(mp)
       builder.setTolerance(tolerance)
-      val triangleCollection = builder.getTriangles(geomFactory).asInstanceOf[GeometryCollection]
+      builder.getTriangles(geomFactory).asInstanceOf[GeometryCollection]
     }
+    r
   }
 }
