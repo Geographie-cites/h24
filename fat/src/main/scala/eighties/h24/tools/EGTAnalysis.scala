@@ -15,7 +15,7 @@
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-package eighties.h24
+package eighties.h24.tools
 
 import java.io.{BufferedInputStream, FileInputStream}
 

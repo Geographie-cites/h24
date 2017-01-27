@@ -59,8 +59,7 @@ object generation {
     sex: Int,
     education: Int,
     point: Point,
-    location: space.Location,
-    mainActivity: MainActivity)
+    location: space.Location)
 
   case class Equipment(typeEquipment: String, point: Point, location:space.Coordinate, quality: String, iris: AreaID)
   case class Activity(point: Point, location: space.Coordinate)
@@ -171,10 +170,6 @@ object generation {
     val workFlows = readMobilityFlows(workFile)(commune).get
     val studyFlows = readMobilityFlows(studyFile)(commune).get
     (work: Boolean, rng: Random) => {
-      if (workFlows.isEmpty) {
-        println("Empty workflows for " + commune)
-        println("study flows " + studyFlows)
-      }
       val areaID = multinomial(if (work) workFlows else studyFlows)(rng)
       geometry(AreaID(areaID)).map(geom=>{
         val sampler = new PolygonSampler(geom)
@@ -190,8 +185,7 @@ object generation {
     geometry: AreaID => Option[MultiPolygon],
     ageSex: Map[AreaID, Vector[Double]],
     schoolAge: Map[AreaID, Vector[Double]],
-    educationSex: Map[AreaID, Vector[Vector[Double]]],
-    mainActivityLocation: AreaID => (Boolean, Random) => Option[Point]) = {
+    educationSex: Map[AreaID, Vector[Vector[Double]]]) = {
 
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
@@ -249,18 +243,13 @@ object generation {
           // Should decide first if has an activity
           val working = true
           val commune = id.id.take(5)
-          val mainActivityPoint = mainActivityLocation(AreaID(commune))(working, rnd)
           IndividualFeature(
             ageCategory = ageIndex,
             age = age,
             sex = sex,
             education = education,
             point = point,
-            location = space.cell(point.getX, point.getY),
-            mainActivity = mainActivityPoint match {
-              case Some(p)=>Active(space.cell(p.getX, p.getY))
-              case None => Inactive
-            }
+            location = space.cell(point.getX, point.getY)
           )
         }
         res
@@ -276,11 +265,10 @@ object generation {
 
     for {
       (irises, geom) <- readGeometry(contourIRISFile, filter)
-      workLocation = mainActivityLocationFromMobilityFlows(workFlowsFile, studyFlowsFile, geom)
       ageSex <- readAgeSex(baseICEvolStructPopFileName)
       schoolAge <- readAgeSchool(baseICDiplomesFormationPopFileName)
       educationSex <- readEducationSex(baseICDiplomesFormationPopFileName)
-    } yield generatePopulation(rng, irises.toSeq, geom, ageSex, schoolAge, educationSex, workLocation).toIterator.flatten
+    } yield generatePopulation(rng, irises.toSeq, geom, ageSex, schoolAge, educationSex).toIterator.flatten
   }
 
 

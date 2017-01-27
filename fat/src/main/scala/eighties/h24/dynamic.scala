@@ -48,19 +48,6 @@ object dynamic {
     (World.allIndividuals modify m)(world)
   }
 
-  def goToWork(world: World) = {
-    def m = (individual: Individual) =>
-      Individual.location.modify { current =>
-        individual.mainActivity match {
-          case Inactive => current
-          case Active(l) => l
-          //FIXME take outsider into account
-          case ActiveOutside => current
-        }
-      } (individual)
-    (World.allIndividuals modify m)(world)
-  }
-
   type Conviction = Vector[Individual] => Vector[Individual]
 
   def localConviction(gama: Double, world: World, random: Random) = {

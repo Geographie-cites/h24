@@ -124,11 +124,6 @@ object population {
 
   type Behaviour = Double
 
-  sealed trait MainActivity
-  case object Inactive extends MainActivity
-  case class Active(location: Location) extends MainActivity
-  case object ActiveOutside extends MainActivity
-
   /*sealed trait Behaviour {
     override def toString = getClass.getName
   }
@@ -160,7 +155,6 @@ object population {
           education,
           behaviour(age, sex, education, random),
           feature.location,
-          feature.mainActivity,
           feature.location
         )
 
@@ -177,7 +171,6 @@ object population {
     education: Education,
     behaviour: Behaviour,
     home: Location,
-    mainActivity: MainActivity,
     location: Location)
 
 

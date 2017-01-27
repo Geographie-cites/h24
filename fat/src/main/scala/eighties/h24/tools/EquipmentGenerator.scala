@@ -15,32 +15,26 @@
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-package eighties.h24
+package eighties.h24.tools
+
+import java.io.{BufferedWriter, FileWriter}
 
 import better.files._
-import com.vividsolutions.jts.geom.Coordinate
-import eighties.h24.population.{Active, ActiveOutside, Inactive}
+import eighties.h24.generation
 import org.apache.commons.math3.random.JDKRandomGenerator
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataUtilities, Transaction}
 
-object PopulationGenerator extends App {
+object EquipmentGenerator extends App {
 
   val path = File("data")
   val outputPath = File("results")
   outputPath.createDirectories()
 
-  val outFile = outputPath / "generated-population-75113.shp"
+  val outFile = outputPath / "generated-equipment-IDF.shp"
+  val outFileCSV = outputPath / "generated-equipment-IDF.csv"
 
-  val specs = "geom:Point:srid=3035," +
-              "cellX:Integer," +
-              "cellY:Integer," +
-              "ageCat:Integer," +
-              "age:Double," +
-              "sex:Integer," +
-              "education:Integer," +
-              "mainactiv:Point:srid=3035," +
-              "activity:Point:srid=3035"
+  val specs = "geom:Point:srid=3035,cellX:Integer,cellY:Integer,type:String,quality:String,iris:String"
   val factory = new ShapefileDataStoreFactory
   val dataStore = factory.createDataStore(outFile.toJava.toURI.toURL)
   val featureTypeName = "Object"
@@ -49,34 +43,26 @@ object PopulationGenerator extends App {
   val typeName = dataStore.getTypeNames()(0)
   val writer = dataStore.getFeatureWriterAppend(typeName, Transaction.AUTO_COMMIT)
   val rng = new JDKRandomGenerator(42)
-  def filterParis13 (v:String) = v.startsWith("75113")
-  def filterAll (v:String) = true
-  def filter (v:String) = filterParis13(v)
-  for {
-    (feature, i) <- generation.generateFeatures(path.toJava, filter, rng).get.zipWithIndex
-  } {
+
+  val bw = new BufferedWriter(new FileWriter(outFileCSV.toJava))
+
+  for ((feature, i) <- generation.generateEquipments(path, _ => true, rng).get.zipWithIndex) {
     import feature._
-    val activity = generation.sampleActivity(feature, rng, 10000)
     def discrete(v:Double) = (v / 200.0).toInt
-    val mainActivityPoint = mainActivity match {
-      case Active(p) => point.getFactory.createPoint(new Coordinate(p._1, p._2))
-      case ActiveOutside => null
-      case Inactive => null
-    }
+    val cellX = discrete(location._1)
+    val cellY = discrete(location._2)
     val values = Array[AnyRef](
       point,
-      discrete(location._1).asInstanceOf[AnyRef],
-      discrete(location._2).asInstanceOf[AnyRef],
-      ageCategory.asInstanceOf[AnyRef],
-      age.getOrElse(75).asInstanceOf[AnyRef],
-      sex.asInstanceOf[AnyRef],
-      education.asInstanceOf[AnyRef],
-      mainActivityPoint,
-      activity.point
-    )
+      cellX.asInstanceOf[AnyRef],
+      cellY.asInstanceOf[AnyRef],
+      typeEquipment.asInstanceOf[AnyRef],
+      quality.asInstanceOf[AnyRef],
+      iris.asInstanceOf[AnyRef])
     val simpleFeature = writer.next
     simpleFeature.setAttributes(values)
     writer.write
+    bw.write(s"$cellX, $cellY\n")
   }
   writer.close
+  bw.close
 }

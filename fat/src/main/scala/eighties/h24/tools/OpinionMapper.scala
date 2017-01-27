@@ -1,4 +1,4 @@
-package eighties.h24
+package eighties.h24.tools
 
 import breeze.plot._
 import eighties.h24.population._
