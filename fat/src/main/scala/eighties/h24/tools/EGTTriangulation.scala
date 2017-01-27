@@ -17,14 +17,60 @@
   */
 package eighties.h24.tools
 
+import java.io.{BufferedInputStream, FileInputStream}
+
 import better.files._
-import com.vividsolutions.jts.geom.GeometryFactory
+import com.vividsolutions.jts.geom.{Coordinate, GeometryCollection, GeometryFactory}
+import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataUtilities, Transaction}
+import com.github.tototoshi.csv.{CSVFormat, CSVReader, DefaultCSVFormat}
+import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
 
-import eighties.h24.generation
+import scala.io.Source
+import scala.util.Try
 
 object EGTTriangulation extends App {
+  object CommaFormat extends DefaultCSVFormat {
+    override val delimiter = ','
+  }
+  object SemicolonFormat extends DefaultCSVFormat {
+    override val delimiter = ';'
+  }
+  def withCSVReader[T](file: File)(format: CSVFormat)(f: CSVReader => T) = {
+    val in = new BufferedInputStream(new FileInputStream(file.toJava))
+    val stream = new LZMACompressorInputStream(in)
+    val reader = CSVReader.open(Source.fromInputStream(stream, "ISO-8859-1"))(format)
+    try f(reader)
+    finally reader.close
+  }
+
+  def readResidenceFromEGT(aFile: File) = withCSVReader(aFile)(SemicolonFormat){ reader =>
+    Try {
+      reader.iterator.drop(1).filter(l => l(11).equalsIgnoreCase("1") && !l(19).equalsIgnoreCase("NA") && !l(20).equalsIgnoreCase("NA")).map { line =>
+        val carreau = line(1).trim
+        val x = line(19).trim.replaceAll(",",".").toDouble
+        val y = line(20).trim.replaceAll(",",".").toDouble
+        carreau -> new Coordinate(x,y)
+      }.toMap
+    }
+  }
+
+  def generateFlowsFromEGT(inputDirectory: File,tolerance: Double = 1.0): Try[GeometryCollection]= {
+    val presenceFile = inputDirectory / "presence_semaine_GLeRoux.csv.lzma"
+    val r = for {
+      m <- readResidenceFromEGT(presenceFile)
+    } yield {
+      val builder = new ConformingDelaunayTriangulationBuilder
+      val v = m.values
+      val geomFactory = new GeometryFactory
+      val mp = geomFactory.createMultiPoint(v.toArray)
+      builder.setSites(mp)
+      builder.setTolerance(tolerance)
+      builder.getTriangles(geomFactory).asInstanceOf[GeometryCollection]
+    }
+    r
+  }
 
   val path = File("../données/EGT 2010/presence semaine EGT")
   val outputPath = File("results")
@@ -45,7 +91,7 @@ object EGTTriangulation extends App {
 
   val res =
     for {
-      t <- generation.generateFlowsFromEGT(path)
+      t <- generateFlowsFromEGT(path)
     } yield {
     val num = t.getNumGeometries
     for (i <- 0 until num) {

@@ -475,30 +475,4 @@ object generation {
     }
   }
 
-  def readResidenceFromEGT(aFile: File) = withCSVReader(aFile)(SemicolonFormat){ reader =>
-    Try {
-      reader.iterator.drop(1).filter(l => l(11).equalsIgnoreCase("1") && !l(19).equalsIgnoreCase("NA") && !l(20).equalsIgnoreCase("NA")).map { line =>
-        val carreau = line(1).trim
-        val x = line(19).trim.replaceAll(",",".").toDouble
-        val y = line(20).trim.replaceAll(",",".").toDouble
-        carreau -> new Coordinate(x,y)
-      }.toMap
-    }
-  }
-
-  def generateFlowsFromEGT(inputDirectory: File,tolerance: Double = 1.0): Try[GeometryCollection]= {
-    val presenceFile = inputDirectory / "presence_semaine_GLeRoux.csv.lzma"
-    val r = for {
-      m <- readResidenceFromEGT(presenceFile)
-    } yield {
-      val builder = new ConformingDelaunayTriangulationBuilder
-      val v = m.values
-      val geomFactory = new GeometryFactory
-      val mp = geomFactory.createMultiPoint(v.toArray)
-      builder.setSites(mp)
-      builder.setTolerance(tolerance)
-      builder.getTriangles(geomFactory).asInstanceOf[GeometryCollection]
-    }
-    r
-  }
 }
