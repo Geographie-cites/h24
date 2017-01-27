@@ -28,6 +28,7 @@ import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
 import eighties.h24.population.Age.AgeValue
 import eighties.h24.population.Sex.{Female, Male}
 import eighties.h24.population.{Age, AggregatedEducation, Sex}
+import monocle.macros.Lenses
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
 import org.apache.commons.math3.distribution.PoissonDistribution
 import org.apache.commons.math3.random.RandomGenerator
@@ -58,9 +59,8 @@ object generation {
   }
 
   case class AreaID(id: String) extends AnyVal
-  case class IndividualFeature(
+  @Lenses case class IndividualFeature(
     ageCategory: Int,
-    age: Option[Double],
     sex: Int,
     education: Int,
     point: Point,
@@ -197,68 +197,66 @@ object generation {
     val transform = CRS.findMathTransform(inCRS, outCRS, true)
 
     irises.map { id =>
-      ageSex.get(id) match {
-        case Some(_) =>
-        case None => println("agesex "+id.id)
-      }
-        val ageSexV = ageSex.get(id).get
-        val schoolAgeV = schoolAge.get(id).get
-        val educationSexV = educationSex.get(id).get
+      val ageSexV = ageSex.get(id).get
+      val schoolAgeV = schoolAge.get(id).get
+      val educationSexV = educationSex.get(id).get
 
-        val sampler = new PolygonSampler(geometry(id).get)
+      val sampler = new PolygonSampler(geometry(id).get)
 
-        val total = ageSexV.sum
+      val total = ageSexV.sum
 
-        val ageSexSizes = Seq(6,2)
-        val ageSexVariate = new RasterVariate(ageSexV.toArray, ageSexSizes)
+      val ageSexSizes = Seq(6,2)
+      val ageSexVariate = new RasterVariate(ageSexV.toArray, ageSexSizes)
 
-        val educationSexSizes = Seq(7)
-        val educationSexVariates = ArrayBuffer(
-          new RasterVariate(educationSexV(0).toArray, educationSexSizes),
-          new RasterVariate(educationSexV(1).toArray, educationSexSizes))
+      val educationSexSizes = Seq(7)
+      val educationSexVariates = ArrayBuffer(
+        new RasterVariate(educationSexV(0).toArray, educationSexSizes),
+        new RasterVariate(educationSexV(1).toArray, educationSexSizes))
 
-        def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
-        val res = (0 until total.toInt).map{ _ =>
-          val sample = ageSexVariate.compute(rnd)
-          val ageIndex = (sample(0)*ageSexSizes(0)).toInt
-          val ageInterval = Age.all(ageIndex)
-          val residual = sample(0)*ageSexSizes(0) - ageIndex
-          val age = ageInterval.to.map(max => rescale(ageInterval.from, max, residual))
-          val sex = (sample(1)*ageSexSizes(1)).toInt
+      def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
 
-          var tempIndex = -1
-          var tempP = -1.0
-          val schooled = age match {
-            case Some(a) =>
-              val schoolAgeIndex = SchoolAge.index(a)
-              tempIndex = schoolAgeIndex
-              if (schoolAgeIndex == 0) false else {
-                tempP = schoolAgeV(schoolAgeIndex - 1)
-                rnd.nextDouble() < schoolAgeV(schoolAgeIndex - 1)
-              }
-            case None => false
-          }
-          val education = if (schooled) 0 else {
-            if (ageIndex > 0) (educationSexVariates(sex).compute(rnd)(0) * educationSexSizes(0)).toInt + 1
-            else 1
-          }
-          val coordinate = sampler.apply(rnd)
-          val transformed = JTS.transform(coordinate, null, transform)
-          val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
-          // Should decide first if has an activity
-          val working = true
-          val commune = id.id.take(5)
-          IndividualFeature(
-            ageCategory = ageIndex,
-            age = age,
-            sex = sex,
-            education = education,
-            point = point,
-            location = space.cell(point.getX, point.getY)
-          )
+      val res = (0 until total.toInt).map{ _ =>
+        val sample = ageSexVariate.compute(rnd)
+        val ageIndex = (sample(0)*ageSexSizes(0)).toInt
+        val ageInterval = Age.all(ageIndex)
+        val residual = sample(0)*ageSexSizes(0) - ageIndex
+        val age = ageInterval.to.map(max => rescale(ageInterval.from, max, residual))
+        val sex = (sample(1)*ageSexSizes(1)).toInt
+
+        var tempIndex = -1
+        var tempP = -1.0
+        val schooled = age match {
+          case Some(a) =>
+            val schoolAgeIndex = SchoolAge.index(a)
+            tempIndex = schoolAgeIndex
+            if (schoolAgeIndex == 0) false else {
+              tempP = schoolAgeV(schoolAgeIndex - 1)
+              rnd.nextDouble() < schoolAgeV(schoolAgeIndex - 1)
+            }
+          case None => false
         }
-        res
+        val education = if (schooled) 0 else {
+          if (ageIndex > 0) (educationSexVariates(sex).compute(rnd)(0) * educationSexSizes(0)).toInt + 1
+          else 1
+        }
+        val coordinate = sampler.apply(rnd)
+        val transformed = JTS.transform(coordinate, null, transform)
+        val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
+
+        // Should decide first if has an activity
+        val working = true
+        val commune = id.id.take(5)
+
+        IndividualFeature(
+          ageCategory = ageIndex,
+          sex = sex,
+          education = education,
+          point = point,
+          location = space.cell(point.getX, point.getY)
+        )
       }
+      res
+    }
   }
 
   def generateFeatures(inputDirectory: java.io.File, filter: String => Boolean, rng: Random) = {
@@ -481,7 +479,9 @@ object generation {
     }
   }
 
-  def readFlowsFromEGT(aFile: File, index: Coordinate=>Int, reqAge: AgeValue, reqSex: Sex, reqEducation: AggregatedEducation, reqInterval: Interval) = withCSVReader(aFile)(SemicolonFormat){ reader =>
+  case class Flow(overlapMinutes:Option[Int], sexe:Sex, age:AgeValue, dipl:AggregatedEducation, activity: space.Location, residence: space.Location)
+
+  def readFlowsFromEGT(aFile: File, location: Coordinate=>space.Location, reqAge: AgeValue, reqSex: Sex, reqEducation: AggregatedEducation, reqInterval: Interval) = withCSVReader(aFile)(SemicolonFormat){ reader =>
     Try {
       reader.iterator.drop(1).map { line =>
         val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
@@ -511,15 +511,15 @@ object generation {
         val point_y = line(18).trim.replaceAll(",",".").toDouble
         val res_x = line(19).trim.replaceAll(",",".").toDouble
         val res_y = line(20).trim.replaceAll(",",".").toDouble
-        (overlapMinutes, sexe, age, dipl, index(new Coordinate(point_x,point_y)),index(new Coordinate(res_x,res_y)))
-      }.filter(p=>p._1 match {
+        new Flow(overlapMinutes, sexe, age, dipl, location(new Coordinate(point_x,point_y)),location(new Coordinate(res_x,res_y)))
+      }.filter(p=>p.overlapMinutes match {
         case None=> false
         case Some(o) => true
       })
     }
   }
 
-  def readFlowsFromEGT(aFile: File) = {
+  def flowsFromEGT(aFile: File) = {
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(l2eCRS, outCRS, true)
@@ -527,22 +527,32 @@ object generation {
     val x_laea_max = 3846000
     val y_laea_min = 2805000
     val y_laea_max = 2937000
-    val row = (x_laea_max - x_laea_min) / 1000
-    def index(coord: Coordinate): Int = {
+    //val row = (x_laea_max - x_laea_min) / 1000
+    def location(coord: Coordinate): space.Location = {
       val laea_coord = JTS.transform(coord, null, transform)
       // replace by cell...
-      val dx = (laea_coord.x.toInt - x_laea_min)/1000
-      val dy = (laea_coord.y.toInt - y_laea_min)/1000
-      dx+dy*row
+      val dx = (laea_coord.x - x_laea_min)
+      val dy = (laea_coord.y - y_laea_min)
+//      dx+dy*row
+      space.cell(dx, dy)
     }
     val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
-    val startDate = new DateTime(formatter.parse("01/01/2010 04:00")
+    val startDate = new DateTime(formatter.parse("01/01/2010 04:00"))
+
+
+
     for {
       age <- Age.all
       sex <- Sex.all
       education <- AggregatedEducation.all
       plage <- (0 until 24)
-      p <- readFlowsFromEGT(aFile, index, age, sex, education, new Interval(startDate.plusHours(plage),startDate.plusHours(plage+1)))
-    } yield {p}
+      index =
+        space.Index[Flow](
+          readFlowsFromEGT(aFile, location, age, sex, education, new Interval(startDate.plusHours(plage),startDate.plusHours(plage+1))).get,
+          (_: Flow).residence,
+          149,
+          132
+        )
+    } yield 0
   }
 }

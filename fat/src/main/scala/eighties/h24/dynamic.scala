@@ -20,6 +20,7 @@ package eighties.h24
 import eighties.h24.population._
 import eighties.h24.space._
 import monocle.Monocle._
+import squants._
 
 import scala.util.Random
 
@@ -47,6 +48,16 @@ object dynamic {
     def m = (individual: Individual) => Individual.location.set(individual.home)(individual)
     (World.allIndividuals modify m)(world)
   }
+
+  case class EGT()
+
+  def moveSampledInEGT(world: World, egt: EGT, time: Time, random: Random) = {
+    def sampleMoveInEGT(individual: Individual) = {
+      Individual.location.set(individual.home)(individual)
+    }
+    (World.allIndividuals modify sampleMoveInEGT)(world)
+  }
+
 
   type Conviction = Vector[Individual] => Vector[Individual]
 
@@ -87,7 +98,7 @@ object dynamic {
 //  }
 
   def randomiseLocation(world: World, random: Random) = {
-    val reach = reachable(Index[Individual](world, World.individuals.get(_), Individual.location.get(_)))
+    val reach = reachable(Index[Individual](world.individuals.iterator, Individual.location.get(_), world.sideI, world.sideJ))
     val reachSize = reach.size
 
     def assign(individual: Individual): Individual =
