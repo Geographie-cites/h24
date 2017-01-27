@@ -18,18 +18,24 @@
 package eighties.h24
 
 import java.io.{BufferedInputStream, FileInputStream}
+import java.text.SimpleDateFormat
+import java.util.Date
 
 import better.files._
 import com.github.tototoshi.csv.{CSVFormat, CSVReader, DefaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
-import eighties.h24.population.Age
+import eighties.h24.population.Age.AgeValue
+import eighties.h24.population.Sex.{Female, Male}
+import eighties.h24.population.{Age, AggregatedEducation, Sex}
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
 import org.apache.commons.math3.distribution.PoissonDistribution
 import org.apache.commons.math3.random.RandomGenerator
 import org.geotools.data.shapefile.ShapefileDataStore
 import org.geotools.geometry.jts.{JTS, JTSFactoryFinder}
 import org.geotools.referencing.CRS
+import org.joda.time.{DateTime, Interval}
+import org.opengis.geometry.DirectPosition
 
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
@@ -475,4 +481,68 @@ object generation {
     }
   }
 
+  def readFlowsFromEGT(aFile: File, index: Coordinate=>Int, reqAge: AgeValue, reqSex: Sex, reqEducation: AggregatedEducation, reqInterval: Interval) = withCSVReader(aFile)(SemicolonFormat){ reader =>
+    Try {
+      reader.iterator.drop(1).map { line =>
+        val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
+        val date_start = new DateTime(formatter.parse(line(8).trim))
+        val date_end = new DateTime(formatter.parse(line(9).trim))
+        val interval = new Interval(date_start, date_end)
+        //val duree = line(10).toInt
+        val overlapMinutes = Option(interval.overlap(reqInterval)).map(_.toDuration.toStandardMinutes.getMinutes)
+        val sexe = line(12).toInt match {
+          case 1 => Male
+          case 2 => Female
+        }
+        val age = Age.parse(line(13).toInt)
+        val dipl = line(14).toInt match {
+          case 0 => AggregatedEducation.Low
+          case 1 => AggregatedEducation.Low
+          case 2 => AggregatedEducation.Low
+          case 3 => AggregatedEducation.Low
+          case 4 => AggregatedEducation.Low
+          case 5 => AggregatedEducation.Middle
+          case 6 => AggregatedEducation.Middle
+          case 7 => AggregatedEducation.High
+          case 8 => AggregatedEducation.High
+          case 9 => AggregatedEducation.High
+        }
+        val point_x = line(17).trim.replaceAll(",",".").toDouble
+        val point_y = line(18).trim.replaceAll(",",".").toDouble
+        val res_x = line(19).trim.replaceAll(",",".").toDouble
+        val res_y = line(20).trim.replaceAll(",",".").toDouble
+        (overlapMinutes, sexe, age, dipl, index(new Coordinate(point_x,point_y)),index(new Coordinate(res_x,res_y)))
+      }.filter(p=>p._1 match {
+        case None=> false
+        case Some(o) => true
+      })
+    }
+  }
+
+  def readFlowsFromEGT(aFile: File) = {
+    val l2eCRS = CRS.decode("EPSG:27572")
+    val outCRS = CRS.decode("EPSG:3035")
+    val transform = CRS.findMathTransform(l2eCRS, outCRS, true)
+    val x_laea_min = 3697000
+    val x_laea_max = 3846000
+    val y_laea_min = 2805000
+    val y_laea_max = 2937000
+    val row = (x_laea_max - x_laea_min) / 1000
+    def index(coord: Coordinate): Int = {
+      val laea_coord = JTS.transform(coord, null, transform)
+      // replace by cell...
+      val dx = (laea_coord.x.toInt - x_laea_min)/1000
+      val dy = (laea_coord.y.toInt - y_laea_min)/1000
+      dx+dy*row
+    }
+    val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
+    val startDate = new DateTime(formatter.parse("01/01/2010 04:00")
+    for {
+      age <- Age.all
+      sex <- Sex.all
+      education <- AggregatedEducation.all
+      plage <- (0 until 24)
+      p <- readFlowsFromEGT(aFile, index, age, sex, education, new Interval(startDate.plusHours(plage),startDate.plusHours(plage+1)))
+    } yield {p}
+  }
 }
