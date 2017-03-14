@@ -38,7 +38,7 @@ libraryDependencies ++= Seq (
   "com.github.tototoshi" %% "scala-csv" % "1.3.4",
   "org.apache.commons" % "commons-compress" % "1.11",
   "org.apache.commons" % "commons-math3" % "3.6.1",
-  "org.tukaani" % "xz" % "1.5",
+  "org.tukaani" % "xz" % "1.6",
   "com.github.pathikrit" %% "better-files" % "2.17.1",
   "org.scalanlp" %% "breeze" % breezeVersion,
   "org.scalanlp" %% "breeze-natives" % breezeVersion,

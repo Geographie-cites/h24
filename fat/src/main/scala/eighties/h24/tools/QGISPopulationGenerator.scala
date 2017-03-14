@@ -23,47 +23,47 @@ import org.apache.commons.math3.random.JDKRandomGenerator
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataUtilities, Transaction}
 
-object QGISPopulationGenerator extends App {
-
-  val path = File("data")
-  val outputPath = File("results")
-  outputPath.createDirectories()
-
-  val outFile = outputPath / "generated-population-75113.shp"
-
-  val specs = "geom:Point:srid=3035," +
-              "cellX:Integer," +
-              "cellY:Integer," +
-              "ageCat:Integer," +
-              "sex:Integer," +
-              "education:Integer"
-  val factory = new ShapefileDataStoreFactory
-  val dataStore = factory.createDataStore(outFile.toJava.toURI.toURL)
-  val featureTypeName = "Object"
-  val featureType = DataUtilities.createType(featureTypeName, specs)
-  dataStore.createSchema(featureType)
-  val typeName = dataStore.getTypeNames()(0)
-  val writer = dataStore.getFeatureWriterAppend(typeName, Transaction.AUTO_COMMIT)
-  val rng = new JDKRandomGenerator(42)
-  def filterParis13 (v:String) = v.startsWith("75113")
-  def filterAll (v:String) = true
-  def filter (v:String) = filterParis13(v)
-  for {
-    (feature, i) <- generation.generateFeatures(path.toJava, filter, rng).get.zipWithIndex
-  } {
-    import feature._
-    def discrete(v:Double) = (v / 200.0).toInt
-    val values = Array[AnyRef](
-      point,
-      discrete(location._1).asInstanceOf[AnyRef],
-      discrete(location._2).asInstanceOf[AnyRef],
-      ageCategory.asInstanceOf[AnyRef],
-      sex.asInstanceOf[AnyRef],
-      education.asInstanceOf[AnyRef]
-    )
-    val simpleFeature = writer.next
-    simpleFeature.setAttributes(values)
-    writer.write
-  }
-  writer.close
-}
+//object QGISPopulationGenerator extends App {
+//
+//  val path = File("data")
+//  val outputPath = File("results")
+//  outputPath.createDirectories()
+//
+//  val outFile = outputPath / "generated-population-75113.shp"
+//
+//  val specs = "geom:Point:srid=3035," +
+//              "cellX:Integer," +
+//              "cellY:Integer," +
+//              "ageCat:Integer," +
+//              "sex:Integer," +
+//              "education:Integer"
+//  val factory = new ShapefileDataStoreFactory
+//  val dataStore = factory.createDataStore(outFile.toJava.toURI.toURL)
+//  val featureTypeName = "Object"
+//  val featureType = DataUtilities.createType(featureTypeName, specs)
+//  dataStore.createSchema(featureType)
+//  val typeName = dataStore.getTypeNames()(0)
+//  val writer = dataStore.getFeatureWriterAppend(typeName, Transaction.AUTO_COMMIT)
+//  val rng = new JDKRandomGenerator(42)
+//  def filterParis13 (v:String) = v.startsWith("75113")
+//  def filterAll (v:String) = true
+//  def filter (v:String) = filterParis13(v)
+//  for {
+//    (feature, i) <- generation.generateFeatures(path.toJava, filter, rng).get.zipWithIndex
+//  } {
+//    import feature._
+//    def discrete(v:Double) = (v / 200.0).toInt
+//    val values = Array[AnyRef](
+//      point,
+//      discrete(location._1).asInstanceOf[AnyRef],
+//      discrete(location._2).asInstanceOf[AnyRef],
+//      ageCategory.asInstanceOf[AnyRef],
+//      sex.asInstanceOf[AnyRef],
+//      education.asInstanceOf[AnyRef]
+//    )
+//    val simpleFeature = writer.next
+//    simpleFeature.setAttributes(values)
+//    writer.write
+//  }
+//  writer.close
+//}

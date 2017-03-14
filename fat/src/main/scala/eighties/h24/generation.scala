@@ -17,17 +17,17 @@
   */
 package eighties.h24
 
-import java.io.{BufferedInputStream, FileInputStream}
+import java.io.{File => _, _}
+import java.util.zip.{GZIPInputStream, GZIPOutputStream}
 
-import better.files._
+import better.files.{File, _}
 import com.github.tototoshi.csv.{CSVFormat, CSVReader, DefaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
 import eighties.h24.population.Age
+import eighties.h24.space.{BoundingBox, Index}
 import monocle.macros.Lenses
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
-import org.apache.commons.math3.distribution.PoissonDistribution
-import org.apache.commons.math3.random.RandomGenerator
 import org.geotools.data.shapefile.ShapefileDataStore
 import org.geotools.geometry.jts.{JTS, JTSFactoryFinder}
 import org.geotools.referencing.CRS
@@ -53,11 +53,74 @@ object generation {
   }
 
   case class AreaID(id: String) extends AnyVal
+
+  object IndividualFeature {
+    def save(features: Vector[IndividualFeature], file: File) = {
+      val os = new OutputStreamWriter(new GZIPOutputStream(new FileOutputStream(file.toJava)))
+      try {
+
+        val cells = {
+          val bounds = BoundingBox(features, IndividualFeature.location.get)
+
+          def relocate = IndividualFeature.location.modify(BoundingBox.translate(bounds))
+
+          Index(features.iterator.map(relocate), IndividualFeature.location.get, bounds.sideI, bounds.sideJ)
+        }
+
+        def formatFeature(feature: IndividualFeature) = Vector(feature.ageCategory, feature.sex, feature.education)
+
+        os.append(s"${cells.sideI},${cells.sideJ}\n")
+
+        for {
+          i <- (0 until cells.sideI)
+          j <- (0 until cells.sideJ)
+          cell = cells.cells(i)(j)
+        } {
+          val line = cell.map(f => formatFeature(f).mkString(",")).mkString("\t")
+          os.append(line + "\n")
+        }
+      } finally os.close
+    }
+
+    def load(file: File) = {
+      val is = Source.fromInputStream(new GZIPInputStream(new FileInputStream(file.toJava)))
+      try {
+        val lines = is.getLines()
+
+        val header = lines.next().split(",")
+        val (sideI, sideJ) = (header(0).toInt, header(1).toInt)
+
+        val locations =
+          for {
+            i <- 0 until sideI
+            j <- 0 until sideJ
+          } yield (i, j)
+
+        val features =
+          for {
+            (line, location) <- lines zip locations.toIterator
+            if !line.isEmpty
+            indiv <- line.split("\t")
+          } yield {
+            val features = indiv.map(_.toInt)
+            IndividualFeature(
+              features(0),
+              features(1),
+              features(2),
+              location
+            )
+          }
+
+        features.toVector
+      } finally is.close
+    }
+
+  }
+
   @Lenses case class IndividualFeature(
     ageCategory: Int,
     sex: Int,
     education: Int,
-    point: Point,
     location: space.Location)
 
   case class Equipment(typeEquipment: String, point: Point, location:space.Coordinate, quality: String, iris: AreaID)
@@ -245,7 +308,6 @@ object generation {
           ageCategory = ageIndex,
           sex = sex,
           education = education,
-          point = point,
           location = space.cell(point.getX, point.getY)
         )
       }
@@ -381,18 +443,18 @@ object generation {
     } yield generateEquipment(rng, equipment, geometry, completeArea)//.toIterator
   }
 
-  def sampleActivity(feature: IndividualFeature, rnd: RandomGenerator, distance: Double = 10000) = {
-    val poisson = new PoissonDistribution(rnd, distance, PoissonDistribution.DEFAULT_EPSILON, PoissonDistribution.DEFAULT_MAX_ITERATIONS)
-    val dist = poisson.sample.toDouble
-    val angle = rnd.nextDouble * Math.PI * 2.0
-    val p = feature.point
-    val factory = p.getFactory
-    val point = factory.createPoint(new Coordinate(p.getX + Math.cos(angle) * dist, p.getY + Math.sin(angle) * dist))
-    Activity(
-      point = point,
-      location = (point.getX, point.getY)
-    )
-  }
+//  def sampleActivity(feature: IndividualFeature, rnd: RandomGenerator, distance: Double = 10000) = {
+//    val poisson = new PoissonDistribution(rnd, distance, PoissonDistribution.DEFAULT_EPSILON, PoissonDistribution.DEFAULT_MAX_ITERATIONS)
+//    val dist = poisson.sample.toDouble
+//    val angle = rnd.nextDouble * Math.PI * 2.0
+//    val p = feature.point
+//    val factory = p.getFactory
+//    val point = factory.createPoint(new Coordinate(p.getX + Math.cos(angle) * dist, p.getY + Math.sin(angle) * dist))
+//    Activity(
+//      point = point,
+//      location = (point.getX, point.getY)
+//    )
+//  }
 
   class RasterVariate(pdf: Array[Double], val m_size: Seq[Int]) {
     val N = m_size.size
@@ -472,5 +534,7 @@ object generation {
       new Coordinate(x,y)
     }
   }
+
+
 
 }

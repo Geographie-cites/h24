@@ -173,5 +173,4 @@ object population {
     home: Location,
     location: Location)
 
-
 }
