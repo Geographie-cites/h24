@@ -54,6 +54,12 @@ object population {
         case 5 => Some(Above75)
         case _ => None
       }
+    def parse(age:Int) =
+      if (age < 15) From0To14 else
+      if (age < 30) From15To29 else
+      if (age < 45) From30To44 else
+      if (age < 60) From45To59 else
+      if (age < 75) From60To74 else Above75
   }
 
   sealed trait Sex
@@ -61,6 +67,8 @@ object population {
   object Sex {
     object Male extends Sex
     object Female extends Sex
+
+    def all = Vector(Male, Female)
 
     def apply(code: Int) =
       code match {
