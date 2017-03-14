@@ -24,18 +24,17 @@ import breeze.stats._
 
 object observable {
 
-  def byEducation[T](b: scala.Vector[Double] => T) =
-    (world: World) =>
+  def byEducation[T](b: scala.Vector[Double] => T)(world: World) =
       for {
         ed <- AggregatedEducation.all
         level = world.individuals.filter(i => AggregatedEducation(i.education).map(_ == ed).getOrElse(false))
-      } yield ed -> b(level.map(_.behaviour))
+      } yield ed -> b(level.map(i => i.behaviour))
 
-  def medianByEducation = byEducation { v => median(DenseVector(v: _*)) }
-  def mseByEducation = byEducation(b => scala.math.sqrt(variance(b)))
-  def meanByEducation = byEducation { v => mean(v) }
+//  def medianByEducation = byEducation { v => median(DenseVector(v: _*)) }
+//  def mseByEducation = byEducation(b => scala.math.sqrt(variance(b)))
+//  def meanByEducation = byEducation { v => mean(v) }
 
-  def resume =
-    byEducation { b => Vector(mean(b), scala.math.sqrt(variance(DenseVector(b: _*))), median(DenseVector(b: _*))) }
+  def resume(world: World) =
+    byEducation[Vector[Double]](b => Vector(mean(b), scala.math.sqrt(variance(DenseVector(b: _*))), median(DenseVector(b: _*))))(world)
 
 }

@@ -110,7 +110,7 @@ object generation {
             if !line.isEmpty
             indiv <- line.split("\t")
           } yield {
-            val features = indiv.map(_.toInt)
+            val features = indiv.split(",").map(_.toInt)
             IndividualFeature(
               features(0),
               features(1),

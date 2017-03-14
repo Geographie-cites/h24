@@ -59,7 +59,7 @@ object dynamic {
   }
 
 
-  type Conviction = Vector[Individual] => Vector[Individual]
+  //type Conviction[B] = Vector[Individual[B]] => Vector[Individual[B]]
 
   def localConviction(gama: Double, world: World, random: Random) = {
     def cs = Index.allCells[Individual].getAll(Index.indexIndividuals(world))
