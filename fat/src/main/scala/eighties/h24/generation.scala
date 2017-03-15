@@ -481,13 +481,35 @@ object generation {
 
   case class Flow(overlapMinutes:Option[Int], sexe:Sex, age:AgeValue, dipl:AggregatedEducation, activity: space.Location, residence: space.Location)
 
-  def readFlowsFromEGT(aFile: File, location: Coordinate=>space.Location, reqAge: AgeValue, reqSex: Sex, reqEducation: AggregatedEducation, reqInterval: Interval) = withCSVReader(aFile)(SemicolonFormat){ reader =>
+  def readFlowsFromEGT(aFile: File, location: Coordinate=>space.Location, /*reqAge: AgeValue, reqSex: Sex, reqEducation: AggregatedEducation, */reqInterval: Interval) =
+    withCSVReader(aFile)(SemicolonFormat){ reader =>
     Try {
-      reader.iterator.drop(1).map { line =>
-        val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
-        val date_start = new DateTime(formatter.parse(line(8).trim))
-        val date_end = new DateTime(formatter.parse(line(9).trim))
-        val interval = new Interval(date_start, date_end)
+      reader.iterator.drop(1).filter(line=>{
+        val d1 = line(8).trim
+        val d2 = line(9).trim
+        val motif = line(11).trim
+        val px = line(17).trim
+        val py = line(18).trim
+        val resx = line(19).trim
+        val resy = line(20).trim
+        !(motif.isEmpty||motif.equalsIgnoreCase("88")||motif.equalsIgnoreCase("99")||
+          px.equalsIgnoreCase("NA")||py.equalsIgnoreCase("NA")||
+          resx.equalsIgnoreCase("NA")||resy.equalsIgnoreCase("NA")||
+          d1.equalsIgnoreCase("NA")||d2.equalsIgnoreCase("NA"))
+      }).map { line =>
+        def format(date:String) = {
+          val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
+          Try{new DateTime(formatter.parse(date))}.toOption match {
+            case Some(d) => d
+            case None => new DateTime(new SimpleDateFormat("dd/MM/yy").parse(date))
+          }
+        }
+        //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
+        val date_start = format(line(8).trim)
+        val date_end = format(line(9).trim)
+        val interval =
+          if (date_start.compareTo(date_end) >= 0) new Interval(date_start, date_start.plusMinutes(1))
+          else new Interval(date_start, date_end)
         //val duree = line(10).toInt
         val overlapMinutes = Option(interval.overlap(reqInterval)).map(_.toDuration.toStandardMinutes.getMinutes)
         val sexe = line(12).toInt match {
@@ -495,7 +517,7 @@ object generation {
           case 2 => Female
         }
         val age = Age.parse(line(13).toInt)
-        val dipl = line(14).toInt match {
+        val dipl = Try{line(14).toInt match {
           case 0 => AggregatedEducation.Low
           case 1 => AggregatedEducation.Low
           case 2 => AggregatedEducation.Low
@@ -506,16 +528,25 @@ object generation {
           case 7 => AggregatedEducation.High
           case 8 => AggregatedEducation.High
           case 9 => AggregatedEducation.High
+        }}.toOption match {
+          case Some(e)=>e
+          case None => AggregatedEducation.Low
         }
         val point_x = line(17).trim.replaceAll(",",".").toDouble
         val point_y = line(18).trim.replaceAll(",",".").toDouble
+//        val testx = line(19).trim.replaceAll(",",".")
+//        val testy = line(20).trim.replaceAll(",",".")
+//        if (testx.equalsIgnoreCase("NA")||testy.equalsIgnoreCase("NA")) println(line)
         val res_x = line(19).trim.replaceAll(",",".").toDouble
         val res_y = line(20).trim.replaceAll(",",".").toDouble
         new Flow(overlapMinutes, sexe, age, dipl, location(new Coordinate(point_x,point_y)),location(new Coordinate(res_x,res_y)))
-      }.filter(p=>p.overlapMinutes match {
-        case None=> false
-        case Some(o) => true
-      })
+      }.filter(p=> {
+        val time = p.overlapMinutes match {
+          case None => false
+          case Some(o) => true
+        }
+        time// && p.sexe == reqSex && p.age == reqAge && p.dipl == reqEducation
+      }).toVector.toIterator
     }
   }
 
@@ -539,8 +570,6 @@ object generation {
     val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
     val startDate = new DateTime(formatter.parse("01/01/2010 04:00"))
 
-
-
     for {
       age <- Age.all
       sex <- Sex.all
@@ -548,7 +577,7 @@ object generation {
       plage <- (0 until 24)
       index =
         space.Index[Flow](
-          readFlowsFromEGT(aFile, location, age, sex, education, new Interval(startDate.plusHours(plage),startDate.plusHours(plage+1))).get,
+          readFlowsFromEGT(aFile, location, /*age, sex, education, */new Interval(startDate.plusHours(plage),startDate.plusHours(plage+1))).get,
           (_: Flow).residence,
           149,
           132
