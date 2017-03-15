@@ -42,7 +42,7 @@ import org.opengis.geometry.DirectPosition
 
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
-import scala.util.{Random, Try}
+import scala.util.{Random, Success, Try, Failure}
 import org.opengis.referencing.crs.CoordinateReferenceSystem
 import org.opengis.referencing.operation.MathTransform
 
@@ -563,9 +563,9 @@ object generation {
       }).map { line =>
         def format(date:String) = {
           val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
-          Try{new DateTime(formatter.parse(date))}.toOption match {
-            case Some(d) => d
-            case None => new DateTime(new SimpleDateFormat("dd/MM/yy").parse(date))
+          Try{new DateTime(formatter.parse(date))} match {
+            case Success(d) => d
+            case Failure(e) => new DateTime(new SimpleDateFormat("dd/MM/yy").parse(date))
           }
         }
         //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
@@ -592,15 +592,12 @@ object generation {
           case 7 => AggregatedEducation.High
           case 8 => AggregatedEducation.High
           case 9 => AggregatedEducation.High
-        }}.toOption match {
-          case Some(e)=>e
-          case None => AggregatedEducation.Low
+        }} match {
+          case Success(e)=>e
+          case Failure(e) => AggregatedEducation.Low
         }
         val point_x = line(17).trim.replaceAll(",",".").toDouble
         val point_y = line(18).trim.replaceAll(",",".").toDouble
-//        val testx = line(19).trim.replaceAll(",",".")
-//        val testy = line(20).trim.replaceAll(",",".")
-//        if (testx.equalsIgnoreCase("NA")||testy.equalsIgnoreCase("NA")) println(line)
         val res_x = line(19).trim.replaceAll(",",".").toDouble
         val res_y = line(20).trim.replaceAll(",",".").toDouble
         new Flow(overlapMinutes, sexe, age, dipl, location(new Coordinate(point_x,point_y)),location(new Coordinate(res_x,res_y)))
