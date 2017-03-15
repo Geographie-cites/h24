@@ -22,6 +22,7 @@ import dynamic._
 import monocle.Monocle._
 import monocle.macros._
 import better.files._
+import eighties.h24.generation.IndividualFeature
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
@@ -68,7 +69,7 @@ object space {
 
   object World {
 
-    def apply(individuals: Vector[Individual], attractions: Vector[Attraction]): World = {
+    def apply[B](individuals: Vector[Individual], attractions: Vector[Attraction]): World = {
       val boundingBox = BoundingBox(individuals, Individual.location.get)
 
       def relocate =
@@ -118,29 +119,24 @@ object space {
   @Lenses case class Index[T](cells: Vector[Vector[Vector[T]]], sideI: Int, sideJ: Int)
 
   def generateWorld(
-    path: java.io.File,
-    filter: String => Boolean,
-    sigmaInitialOpinion: Double,
-    workerRatio: Double,
+    features: Vector[IndividualFeature],
+    behaviour: (IndividualFeature, Random) => Behaviour,
     rng: Random) = {
 
     def included(individual: Individual) = individual.education != Education.Schol && individual.age != Age.From0To14
 
-    def byEducation = {
-      def behaviour(ed: Education, random: Random) =
-        AggregatedEducation(ed) match {
-          case Some(AggregatedEducation.Low) => (-1.0 + random.nextGaussian() * sigmaInitialOpinion)
-          case Some(AggregatedEducation.Middle) => (0.0 + random.nextGaussian() * sigmaInitialOpinion)
-          case Some(AggregatedEducation.High) => (1.0 + random.nextGaussian() * sigmaInitialOpinion)
-          case _ => Double.NaN
-        }
-      (age: Age, sex: Sex, education: Education, rng: Random) => behaviour(education, rng)
-    }
+//    def byEducation = {
+//      def behaviour(ed: Education, random: Random) =
+//        AggregatedEducation(ed) match {
+//          case Some(AggregatedEducation.Low) => (-1.0 + random.nextGaussian() * sigmaInitialOpinion)
+//          case Some(AggregatedEducation.Middle) => (0.0 + random.nextGaussian() * sigmaInitialOpinion)
+//          case Some(AggregatedEducation.High) => (1.0 + random.nextGaussian() * sigmaInitialOpinion)
+//          case _ => Double.NaN
+//        }
+//      (age: Age, sex: Sex, education: Education, rng: Random) => behaviour(education, rng)
+//    }
 
-    def individuals =
-      for {
-        features <- generation.generateFeatures(path, filter, rng)
-      } yield features.flatMap(f => Individual(f, byEducation, rng)).filter(included).toVector
+    def individuals = features.flatMap(f => Individual(f, behaviour, rng)).filter(included)
 
     /*def equipements =
       for {
@@ -148,6 +144,7 @@ object space {
       } yield equipments.flatMap(_.)*/
 
     //assignWork(workerRatio, generateAttractions(World(individuals.get, Vector.empty), 0.01, rng), rng)
-    World(individuals.get, Vector.empty)
+
+    World(individuals, Vector.empty)
   }
 }

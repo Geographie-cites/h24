@@ -18,10 +18,9 @@
 package eighties.h24
 
 import better.files._
-import eighties.h24.dynamic._
+import eighties.h24.generation._
 import eighties.h24.population._
 import eighties.h24.space._
-import shapeless.Lazy
 
 import scala.util.Random
 
@@ -38,27 +37,15 @@ object Simulation extends App {
   val gamaOpinion = 2
   val activityRatio = 0.3
 
-  val h24 = new H24(gamaOpinion, activityRatio)
-
-  def world = generateWorld(path.toJava, _ => true /*_.startsWith("75")*/, sigmaInitialOpinion, workers, rng)
-
- //println(observable.resume(world))
-//
-//  def save(w: World, s: Int) = {
-//    val name = s"paris-with-random-mobility-with-initial-gaussian${s}.tiff"
-//    WorldMapper.mapColorRGB(w, outputPath / name toJava)
-//  }
+  def features = IndividualFeature.load(File("results/population.csv.gz"))
 
 
-  //save(world, 0)
+  def world = generateWorld(features, (_,_) => 0.5, rng)
 
   val last =
     (1 to steps).foldLeft(world) {
       (w, s) =>
-        println(s"begin $s at " + System.currentTimeMillis())
-        val nw = h24.simulation(world, 1, rng)
-        println(s"end $s at " + System.currentTimeMillis())
-        //println(observable.resume(nw))
-        nw
+        def nw = dynamic.randomiseLocation(w, rng)
+        dynamic.localConviction(gamaOpinion, nw, rng)
     }
 }

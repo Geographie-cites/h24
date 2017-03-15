@@ -132,26 +132,8 @@ object population {
 
   type Behaviour = Double
 
-  /*sealed trait Behaviour {
-    override def toString = getClass.getName
-  }
-
-  object Behaviour {
-    object Meat extends Behaviour
-    object Veggie extends Behaviour
-
-    def all = Vector(Meat, Veggie)
-
-    def random(ratio: Double) =
-      (age: Age, sex: Sex, education: Education, rng: Random) =>
-        rng.nextDouble() < ratio match {
-          case true => Meat
-          case false => Veggie
-        }
-  }*/
-
   object Individual {
-    def apply(feature: IndividualFeature, behaviour: (Age, Sex, Education, Random) => Behaviour, random: Random): Option[Individual] =
+    def apply(feature: IndividualFeature, behaviour: (IndividualFeature, Random) => Behaviour, random: Random): Option[Individual] = {
       for {
         age <- Age(feature.ageCategory)
         sex <- Sex(feature.sex)
@@ -161,15 +143,15 @@ object population {
           age,
           sex,
           education,
-          behaviour(age, sex, education, random),
+          behaviour(feature, random),
           feature.location,
           feature.location
         )
+    }
 
 
     def i = Individual.location composeLens first
     def j = Individual.location composeLens second
-
   }
 
 
@@ -180,6 +162,5 @@ object population {
     behaviour: Behaviour,
     home: Location,
     location: Location)
-
 
 }
