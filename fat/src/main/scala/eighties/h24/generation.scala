@@ -66,7 +66,6 @@ object generation {
     def save(features: Vector[IndividualFeature], file: File) = {
       val os = new OutputStreamWriter(new GZIPOutputStream(new FileOutputStream(file.toJava)))
       try {
-
         val cells = {
           val bounds = BoundingBox(features, IndividualFeature.location.get)
 
