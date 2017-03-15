@@ -17,6 +17,9 @@
   */
 package eighties.h24
 
+import java.io.{FileInputStream, FileOutputStream}
+
+import better.files._
 import eighties.h24.population._
 import eighties.h24.space._
 import monocle.Monocle._
@@ -75,6 +78,25 @@ object dynamic {
 
     def noMove(i: Int, j: Int) =
       Vector.tabulate(i, j) {(ii, jj) => Category.all.map { c => c -> Vector((ii, jj) -> 1.0) }.toMap }
+
+
+    import boopickle.Default._
+
+    implicit val agePickler = transformPickler((i: Int) => Age.all(i))(s => Age.all.indexOf(s))
+    implicit val sexPickler = transformPickler((i: Int) => Sex.all(i))(s => Sex.all.indexOf(s))
+    implicit val educationPickler = transformPickler((i: Int) => Education.all(i))(s => Education.all.indexOf(s))
+
+    def save(moves: Moves, file: File) = {
+      val os = new FileOutputStream(file.toJava)
+      try os.getChannel.write(Pickle.intoBytes(moves))
+      finally os.close()
+    }
+
+    def load(file: File) = {
+      val is = new FileInputStream(file.toJava)
+      try Unpickle[Moves].fromBytes(is.getChannel.toMappedByteBuffer)
+      finally is.close()
+    }
 
   }
 

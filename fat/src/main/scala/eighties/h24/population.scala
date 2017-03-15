@@ -17,6 +17,7 @@
   */
 package eighties.h24
 
+
 import generation._
 import space._
 import monocle.function.all._
@@ -27,24 +28,20 @@ import scala.util.Random
 
 object population {
 
-  sealed trait Age {
-    def from: Int
-    def to: Option[Int]
-  }
+  case class Age private(from: Int, to: Option[Int])
 
   object Age {
-    case class AgeValue private(from: Int, to: Option[Int]) extends Age
 
-    val From0To14 = AgeValue(0, Some(14))
-    val From15To29 = AgeValue(15, Some(29))
-    val From30To44 = AgeValue(30, Some(44))
-    val From45To59 = AgeValue(45, Some(59))
-    val From60To74 = AgeValue(60, Some(74))
-    val Above75 = AgeValue(75, None)
+    val From0To14 = Age(0, Some(14))
+    val From15To29 = Age(15, Some(29))
+    val From30To44 = Age(30, Some(44))
+    val From45To59 = Age(45, Some(59))
+    val From60To74 = Age(60, Some(74))
+    val Above75 = Age(75, None)
 
     def all = Vector(From0To14, From15To29, From30To44, From45To59, From60To74, Above75)
 
-    def apply(code: Int) =
+    def apply(code: Int): Option[Age] =
       code match {
         case 0 => Some(From0To14)
         case 1 => Some(From15To29)
@@ -81,7 +78,6 @@ object population {
   sealed trait Education {
     override def toString = getClass.getName
   }
-
 
   object Education {
     object Schol extends Education

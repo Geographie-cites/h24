@@ -45,7 +45,8 @@ libraryDependencies ++= Seq (
   "org.scalanlp" %% "breeze-viz" % breezeVersion,
   "org.typelevel"  %% "squants"  % "1.1.0",
   "joda-time" % "joda-time" % "2.9.7",
-  "com.thoughtworks.xstream" % "xstream" % "1.4.9"
+  //"com.thoughtworks.xstream" % "xstream" % "1.4.9",
+  "io.suzaku" %% "boopickle" % "1.2.6"
 )
  
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)

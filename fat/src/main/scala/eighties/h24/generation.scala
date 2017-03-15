@@ -18,18 +18,13 @@
 package eighties.h24
 
 
-import java.io.{File => _, _}
-import java.util.zip.{GZIPInputStream, GZIPOutputStream}
-import java.io.{BufferedInputStream, FileInputStream}
+import java.io.{BufferedInputStream, FileInputStream, FileOutputStream}
 import java.text.SimpleDateFormat
-import java.util.Date
 
-import better.files.{File, _}
+import better.files._
 import com.github.tototoshi.csv.{CSVFormat, CSVReader, DefaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
-import eighties.h24.space.{BoundingBox, Index}
-import eighties.h24.population.Age.AgeValue
 import eighties.h24.population.Sex.{Female, Male}
 import eighties.h24.population.{Age, AggregatedEducation, Sex}
 import monocle.macros.Lenses
@@ -38,24 +33,23 @@ import org.geotools.data.shapefile.ShapefileDataStore
 import org.geotools.geometry.jts.{JTS, JTSFactoryFinder}
 import org.geotools.referencing.CRS
 import org.joda.time.{DateTime, Interval}
-import org.opengis.geometry.DirectPosition
 
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
-import scala.util.{Random, Success, Try, Failure}
+import scala.util.{Failure, Random, Success, Try}
 import org.opengis.referencing.crs.CoordinateReferenceSystem
 import org.opengis.referencing.operation.MathTransform
 
 object generation {
   object SchoolAge {
-    val From0To1 = Age.AgeValue(0, Some(1))
-    val From2To5 = Age.AgeValue(2, Some(5))
-    val From6To10 = Age.AgeValue(6, Some(10))
-    val From11To14 = Age.AgeValue(11, Some(14))
-    val From15To17 = Age.AgeValue(15, Some(17))
-    val From18To24 = Age.AgeValue(18, Some(24))
-    val From25To29 = Age.AgeValue(25, Some(29))
-    val Above30 = Age.AgeValue(30, None)
+    val From0To1 = Age(0, Some(1))
+    val From2To5 = Age(2, Some(5))
+    val From6To10 = Age(6, Some(10))
+    val From11To14 = Age(11, Some(14))
+    val From15To17 = Age(15, Some(17))
+    val From18To24 = Age(18, Some(24))
+    val From25To29 = Age(25, Some(29))
+    val Above30 = Age(30, None)
     def all = Vector(From0To1, From2To5, From6To10, From11To14, From15To17, From18To24, From25To29, Above30)
     def index(age: Double) = SchoolAge.all.lastIndexWhere(value => age > value.from)
   }
@@ -64,62 +58,17 @@ object generation {
 
   object IndividualFeature {
     def save(features: Vector[IndividualFeature], file: File) = {
-      val os = new OutputStreamWriter(new GZIPOutputStream(new FileOutputStream(file.toJava)))
-      try {
-        val cells = {
-          val bounds = BoundingBox(features, IndividualFeature.location.get)
-
-          def relocate = IndividualFeature.location.modify(BoundingBox.translate(bounds))
-
-          Index(features.iterator.map(relocate), IndividualFeature.location.get, bounds.sideI, bounds.sideJ)
-        }
-
-        def formatFeature(feature: IndividualFeature) = Vector(feature.ageCategory, feature.sex, feature.education)
-
-        os.append(s"${cells.sideI},${cells.sideJ}\n")
-
-        for {
-          i <- (0 until cells.sideI)
-          j <- (0 until cells.sideJ)
-          cell = cells.cells(i)(j)
-        } {
-          val line = cell.map(f => formatFeature(f).mkString(",")).mkString("\t")
-          os.append(line + "\n")
-        }
-      } finally os.close
+      import boopickle.Default._
+      val os = new FileOutputStream(file.toJava)
+      try os.getChannel.write(Pickle.intoBytes(features))
+      finally os.close()
     }
 
     def load(file: File) = {
-      val is = Source.fromInputStream(new GZIPInputStream(new FileInputStream(file.toJava)))
-      try {
-        val lines = is.getLines()
-
-        val header = lines.next().split(",")
-        val (sideI, sideJ) = (header(0).toInt, header(1).toInt)
-
-        val locations =
-          for {
-            i <- 0 until sideI
-            j <- 0 until sideJ
-          } yield (i, j)
-
-        val features =
-          for {
-            (line, location) <- lines zip locations.toIterator
-            if !line.isEmpty
-            indiv <- line.split("\t")
-          } yield {
-            val features = indiv.split(",").map(_.toInt)
-            IndividualFeature(
-              features(0),
-              features(1),
-              features(2),
-              location
-            )
-          }
-
-        features.toVector
-      } finally is.close
+      import boopickle.Default._
+      val is = new FileInputStream(file.toJava)
+      try Unpickle[Vector[IndividualFeature]].fromBytes(is.getChannel.toMappedByteBuffer)
+      finally is.close
     }
 
   }
@@ -542,7 +491,7 @@ object generation {
     }
   }
 
-  case class Flow(overlapMinutes:Option[Int], sexe:Sex, age:AgeValue, dipl:AggregatedEducation, activity: space.Location, residence: space.Location)
+  case class Flow(overlapMinutes: Option[Int], sexe: Sex, age: Age, dipl:AggregatedEducation, activity: space.Location, residence: space.Location)
 
   def readFlowsFromEGT(aFile: File, location: Coordinate=>space.Location, /*reqAge: AgeValue, reqSex: Sex, reqEducation: AggregatedEducation, */reqInterval: Interval) =
     withCSVReader(aFile)(SemicolonFormat){ reader =>
