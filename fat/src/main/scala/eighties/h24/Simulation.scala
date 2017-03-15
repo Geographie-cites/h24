@@ -48,5 +48,12 @@ object Simulation extends App {
 
   val moveTimeLapse = MoveMatrix.noMove(world.sideI, world.sideJ)
 
+  val last =
+    (1 to steps).foldLeft(world) {
+      (w, s) =>
+        def nw = dynamic.moveInMoveMatrix(w, moveTimeLapse, rng)
+        dynamic.localConviction(gamaOpinion, nw, rng)
+    }
 
+  
 }
