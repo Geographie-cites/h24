@@ -62,12 +62,23 @@ object dynamic {
           sex = individual.sex,
           education = individual.education
         )
+
+      def all =
+        for {
+          age <- Age.all
+          sex <- Sex.all
+          education <- Education.all
+        } yield Category(age, sex, education)
     }
 
     case class Category(age: Age, sex: Sex, education: Education)
+
+    def noMove(i: Int, j: Int) =
+      Vector.tabulate(i, j) {(ii, jj) => Category.all.map { c => c -> Vector((ii, jj) -> 1.0) }.toMap }
+
   }
 
-  def moveSampledInEGT(world: World, moves: MoveMatrix.TimeLapse, time: Time, random: Random) = {
+  def moveInMoveMatrix(world: World, moves: MoveMatrix.TimeLapse, random: Random) = {
     def sampleMoveInEGT(individual: Individual) = {
       val location = Individual.location.get(individual)
       val move = moves(location._1)(location._2)
