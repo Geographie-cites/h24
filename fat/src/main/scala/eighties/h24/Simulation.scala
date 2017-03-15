@@ -38,8 +38,6 @@ object Simulation extends App {
   val activityRatio = 0.3
 
   def features = IndividualFeature.load(File("results/population.csv.gz"))
-
-
   def world = generateWorld(features, (_,_) => 0.5, rng)
 
   val last =

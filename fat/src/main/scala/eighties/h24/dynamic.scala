@@ -49,17 +49,20 @@ object dynamic {
     (World.allIndividuals modify m)(world)
   }
 
-  case class EGT()
+  object MoveMatrix {
+    type Moves = Vector[TimeLapse]
+    type TimeLapse = Vector[Vector[Cell]]
+    type Cell = Map[Category, Vector[Move]]
+    case class Move(location: Location, flow: Double)
+    case class Category(age: Age, sex: Sex, education: Education)
+  }
 
-  def moveSampledInEGT(world: World, egt: EGT, time: Time, random: Random) = {
+  def moveSampledInEGT(world: World, moves: MoveMatrix.Moves, time: Time, random: Random) = {
     def sampleMoveInEGT(individual: Individual) = {
       Individual.location.set(individual.home)(individual)
     }
     (World.allIndividuals modify sampleMoveInEGT)(world)
   }
-
-
-  //type Conviction[B] = Vector[Individual[B]] => Vector[Individual[B]]
 
   def localConviction(gama: Double, world: World, random: Random) = {
     def cs = Index.allCells[Individual].getAll(Index.indexIndividuals(world))
