@@ -17,10 +17,16 @@
   */
 package eighties.h24
 
+import java.io.FileOutputStream
+import java.nio.file.Files
+import java.util.zip.GZIPOutputStream
+
 import better.files._
+import eighties.h24.dynamic.MoveMatrix
 import eighties.h24.generation._
 import eighties.h24.population._
 import eighties.h24.space._
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream
 
 import scala.util.Random
 
@@ -37,13 +43,17 @@ object Simulation extends App {
   val gamaOpinion = 2
   val activityRatio = 0.3
 
-  def features = IndividualFeature.load(File("results/population.csv.gz"))
-  def world = generateWorld(features, (_,_) => 0.5, rng)
+  def features = IndividualFeature.load(File("results/population.bin"))
+  val world = generateWorld(features, (_,_) => 0.5, rng)
+
+  val moveTimeLapse = MoveMatrix.noMove(world.sideI, world.sideJ)
 
   val last =
     (1 to steps).foldLeft(world) {
       (w, s) =>
-        def nw = dynamic.randomiseLocation(w, rng)
+        def nw = dynamic.moveInMoveMatrix(w, moveTimeLapse, rng)
         dynamic.localConviction(gamaOpinion, nw, rng)
     }
+
+  
 }

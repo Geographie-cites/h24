@@ -7,5 +7,5 @@ import eighties.h24.space._
 
 object PopulationGenerator extends App {
   def features = generateFeatures(File("data").toJava, _ => true, new util.Random(42)).get.toVector
-  IndividualFeature.save(features, File("results/population.csv.gz"))
+  IndividualFeature.save(features, File("results/population.bin"))
 }
