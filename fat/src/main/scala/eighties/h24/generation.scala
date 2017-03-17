@@ -28,10 +28,11 @@ import better.files.{File, _}
 import com.github.tototoshi.csv.{CSVFormat, CSVReader, DefaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
-import eighties.h24.space.{BoundingBox, Index}
+import eighties.h24.dynamic.MoveMatrix.TimeLapse
+import eighties.h24.space.{BoundingBox, Index, Location}
 import eighties.h24.population.Age.AgeValue
 import eighties.h24.population.Sex.{Female, Male}
-import eighties.h24.population.{Age, AggregatedEducation, Sex}
+import eighties.h24.population.{Age, AggregatedEducation, Education, Sex}
 import monocle.macros.Lenses
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
 import org.geotools.data.shapefile.ShapefileDataStore
@@ -42,7 +43,7 @@ import org.opengis.geometry.DirectPosition
 
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
-import scala.util.{Random, Success, Try, Failure}
+import scala.util.{Failure, Random, Success, Try}
 import org.opengis.referencing.crs.CoordinateReferenceSystem
 import org.opengis.referencing.operation.MathTransform
 
@@ -542,45 +543,52 @@ object generation {
     }
   }
 
-  case class Flow(overlapMinutes:Option[Int], sexe:Sex, age:AgeValue, dipl:AggregatedEducation, activity: space.Location, residence: space.Location)
+  case class Flow(id:String, start:DateTime, end:DateTime, duration:Long, sexe:Sex, age:AgeValue, dipl:AggregatedEducation, activity: space.Location, residence: space.Location)
 
-  def readFlowsFromEGT(aFile: File, location: Coordinate=>space.Location, /*reqAge: AgeValue, reqSex: Sex, reqEducation: AggregatedEducation, */reqInterval: Interval) =
+  def readFlowsFromEGT(aFile: File, location: Coordinate=>space.Location) =
     withCSVReader(aFile)(SemicolonFormat){ reader =>
     Try {
-      reader.iterator.drop(1).filter(line=>{
-        val d1 = line(8).trim
-        val d2 = line(9).trim
-        val motif = line(11).trim
-        val px = line(17).trim
-        val py = line(18).trim
-        val resx = line(19).trim
-        val resy = line(20).trim
+      reader.allWithHeaders().filter(line=>{
+        val d1 = line("heure_deb").trim
+        val d2 = line("heure_fin").trim
+        val motif = line("motif_presence").trim
+        val px = line("POINT_X").trim
+        val py = line("POINT_Y").trim
+        val resx = line("POINT_X_RES").trim
+        val resy = line("POINT_Y_RES").trim
         !(motif.isEmpty||motif.equalsIgnoreCase("88")||motif.equalsIgnoreCase("99")||
           px.equalsIgnoreCase("NA")||py.equalsIgnoreCase("NA")||
           resx.equalsIgnoreCase("NA")||resy.equalsIgnoreCase("NA")||
           d1.equalsIgnoreCase("NA")||d2.equalsIgnoreCase("NA"))
       }).map { line =>
         def format(date:String) = {
-          val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
+          val formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm")
           Try{new DateTime(formatter.parse(date))} match {
             case Success(d) => d
-            case Failure(e) => new DateTime(new SimpleDateFormat("dd/MM/yy").parse(date))
+            case Failure(e) => {
+              new DateTime(new SimpleDateFormat("dd/MM/yyyy").parse(date))
+            }
           }
         }
         //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
-        val date_start = format(line(8).trim)
-        val date_end = format(line(9).trim)
-        val interval =
-          if (date_start.compareTo(date_end) >= 0) new Interval(date_start, date_start.plusMinutes(1))
-          else new Interval(date_start, date_end)
+        val date_start = format(line("heure_deb").trim)
+        val date_end = format(line("heure_fin").trim)
+        val duration =
+          if (date_start.compareTo(date_end) < 0) new Interval(date_start, date_end).toDuration.getStandardMinutes
+          else 0
+        val firstDate = format("01/01/2010 04:00")
+        if (date_start.compareTo(firstDate) <0) {
+          println(date_start)
+          println(line)
+        }
         //val duree = line(10).toInt
-        val overlapMinutes = Option(interval.overlap(reqInterval)).map(_.toDuration.toStandardMinutes.getMinutes)
-        val sexe = line(12).toInt match {
+        //val overlapMinutes = Option(interval.overlap(reqInterval)).map(_.toDuration.toStandardMinutes.getMinutes)
+        val sexe = line("sexe").toInt match {
           case 1 => Male
           case 2 => Female
         }
-        val age = Age.parse(line(13).toInt)
-        val dipl = Try{line(14).toInt match {
+        val age = Age.parse(line("age").toInt)
+        val dipl = Try{line("dipl").toInt match {
           case 0 => AggregatedEducation.Low
           case 1 => AggregatedEducation.Low
           case 2 => AggregatedEducation.Low
@@ -595,19 +603,29 @@ object generation {
           case Success(e)=>e
           case Failure(e) => AggregatedEducation.Low
         }
-        val point_x = line(17).trim.replaceAll(",",".").toDouble
-        val point_y = line(18).trim.replaceAll(",",".").toDouble
-        val res_x = line(19).trim.replaceAll(",",".").toDouble
-        val res_y = line(20).trim.replaceAll(",",".").toDouble
-        new Flow(overlapMinutes, sexe, age, dipl, location(new Coordinate(point_x,point_y)),location(new Coordinate(res_x,res_y)))
-      }.filter(p=> {
-        val time = p.overlapMinutes match {
-          case None => false
-          case Some(o) => true
-        }
-        time// && p.sexe == reqSex && p.age == reqAge && p.dipl == reqEducation
-      }).toVector.toIterator
+        val point_x = line("POINT_X").trim.replaceAll(",",".").toDouble
+        val point_y = line("POINT_Y").trim.replaceAll(",",".").toDouble
+        val res_x = line("POINT_X_RES").trim.replaceAll(",",".").toDouble
+        val res_y = line("POINT_Y_RES").trim.replaceAll(",",".").toDouble
+        new Flow(line("ID_pers"), date_start, date_end, duration, sexe, age, dipl, location(new Coordinate(point_x,point_y)),location(new Coordinate(res_x,res_y)))
+      }.filter(p=> {p.duration > 0})
     }
+  }
+
+  class MyMoveMatrix(moves: Vector[TimeLapse]) {
+    case class Move(location: Location, flow: Double)
+    case class Category(age: Age, sex: Sex, education: Education)
+    def this(nbTimeLapse: Int, sizeX: Int, sizeY: Int) = {
+      this(Vector.fill(nbTimeLapse, sizeX, sizeY)(Map()))
+    }
+    def add(flow:Flow): MyMoveMatrix = {
+      new MyMoveMatrix(this.moves.map(timelapse=>{
+        timelapse
+      }))
+    }
+  }
+  def addFlowToMatrix(mat:MyMoveMatrix, flow: Flow):MyMoveMatrix={
+    mat.add(flow)
   }
 
   def flowsFromEGT(aFile: File) = {
@@ -627,21 +645,15 @@ object generation {
 //      dx+dy*row
       space.cell(dx, dy)
     }
-    val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
-    val startDate = new DateTime(formatter.parse("01/01/2010 04:00"))
+    //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
+    //val startDate = new DateTime(formatter.parse("01/01/2010 04:00"))
 
-    for {
-      age <- Age.all
-      sex <- Sex.all
-      education <- AggregatedEducation.all
-      plage <- (0 until 24)
-      index =
-        space.Index[Flow](
-          readFlowsFromEGT(aFile, location, /*age, sex, education, */new Interval(startDate.plusHours(plage),startDate.plusHours(plage+1))).get,
-          (_: Flow).residence,
-          149,
-          132
-        )
-    } yield 0
+    readFlowsFromEGT(aFile, location) match {
+      case Success(lf) => {
+        val newmatrix = lf.foldLeft(new MyMoveMatrix(1,2,3))(addFlowToMatrix)
+
+      }
+      case Failure(e) => println("sorry")
+    }
   }
 }
