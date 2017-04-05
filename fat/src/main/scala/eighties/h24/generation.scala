@@ -26,6 +26,7 @@ import better.files.{File, _}
 import com.github.tototoshi.csv.{CSVFormat, CSVReader, DefaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
+import eighties.h24.dynamic.MoveMatrix
 import eighties.h24.dynamic.MoveMatrix.{Category, Cell, TimeLapse}
 import eighties.h24.space.{BoundingBox, Index, Location}
 import eighties.h24.population.Sex.{Female, Male}
@@ -139,7 +140,7 @@ object generation {
     }
 
   def readGeometry(aFile: File, filter: String => Boolean): Try[(Seq[AreaID],AreaID => Option[MultiPolygon])] = {
-    def aggregated(geometry: Map[AreaID, MultiPolygon]): AreaID => Option[MultiPolygon] = scalaz.Memo.mutableHashMapMemo {
+    def aggregated(geometry: Map[AreaID, MultiPolygon]): AreaID => Option[MultiPolygon] = Memo.mutableHashMapMemo {
       (id: AreaID) =>
       geometry.get(id) match {
         case Some(mp) => Some(mp)
@@ -544,7 +545,7 @@ object generation {
     }
   }
 
-  case class Flow(id:String, start:DateTime, end:DateTime, duration:Long, sexe:Sex, age:Age, dipl:AggregatedEducation, activity: space.Location, residence: space.Location)
+  case class Flow(id:String, start:DateTime, end:DateTime, duration:Long, sex:Sex, age:Age, education:Education, activity: space.Location, residence: space.Location)
 
   def readFlowsFromEGT(aFile: File, location: Coordinate=>space.Location) =
     withCSVReader(aFile)(SemicolonFormat){ reader =>
@@ -584,31 +585,31 @@ object generation {
         }
         //val duree = line(10).toInt
         //val overlapMinutes = Option(interval.overlap(reqInterval)).map(_.toDuration.toStandardMinutes.getMinutes)
-        val sexe = line("sexe").toInt match {
+        val sex = line("sexe").toInt match {
           case 1 => Male
           case 2 => Female
         }
         val age = Age.parse(line("age").toInt)
         val dipl = Try{line("dipl").toInt match {
-          case 0 => AggregatedEducation.Low
-          case 1 => AggregatedEducation.Low
-          case 2 => AggregatedEducation.Low
-          case 3 => AggregatedEducation.Low
-          case 4 => AggregatedEducation.Low
-          case 5 => AggregatedEducation.Middle
-          case 6 => AggregatedEducation.Middle
-          case 7 => AggregatedEducation.High
-          case 8 => AggregatedEducation.High
-          case 9 => AggregatedEducation.High
+          case 0 => Education.Dipl0
+          case 1 => Education.Schol
+          case 2 => Education.BEPC
+          case 3 => Education.BEPC
+          case 4 => Education.CAPBEP
+          case 5 => Education.BAC
+          case 6 => Education.BACP2
+          case 7 => Education.SUP
+          case 8 => Education.BAC
+          case 9 => Education.BAC
         }} match {
           case Success(e)=>e
-          case Failure(e) => AggregatedEducation.Low
+          case Failure(e) => Education.Dipl0
         }
         val point_x = line("POINT_X").trim.replaceAll(",",".").toDouble
         val point_y = line("POINT_Y").trim.replaceAll(",",".").toDouble
         val res_x = line("POINT_X_RES").trim.replaceAll(",",".").toDouble
         val res_y = line("POINT_Y_RES").trim.replaceAll(",",".").toDouble
-        new Flow(line("ID_pers"), date_start, date_end, duration, sexe, age, dipl, location(new Coordinate(point_x,point_y)),location(new Coordinate(res_x,res_y)))
+        new Flow(line("ID_pers"), date_start, date_end, duration, sex, age, dipl, location(new Coordinate(point_x,point_y)),location(new Coordinate(res_x,res_y)))
       }.filter(p=> {p.duration > 0})
     }
   }
@@ -624,7 +625,18 @@ object generation {
       def add2(x: Int, t:TimeLapse, flow: Flow):TimeLapse={
         def add3(y: Int, t:Vector[Cell], flow: Flow):Vector[Cell]={
           def add4(c: Cell, flow: Flow):Cell={
-            c
+            val cat = new Category(age = flow.age, sex = flow.sex, education = flow.education)
+            c.get(cat) match {
+              case Some(moves) => {
+                val index = moves.indexWhere((m) => m._1._1 == flow.activity._1 && m._1._2 == flow.activity._2)
+                if (index == -1) c + (cat -> moves.:+(flow.activity, 1.0))
+                else {
+                  val v = moves(index)._2
+                  c + (cat -> moves.updated(index, (flow.activity, v + 1.0)))
+                }
+              }
+              case None => c + (cat -> Vector((flow.activity,1.0)))
+            }
           }
           if (y == flow.residence._2) {
             add4(t.head, flow) +: t.tail
@@ -650,7 +662,7 @@ object generation {
   def noMove(i: Int, j: Int) =
     Vector.tabulate(i, j) {(ii, jj) => Category.all.map { c => c -> Vector() }.toMap }
 
-  def flowsFromEGT(aFile: File) = {
+  def flowsFromEGT(aFile: File, outFile: File) = {
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(l2eCRS, outCRS, true)
@@ -673,6 +685,7 @@ object generation {
     readFlowsFromEGT(aFile, location) match {
       case Success(lf) => {
         val newmatrix = lf.foldLeft(Vector[TimeLapse]())(addFlowToMatrix)
+        MoveMatrix.save(newmatrix, outFile)
       }
       case Failure(e) => println("sorry")
     }
