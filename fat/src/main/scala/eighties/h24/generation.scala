@@ -18,19 +18,16 @@
 package eighties.h24
 
 
-import java.io.{File => _, _}
 import java.util.zip.{GZIPInputStream, GZIPOutputStream}
-import java.io.{BufferedInputStream, FileInputStream}
+import java.io.{BufferedInputStream, FileInputStream, FileOutputStream, OutputStreamWriter}
 import java.text.SimpleDateFormat
-import java.util.Date
 
 import better.files.{File, _}
 import com.github.tototoshi.csv.{CSVFormat, CSVReader, DefaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
-import eighties.h24.dynamic.MoveMatrix.TimeLapse
+import eighties.h24.dynamic.MoveMatrix.{Category, Cell, TimeLapse}
 import eighties.h24.space.{BoundingBox, Index, Location}
-import eighties.h24.population.Age.AgeValue
 import eighties.h24.population.Sex.{Female, Male}
 import eighties.h24.population.{Age, AggregatedEducation, Education, Sex}
 import monocle.macros.Lenses
@@ -39,7 +36,6 @@ import org.geotools.data.shapefile.ShapefileDataStore
 import org.geotools.geometry.jts.{JTS, JTSFactoryFinder}
 import org.geotools.referencing.CRS
 import org.joda.time.{DateTime, Interval}
-import org.opengis.geometry.DirectPosition
 
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
@@ -47,16 +43,18 @@ import scala.util.{Failure, Random, Success, Try}
 import org.opengis.referencing.crs.CoordinateReferenceSystem
 import org.opengis.referencing.operation.MathTransform
 
+import scalaz.Memo
+
 object generation {
   object SchoolAge {
-    val From0To1 = Age.AgeValue(0, Some(1))
-    val From2To5 = Age.AgeValue(2, Some(5))
-    val From6To10 = Age.AgeValue(6, Some(10))
-    val From11To14 = Age.AgeValue(11, Some(14))
-    val From15To17 = Age.AgeValue(15, Some(17))
-    val From18To24 = Age.AgeValue(18, Some(24))
-    val From25To29 = Age.AgeValue(25, Some(29))
-    val Above30 = Age.AgeValue(30, None)
+    val From0To1 = Age(0, Some(1))
+    val From2To5 = Age(2, Some(5))
+    val From6To10 = Age(6, Some(10))
+    val From11To14 = Age(11, Some(14))
+    val From15To17 = Age(15, Some(17))
+    val From18To24 = Age(18, Some(24))
+    val From25To29 = Age(25, Some(29))
+    val Above30 = Age(30, None)
     def all = Vector(From0To1, From2To5, From6To10, From11To14, From15To17, From18To24, From25To29, Above30)
     def index(age: Double) = SchoolAge.all.lastIndexWhere(value => age > value.from)
   }
@@ -140,13 +138,15 @@ object generation {
       case x => x.toDouble
     }
 
-  def readGeometry(aFile: File, filter: String => Boolean) = {
-    def aggregated(geometry: Map[AreaID, MultiPolygon]) = scalaz.Memo.mutableHashMapMemo { (id: AreaID) =>
+  def readGeometry(aFile: File, filter: String => Boolean): Try[(Seq[AreaID],AreaID => Option[MultiPolygon])] = {
+    def aggregated(geometry: Map[AreaID, MultiPolygon]): AreaID => Option[MultiPolygon] = scalaz.Memo.mutableHashMapMemo {
+      (id: AreaID) =>
       geometry.get(id) match {
         case Some(mp) => Some(mp)
-        case None =>
+        case None => {
           val irises = geometry.filter { case (key, g) => key.id.startsWith(id.id) }
           union(irises.values)
+        }
       }
     }
 
@@ -162,7 +162,7 @@ object generation {
               val iris = feature.getAttribute("DCOMIRIS").toString.replaceAll("0000$", "").trim
               AreaID(iris) -> geom
             }.toMap
-          irises.map(_._1) -> aggregated(irises)
+          (irises.keys.toSeq, aggregated(irises))
         }
       } finally reader.close
     } finally store.dispose
@@ -261,6 +261,7 @@ object generation {
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(inCRS, outCRS, true)
 
+
     irises.map { id =>
       val ageSexV = ageSex.get(id).get
       val schoolAgeV = schoolAge.get(id).get
@@ -335,7 +336,7 @@ object generation {
       ageSex <- readAgeSex(baseICEvolStructPopFileName)
       schoolAge <- readAgeSchool(baseICDiplomesFormationPopFileName)
       educationSex <- readEducationSex(baseICDiplomesFormationPopFileName)
-    } yield generatePopulation(rng, irises.toSeq, geom, ageSex, schoolAge, educationSex).toIterator.flatten
+    } yield generatePopulation(rng, irises, geom, ageSex, schoolAge, educationSex).toIterator.flatten
   }
 
 
@@ -427,7 +428,7 @@ object generation {
     }.filter (e => e.point.intersects(transformedArea))
   }
 
-  def union(polygons: Iterable[MultiPolygon]) = {
+  def union(polygons: Iterable[MultiPolygon]): Option[MultiPolygon] = {
     if (polygons.size == 1) {
       Some(polygons.head)
     } else {
@@ -543,7 +544,7 @@ object generation {
     }
   }
 
-  case class Flow(id:String, start:DateTime, end:DateTime, duration:Long, sexe:Sex, age:AgeValue, dipl:AggregatedEducation, activity: space.Location, residence: space.Location)
+  case class Flow(id:String, start:DateTime, end:DateTime, duration:Long, sexe:Sex, age:Age, dipl:AggregatedEducation, activity: space.Location, residence: space.Location)
 
   def readFlowsFromEGT(aFile: File, location: Coordinate=>space.Location) =
     withCSVReader(aFile)(SemicolonFormat){ reader =>
@@ -611,22 +612,43 @@ object generation {
       }.filter(p=> {p.duration > 0})
     }
   }
+  //type TimeLapse = Vector[Vector[Cell]]
+  //type Cell = Map[Category, Vector[Move]]
+  //type Move = (Location, Double)
 
-  class MyMoveMatrix(moves: Vector[TimeLapse]) {
-    case class Move(location: Location, flow: Double)
-    case class Category(age: Age, sex: Sex, education: Education)
-    def this(nbTimeLapse: Int, sizeX: Int, sizeY: Int) = {
-      this(Vector.fill(nbTimeLapse, sizeX, sizeY)(Map()))
-    }
-    def add(flow:Flow): MyMoveMatrix = {
-      new MyMoveMatrix(this.moves.map(timelapse=>{
-        timelapse
-      }))
-    }
+  def intersects(t:Int, start:DateTime, end:DateTime): Boolean = {
+    true
   }
-  def addFlowToMatrix(mat:MyMoveMatrix, flow: Flow):MyMoveMatrix={
-    mat.add(flow)
+  def addFlowToMatrix(mat:Vector[TimeLapse], flow: Flow):Vector[TimeLapse]={
+    def add1(t: Int, mat:Vector[TimeLapse], flow: Flow):Vector[TimeLapse]={
+      def add2(x: Int, t:TimeLapse, flow: Flow):TimeLapse={
+        def add3(y: Int, t:Vector[Cell], flow: Flow):Vector[Cell]={
+          def add4(c: Cell, flow: Flow):Cell={
+            c
+          }
+          if (y == flow.residence._2) {
+            add4(t.head, flow) +: t.tail
+          } else {
+            t.head +: add3(y + 1, t.tail, flow)
+          }
+        }
+        if (x == flow.residence._1) {
+          add3(0, t.head, flow) +: t.tail
+        } else {
+          t.head +: add2(x + 1, t.tail, flow)
+        }
+      }
+      if (intersects(t, flow.start, flow.end)) {
+        add2(0, mat.head, flow) +: mat.tail
+      } else {
+        mat.head +: add1(t + 1, mat.tail, flow)
+      }
+    }
+    add1(0,mat,flow)
   }
+
+  def noMove(i: Int, j: Int) =
+    Vector.tabulate(i, j) {(ii, jj) => Category.all.map { c => c -> Vector() }.toMap }
 
   def flowsFromEGT(aFile: File) = {
     val l2eCRS = CRS.decode("EPSG:27572")
@@ -650,8 +672,7 @@ object generation {
 
     readFlowsFromEGT(aFile, location) match {
       case Success(lf) => {
-        val newmatrix = lf.foldLeft(new MyMoveMatrix(1,2,3))(addFlowToMatrix)
-
+        val newmatrix = lf.foldLeft(Vector[TimeLapse]())(addFlowToMatrix)
       }
       case Failure(e) => println("sorry")
     }
