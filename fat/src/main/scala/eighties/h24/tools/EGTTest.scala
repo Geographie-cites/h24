@@ -63,11 +63,12 @@ object EGTTest extends App {
         132
       )
       space.Index.allCells[Flow].getAll(index).map { c =>
-        val values = c.map(f => (f.activity, f.start, f.end, f.id))
+        val values = c.map(f => (f.activity, f.interval, f.id))
         values.map(v => {
-          val s = v._2
-          val e = v._3
-          val id = v._4
+          val interval = v._2
+          val s = interval.getStart
+          val e = interval.getEnd
+          val id = v._3
           val fmt = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")
           val valuesRes = Array[AnyRef](
             geomfactory.createPoint(new Coordinate(x_laea_min + v._1._1 * 1000, y_laea_min + v._1._2 * 1000)),

@@ -27,7 +27,7 @@ import com.github.tototoshi.csv.{CSVFormat, CSVReader, DefaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
 import eighties.h24.dynamic.MoveMatrix
-import eighties.h24.dynamic.MoveMatrix.{Category, Cell, TimeLapse}
+import eighties.h24.dynamic.MoveMatrix.{Category, Cell, Move, TimeLapse}
 import eighties.h24.space.{BoundingBox, Index, Location}
 import eighties.h24.population.Sex.{Female, Male}
 import eighties.h24.population.{Age, AggregatedEducation, Education, Sex}
@@ -545,7 +545,7 @@ object generation {
     }
   }
 
-  case class Flow(id:String, start:DateTime, end:DateTime, duration:Long, sex:Sex, age:Age, education:Education, activity: space.Location, residence: space.Location)
+  case class Flow(id:String, interval:Interval, duration:Long, sex:Sex, age:Age, education:Education, activity: space.Location, residence: space.Location)
 
   def readFlowsFromEGT(aFile: File, location: Coordinate=>space.Location) =
     withCSVReader(aFile)(SemicolonFormat){ reader =>
@@ -566,9 +566,9 @@ object generation {
         def format(date:String) = {
           val formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm")
           Try{new DateTime(formatter.parse(date))} match {
-            case Success(d) => d
+            case Success(d) => d.toInstant
             case Failure(e) => {
-              new DateTime(new SimpleDateFormat("dd/MM/yyyy").parse(date))
+              new DateTime(new SimpleDateFormat("dd/MM/yyyy").parse(date)).toInstant
             }
           }
         }
@@ -609,7 +609,7 @@ object generation {
         val point_y = line("POINT_Y").trim.replaceAll(",",".").toDouble
         val res_x = line("POINT_X_RES").trim.replaceAll(",",".").toDouble
         val res_y = line("POINT_Y_RES").trim.replaceAll(",",".").toDouble
-        new Flow(line("ID_pers"), date_start, date_end, duration, sex, age, dipl, location(new Coordinate(point_x,point_y)),location(new Coordinate(res_x,res_y)))
+        new Flow(line("ID_pers"), new Interval(date_start, date_end), duration, sex, age, dipl, location(new Coordinate(point_x,point_y)),location(new Coordinate(res_x,res_y)))
       }.filter(p=> {p.duration > 0})
     }
   }
@@ -617,52 +617,39 @@ object generation {
   //type Cell = Map[Category, Vector[Move]]
   //type Move = (Location, Double)
 
-  def intersects(t:Int, start:DateTime, end:DateTime): Boolean = {
+  def intersects(t:Int, interval:Interval): Boolean = {
     true
   }
-  def addFlowToMatrix(mat:Vector[TimeLapse], flow: Flow):Vector[TimeLapse]={
-    def add1(t: Int, mat:Vector[TimeLapse], flow: Flow):Vector[TimeLapse]={
-      def add2(x: Int, t:TimeLapse, flow: Flow):TimeLapse={
-        def add3(y: Int, t:Vector[Cell], flow: Flow):Vector[Cell]={
-          def add4(c: Cell, flow: Flow):Cell={
-            val cat = new Category(age = flow.age, sex = flow.sex, education = flow.education)
-            c.get(cat) match {
-              case Some(moves) => {
-                val index = moves.indexWhere((m) => m._1._1 == flow.activity._1 && m._1._2 == flow.activity._2)
-                if (index == -1) c + (cat -> moves.:+(flow.activity, 1.0))
-                else {
-                  val v = moves(index)._2
-                  c + (cat -> moves.updated(index, (flow.activity, v + 1.0)))
-                }
-              }
-              case None => c + (cat -> Vector((flow.activity,1.0)))
-            }
-          }
-          if (y == flow.residence._2) {
-            add4(t.head, flow) +: t.tail
-          } else {
-            t.head +: add3(y + 1, t.tail, flow)
-          }
-        }
-        if (x == flow.residence._1) {
-          add3(0, t.head, flow) +: t.tail
-        } else {
-          t.head +: add2(x + 1, t.tail, flow)
+
+  def addFlowToCell(c: Cell, flow: Flow):Cell={
+    val cat = new Category(age = flow.age, sex = flow.sex, education = flow.education)
+    c.get(cat) match {
+      case Some(moves) => {
+        val index = moves.indexWhere((m) => m._1._1 == flow.activity._1 && m._1._2 == flow.activity._2)
+        if (index == -1) c + (cat -> moves.:+(flow.activity, 1.0))
+        else {
+          val v = moves(index)._2
+          c + (cat -> moves.updated(index, (flow.activity, v + 1.0)))
         }
       }
-      if (intersects(t, flow.start, flow.end)) {
-        add2(0, mat.head, flow) +: mat.tail
-      } else {
-        mat.head +: add1(t + 1, mat.tail, flow)
-      }
+      case None => c + (cat -> Vector((flow.activity,1.0)))
     }
-    add1(0,mat,flow)
   }
 
-  def noMove(i: Int, j: Int) =
-    Vector.tabulate(i, j) {(ii, jj) => Category.all.map { c => c -> Vector() }.toMap }
+  def addFlowToMatrix(intervals:Vector[Interval])(mat:Vector[TimeLapse], flow: Flow):Vector[TimeLapse]={
+    val indices = dynamic.getTimeIndices(flow.interval,intervals)
+    indices.foldLeft(mat)((m,index) => {
+      val mi = m(index)
+      val mix = mi(flow.residence._1)
+      val mixy = mix(flow.residence._2)
+      m.updated(index, mi.updated(flow.residence._1, mix.updated(flow.residence._2, addFlowToCell(mixy,flow))))
+    })
+  }
 
-  def flowsFromEGT(aFile: File, outFile: File) = {
+  def noMove(intervals: Int, i: Int, j: Int) =
+    Vector.tabulate(intervals, i, j) {(it, ii, jj) => Category.all.map { c => c -> Vector[Move]() }.toMap }
+
+  def flowsFromEGT(aFile: File, intervals:Vector[Interval], outFile: File) = {
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(l2eCRS, outCRS, true)
@@ -684,7 +671,7 @@ object generation {
 
     readFlowsFromEGT(aFile, location) match {
       case Success(lf) => {
-        val newmatrix = lf.foldLeft(Vector[TimeLapse]())(addFlowToMatrix)
+        val newmatrix = lf.foldLeft(noMove(intervals.size,149,132))(addFlowToMatrix(intervals))
         MoveMatrix.save(newmatrix, outFile)
       }
       case Failure(e) => println("sorry")

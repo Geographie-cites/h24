@@ -23,6 +23,8 @@ import better.files._
 import eighties.h24.population._
 import eighties.h24.space._
 import monocle.Monocle._
+import org.jfree.data.time.TimePeriod
+import org.joda.time.{DateTime, Instant, Interval}
 import squants._
 
 import scala.util.Random
@@ -51,6 +53,10 @@ object dynamic {
     def m = (individual: Individual) => Individual.location.set(individual.home)(individual)
     (World.allIndividuals modify m)(world)
   }
+
+  def getTimeIndex(i: Instant, intervals: Vector[Interval]) = intervals.indexWhere(p=>p.contains(i))
+
+  def getTimeIndices(i: Interval, intervals: Vector[Interval]) = intervals.zipWithIndex.filter(v => v._1.contains(i)).map(_._2)
 
   object MoveMatrix {
     type Moves = Vector[TimeLapse]
