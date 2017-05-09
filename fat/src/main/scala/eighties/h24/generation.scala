@@ -27,7 +27,7 @@ import com.github.tototoshi.csv.{CSVFormat, CSVReader, DefaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
 import eighties.h24.dynamic.MoveMatrix
-import eighties.h24.dynamic.MoveMatrix.{Cell, Move, TimeLapse}
+import eighties.h24.dynamic.MoveMatrix.{Cell, Move, CellMatrix}
 import eighties.h24.space.{BoundingBox, Index, Location}
 import eighties.h24.population.Sex.{Female, Male}
 import eighties.h24.population._
@@ -625,42 +625,59 @@ object generation {
     true
   }
 
-  def addFlowToCell(c: Cell, flow: Flow):Cell={
-    val cat = new Category(age = flow.age, sex = flow.sex, education = flow.education)
+
+  import MoveMatrix._
+
+
+  def addFlowToCell(c: Cell, flow: Flow, timeSlice: TimeSlice): Cell = {
+    val jodaInterval = interval(timeSlice)
+    val intersection = jodaInterval.overlap(flow.interval)
+
+    val cat = Category(age = flow.age, sex = flow.sex, education = flow.education)
+
+//    val add =
+//      for {
+//        moves <- c.get(cat)
+//        (v, i) <- moves.zipWithIndex.find { m => m._1._1 == flow.activity._1 && m._1._2 == flow.activity._2 }
+//      } yield cat -> moves.updated(i, (flow.activity, v._2 + intersection.toDurationMillis))
+//
+//    moves + add.getOrElse()
+
     c.get(cat) match {
-      case Some(moves) => {
-        val index = moves.indexWhere((m) => m._1._1 == flow.activity._1 && m._1._2 == flow.activity._2)
-        if (index == -1) c + (cat -> moves.:+(flow.activity, 1.0))
+      case Some(moves) =>
+        val index = moves.indexWhere { m => m._1._1 == flow.activity._1 && m._1._2 == flow.activity._2 }
+        if (index == -1) c + (cat -> moves.:+(flow.activity, intersection.toDurationMillis.toDouble))
         else {
           val v = moves(index)._2
-          c + (cat -> moves.updated(index, (flow.activity, v + 1.0)))
+          c + (cat -> moves.updated(index, (flow.activity, v + intersection.toDurationMillis.toDouble)))
         }
-      }
-      case None => c + (cat -> Vector((flow.activity,1.0)))
+      case None => c + (cat -> Vector((flow.activity, intersection.toDurationMillis.toDouble)))
     }
   }
 
-  def addFlowToMatrix(intervals:Vector[Interval])(mat:Vector[TimeLapse], flow: Flow):Vector[TimeLapse]={
-    val indices = dynamic.getTimeIndices(flow.interval,intervals)
-    indices.foldLeft(mat)((m,index) => {
-      val mi = m(index)
-      val mix = mi(flow.residence._1)
-      val mixy = mix(flow.residence._2)
-      m.updated(index, mi.updated(flow.residence._1, mix.updated(flow.residence._2, addFlowToCell(mixy,flow))))
-    })
-  }
+  def addFlowToMatrix(slices: TimeSlices, flow: Flow): TimeSlices =
+    slices.map { case (time, slice) =>
+     time ->
+       MoveMatrix.cell(flow.residence).modify { current => addFlowToCell(current, flow, time) }(slice)
+    }
 
-  def noMove(intervals: Int, i: Int, j: Int) =
-    Vector.tabulate(intervals, i, j) {(it, ii, jj) => Category.all.map { c => c -> Vector[Move]() }.toMap }
+  def noMove(timeSlices: Vector[TimeSlice], i: Int, j: Int): TimeSlices =
+    timeSlices.map { ts =>
+      ts -> Vector.tabulate(i, j) { (ii, jj) => Category.all.map { c => c -> Vector[Move]() }.toMap }
+    }.toMap
 
-  val intervals = Vector(
-    new Interval(new DateTime(2010,1,1,0,0), new DateTime(2010,1,1,6,0)),
-    new Interval(new DateTime(2010,1,1,6,0), new DateTime(2010,1,1,12,0)),
-    new Interval(new DateTime(2010,1,1,12,0), new DateTime(2010,1,1,18,0)),
-    new Interval(new DateTime(2010,1,1,18,0), new DateTime(2010,1,2,0,0))
+  val timeSlices = Vector(
+    MoveMatrix.TimeSlice(0, 6),
+    MoveMatrix.TimeSlice(6, 12),
+    MoveMatrix.TimeSlice(12, 18),
+    MoveMatrix.TimeSlice(18, 24)
   )
 
-  def flowsFromEGT(aFile: File, intervals:Vector[Interval] = intervals) = {
+  def interval(timeSlice: MoveMatrix.TimeSlice) =
+    new Interval(new DateTime(2010, 1, 1, timeSlice.from, 0), new DateTime(2010, 1, 1, timeSlice.to, 0))
+
+
+  def flowsFromEGT(aFile: File, slices: Vector[TimeSlice] = timeSlices) = {
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(l2eCRS, outCRS, true)
@@ -680,6 +697,6 @@ object generation {
     //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
     //val startDate = new DateTime(formatter.parse("01/01/2010 04:00"))
 
-    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(intervals.size, 149, 132))(addFlowToMatrix(intervals)) }
+    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(slices, 149, 132))(addFlowToMatrix) }
   }
 }
