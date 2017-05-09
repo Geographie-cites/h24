@@ -13,7 +13,7 @@ val geotoolsVersion = "14.3"
 
 val jtsVersion = "1.13"
 
-val breezeVersion = "latest.integration"
+val breezeVersion = "0.13.1"
 
 resolvers ++= Seq(
   "osgeo" at "http://download.osgeo.org/webdav/geotools/",
