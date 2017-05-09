@@ -136,10 +136,9 @@ object population {
 
     def apply(education: Education) =
       education match {
-        case Education.Dipl0 | Education.BEPC | Education.CAPBEP | Education.CEP => Some(Low)
-        case Education.BAC | Education.BACP2 => Some(Middle)
-        case Education.SUP => Some(High)
-        case _ => None
+        case Education.Dipl0 | Education.BEPC | Education.CAPBEP | Education.CEP => Low
+        case Education.BAC | Education.BACP2 => Middle
+        case Education.SUP => High
       }
 
   }
@@ -173,6 +172,27 @@ object population {
     age: Age,
     sex: Sex,
     education: Education,
+    behaviour: Behaviour,
+    home: Location,
+    location: Location)
+
+
+  object AggregatedIndividual {
+    def apply(individual: Individual): AggregatedIndividual =
+      new AggregatedIndividual(
+        age = AggregatedAge(individual.age),
+        sex = individual.sex,
+        education = AggregatedEducation(individual.education),
+        behaviour = individual.behaviour,
+        home = individual.home,
+        location = individual.location
+      )
+  }
+
+  @Lenses case class AggregatedIndividual(
+    age: AggregatedAge,
+    sex: Sex,
+    education: AggregatedEducation,
     behaviour: Behaviour,
     home: Location,
     location: Location)

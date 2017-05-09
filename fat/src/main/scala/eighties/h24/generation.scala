@@ -614,7 +614,7 @@ object generation {
         val res_x = line("POINT_X_RES").trim.replaceAll(",",".").toDouble
         val res_y = line("POINT_Y_RES").trim.replaceAll(",",".").toDouble
         new Flow(line("ID_pers"), new Interval(date_start, date_end), duration, sex, age, dipl, location(new Coordinate(point_x,point_y)),location(new Coordinate(res_x,res_y)))
-      }.filter(p=> {p.duration > 0})
+      }.filter(_.duration > 0)
     }
   }
   //type TimeLapse = Vector[Vector[Cell]]

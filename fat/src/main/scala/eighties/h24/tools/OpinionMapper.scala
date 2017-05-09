@@ -13,10 +13,9 @@ object OpinionMapper extends App {
   def clamp(v: Double, min: Double = -1.0, max: Double = 1.0) = math.min(math.max(v, min), max)
   def behaviour(ed: Education, random: Random) =
     AggregatedEducation(ed) match {
-      case Some(AggregatedEducation.Low) => clamp(-0.30 + random.nextGaussian() * sigmaInitialOpinion)
-      case Some(AggregatedEducation.Middle) => clamp(0.00 + random.nextGaussian() * sigmaInitialOpinion)
-      case Some(AggregatedEducation.High) => clamp(0.30 + random.nextGaussian() * sigmaInitialOpinion)
-      case _ => Double.NaN
+      case AggregatedEducation.Low => clamp(-0.30 + random.nextGaussian() * sigmaInitialOpinion)
+      case AggregatedEducation.Middle => clamp(0.00 + random.nextGaussian() * sigmaInitialOpinion)
+      case AggregatedEducation.High => clamp(0.30 + random.nextGaussian() * sigmaInitialOpinion)
     }
 
   def generateEducation(random: Random) = Education.apply(random.nextInt(7) + 1)
