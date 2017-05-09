@@ -27,10 +27,10 @@ import com.github.tototoshi.csv.{CSVFormat, CSVReader, DefaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
 import eighties.h24.dynamic.MoveMatrix
-import eighties.h24.dynamic.MoveMatrix.{Category, Cell, Move, TimeLapse}
+import eighties.h24.dynamic.MoveMatrix.{Cell, Move, TimeLapse}
 import eighties.h24.space.{BoundingBox, Index, Location}
 import eighties.h24.population.Sex.{Female, Male}
-import eighties.h24.population.{Age, AggregatedEducation, Education, Sex}
+import eighties.h24.population._
 import monocle.macros.Lenses
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
 import org.geotools.data.shapefile.ShapefileDataStore
@@ -47,16 +47,20 @@ import org.opengis.referencing.operation.MathTransform
 import scalaz.Memo
 
 object generation {
+
+  sealed class SchoolAge(val from: Int, val to: Option[Int])
+
   object SchoolAge {
-    val From0To1 = Age(0, Some(1))
-    val From2To5 = Age(2, Some(5))
-    val From6To10 = Age(6, Some(10))
-    val From11To14 = Age(11, Some(14))
-    val From15To17 = Age(15, Some(17))
-    val From18To24 = Age(18, Some(24))
-    val From25To29 = Age(25, Some(29))
-    val Above30 = Age(30, None)
-    def all = Vector(From0To1, From2To5, From6To10, From11To14, From15To17, From18To24, From25To29, Above30)
+    object From0To1 extends SchoolAge(0, Some(1))
+    object From2To5 extends SchoolAge(2, Some(5))
+    object From6To10 extends SchoolAge(6, Some(10))
+    object From11To14 extends SchoolAge(11, Some(14))
+    object From15To17 extends SchoolAge(15, Some(17))
+    object From18To24 extends SchoolAge(18, Some(24))
+    object From25To29 extends SchoolAge(25, Some(29))
+    object Above30 extends SchoolAge(30, None)
+
+    def all = Vector[SchoolAge](From0To1, From2To5, From6To10, From11To14, From15To17, From18To24, From25To29, Above30)
     def index(age: Double) = SchoolAge.all.lastIndexWhere(value => age > value.from)
   }
 
@@ -676,6 +680,6 @@ object generation {
     //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
     //val startDate = new DateTime(formatter.parse("01/01/2010 04:00"))
 
-    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(intervals.size,149,132))(addFlowToMatrix(intervals)) }
+    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(intervals.size, 149, 132))(addFlowToMatrix(intervals)) }
   }
 }

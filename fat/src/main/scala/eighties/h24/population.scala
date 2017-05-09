@@ -28,16 +28,16 @@ import scala.util.Random
 
 object population {
 
-  case class Age private(from: Int, to: Option[Int])
+  sealed class Age(val from: Int, val to: Option[Int])
 
   object Age {
 
-    val From0To14 = Age(0, Some(14))
-    val From15To29 = Age(15, Some(29))
-    val From30To44 = Age(30, Some(44))
-    val From45To59 = Age(45, Some(59))
-    val From60To74 = Age(60, Some(74))
-    val Above75 = Age(75, None)
+    object From0To14 extends Age(0, Some(14))
+    object From15To29 extends Age(15, Some(29))
+    object From30To44 extends Age(30, Some(44))
+    object From45To59 extends Age(45, Some(59))
+    object From60To74 extends Age(60, Some(74))
+    object Above75 extends Age(75, None)
 
     def all = Vector(From0To14, From15To29, From30To44, From45To59, From60To74, Above75)
 
@@ -51,12 +51,30 @@ object population {
         case 5 => Some(Above75)
         case _ => None
       }
+
     def parse(age:Int) =
       if (age < 15) From0To14 else
       if (age < 30) From15To29 else
       if (age < 45) From30To44 else
       if (age < 60) From45To59 else
       if (age < 75) From60To74 else Above75
+  }
+
+
+  sealed trait AggregatedAge
+
+  object AggregatedAge {
+    object Junior extends AggregatedAge
+    object Senior extends AggregatedAge
+    object Veteran extends AggregatedAge
+
+    def apply(age: Age) = age match {
+      case Age.From0To14 | Age.From15To29 => Junior
+      case Age.From30To44 | Age.From45To59 => Senior
+      case Age.From60To74 | Age.Above75 => Veteran
+    }
+
+    def all = Vector(Junior, Senior, Veteran)
   }
 
   sealed trait Sex
@@ -158,5 +176,24 @@ object population {
     behaviour: Behaviour,
     home: Location,
     location: Location)
+
+
+  object Category {
+    def apply(individual: Individual): Category =
+      Category(
+        age = individual.age,
+        sex = individual.sex,
+        education = individual.education
+      )
+
+    def all =
+      for {
+        age <- Age.all
+        sex <- Sex.all
+        education <- Education.all
+      } yield Category(age, sex, education)
+  }
+
+  case class Category(age: Age, sex: Sex, education: Education)
 
 }

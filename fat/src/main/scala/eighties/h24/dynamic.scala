@@ -66,36 +66,24 @@ object dynamic {
 
     import monocle.std.all._
 
-    def moves(category: Category) =
+    def cells =
       each[Moves, TimeLapse] composeTraversal
         each[TimeLapse, Vector[Cell]] composeTraversal
-        each[Vector[Cell], Cell] composeTraversal
+        each[Vector[Cell], Cell]
+
+    def allMoves =
+      cells composeTraversal
+        each[Cell, Vector[Move]] composeTraversal each[Vector[Move], Move]
+
+    def moves(category: Category) =
+      cells composeTraversal
         filterIndex[Cell, Category, Vector[Move]](_ == category) composeTraversal
         each[Vector[Move], Move]
 
     def location = first[Move, Location]
 
-    object Category {
-      def apply(individual: Individual): Category =
-        Category(
-          age = individual.age,
-          sex = individual.sex,
-          education = individual.education
-        )
-
-      def all =
-        for {
-          age <- Age.all
-          sex <- Sex.all
-          education <- Education.all
-        } yield Category(age, sex, education)
-    }
-
-    case class Category(age: Age, sex: Sex, education: Education)
-
     def noMove(i: Int, j: Int) =
       Vector.tabulate(i, j) {(ii, jj) => Category.all.map { c => c -> Vector((ii, jj) -> 1.0) }.toMap }
-
 
     import boopickle.Default._
 
@@ -121,7 +109,7 @@ object dynamic {
     def sampleMoveInEGT(individual: Individual) = {
       val location = Individual.location.get(individual)
       val move = moves(location._1)(location._2)
-      val destination = multinomial(move(MoveMatrix.Category(individual)))(random)
+      val destination = multinomial(move(Category(individual)))(random)
       Individual.location.set(destination)(individual)
     }
     (World.allIndividuals modify sampleMoveInEGT)(world)
