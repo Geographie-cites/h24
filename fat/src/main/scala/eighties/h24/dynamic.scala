@@ -87,7 +87,7 @@ object dynamic {
 
     def moves(category: Category => Boolean) =
       cells composeTraversal
-        filterIndex[Cell, Category, Vector[Move]](_ == category) composeTraversal
+        filterIndex[Cell, Category, Vector[Move]](category) composeTraversal
         each[Vector[Move], Move]
 
 
