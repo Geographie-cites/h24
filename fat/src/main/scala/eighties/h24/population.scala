@@ -216,4 +216,20 @@ object population {
 
   case class Category(age: Age, sex: Sex, education: Education)
 
+
+  object AggregatedCategory {
+    def apply(category: Category): AggregatedCategory =
+      new AggregatedCategory(
+        age = AggregatedAge(category.age),
+        sex = category.sex,
+        education = AggregatedEducation(category.education)
+      )
+  }
+
+  case class AggregatedCategory(
+    age: AggregatedAge,
+    sex: Sex,
+    education: AggregatedEducation)
+
+
 }

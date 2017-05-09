@@ -63,18 +63,18 @@ object EGTTest extends App {
         132
       )
       space.Index.allCells[Flow].getAll(index).map { c =>
-        val values = c.map(f => (f.activity, f.interval, f.id))
+        val values = c.map(f => (f.activity, f.timeSlice, f.id))
         values.map(v => {
           val interval = v._2
-          val s = interval.getStart
-          val e = interval.getEnd
+          val s = interval.from
+          val e = interval.to
           val id = v._3
           val fmt = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")
           val valuesRes = Array[AnyRef](
             geomfactory.createPoint(new Coordinate(x_laea_min + v._1._1 * 1000, y_laea_min + v._1._2 * 1000)),
             id,
-            s.toString(fmt),
-            e.toString(fmt)
+            s.toString,
+            e.toString
           )
           val simpleFeatureRes = writerRes.next
           simpleFeatureRes.setAttributes(valuesRes)
