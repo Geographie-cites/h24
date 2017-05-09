@@ -59,7 +59,14 @@ object dynamic {
   def getTimeIndices(i: Interval, intervals: Vector[Interval]) = intervals.zipWithIndex.filter(v => v._1.contains(i)).map(_._2)
 
   object MoveMatrix {
-    case class TimeSlice(from: Int, to: Int)
+
+    object TimeSlice {
+      def fromHours(from: Int, to: Int): TimeSlice = new TimeSlice(from * 60, to * 60)
+    }
+
+    case class TimeSlice(from: Int, to: Int) {
+      def length = to - from
+    }
 
     type TimeSlices = Map[TimeSlice, CellMatrix]
     type CellMatrix = Vector[Vector[Cell]]
@@ -78,10 +85,11 @@ object dynamic {
       cells composeTraversal
         each[Cell, Vector[Move]] composeTraversal each[Vector[Move], Move]
 
-    def moves(category: Category) =
+    def moves(category: Category => Boolean) =
       cells composeTraversal
         filterIndex[Cell, Category, Vector[Move]](_ == category) composeTraversal
         each[Vector[Move], Move]
+
 
     def location = first[Move, Location]
 

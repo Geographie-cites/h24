@@ -9,7 +9,8 @@ object EGTStat extends App {
 
   import eighties.h24.dynamic._
 
-  val ls = MoveMatrix.moves(Category(Age.From30To44, Sex.Female, Education.BACP2)) composeLens MoveMatrix.location
+  val ls =
+    MoveMatrix.moves(category => AggregatedCategory(category) == AggregatedCategory(AggregatedAge.Senior, Sex.Female, AggregatedEducation.Middle)) composeLens MoveMatrix.location
 
   val path = File("../données/EGT 2010/presence semaine EGT")
   val outputPath = File("results")
@@ -17,12 +18,12 @@ object EGTStat extends App {
 
   val outFileRes = outputPath / "matrix.bin"
 
-  generation.flowsFromEGT(path / "presence_semaine_GLeRoux.csv.lzma").foreach {
-    newMatrix =>
-      val allMovesValue = MoveMatrix.allMoves.getAll(newMatrix).toVector
-      val bb = BoundingBox[MoveMatrix.Move](allMovesValue, _._1)
-      val cat = ls.getAll(newMatrix).groupBy(x => x)
-      println(BoundingBox.allLocations(bb).count { l => cat.contains(l) })
-  }
+  val newMatrix = generation.flowsFromEGT(path / "presence_semaine_GLeRoux.csv.lzma").get
+
+  val allMovesValue = MoveMatrix.allMoves.getAll(newMatrix).toVector
+  val bb = BoundingBox[MoveMatrix.Move](allMovesValue, _._1)
+  val cat = ls.getAll(newMatrix).groupBy(x => x)
+  println(BoundingBox.allLocations(bb).count { l => !cat.contains(l) })
+
 
 }

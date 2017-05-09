@@ -27,7 +27,7 @@ import com.github.tototoshi.csv.{CSVFormat, CSVReader, DefaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
 import eighties.h24.dynamic.MoveMatrix
-import eighties.h24.dynamic.MoveMatrix.{Cell, Move, CellMatrix}
+import eighties.h24.dynamic.MoveMatrix.{Cell, CellMatrix, Move, TimeSlice}
 import eighties.h24.space.{BoundingBox, Index, Location}
 import eighties.h24.population.Sex.{Female, Male}
 import eighties.h24.population._
@@ -36,7 +36,7 @@ import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
 import org.geotools.data.shapefile.ShapefileDataStore
 import org.geotools.geometry.jts.{JTS, JTSFactoryFinder}
 import org.geotools.referencing.CRS
-import org.joda.time.{DateTime, Interval}
+import org.joda.time.{DateTime, DateTimeFieldType, Interval}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
@@ -549,12 +549,12 @@ object generation {
     }
   }
 
-  case class Flow(id:String, interval:Interval, duration:Long, sex:Sex, age:Age, education:Education, activity: space.Location, residence: space.Location)
+  case class Flow(id:String, timeSlice: TimeSlice, sex:Sex, age:Age, education:Education, activity: space.Location, residence: space.Location)
 
   def readFlowsFromEGT(aFile: File, location: Coordinate=>space.Location) =
     withCSVReader(aFile)(SemicolonFormat){ reader =>
     Try {
-      reader.allWithHeaders().filter(line=>{
+      reader.allWithHeaders().filter { line =>
         val d1 = line("heure_deb").trim
         val d2 = line("heure_fin").trim
         val motif = line("motif_presence").trim
@@ -562,31 +562,27 @@ object generation {
         val py = line("POINT_Y").trim
         val resx = line("POINT_X_RES").trim
         val resy = line("POINT_Y_RES").trim
-        !(motif.isEmpty||motif.equalsIgnoreCase("88")||motif.equalsIgnoreCase("99")||
-          px.equalsIgnoreCase("NA")||py.equalsIgnoreCase("NA")||
-          resx.equalsIgnoreCase("NA")||resy.equalsIgnoreCase("NA")||
-          d1.equalsIgnoreCase("NA")||d2.equalsIgnoreCase("NA"))
-      }).map { line =>
+        !(motif.isEmpty || motif.equalsIgnoreCase("88") || motif.equalsIgnoreCase("99") ||
+          px.equalsIgnoreCase("NA") || py.equalsIgnoreCase("NA") ||
+          resx.equalsIgnoreCase("NA") || resy.equalsIgnoreCase("NA") ||
+          d1.equalsIgnoreCase("NA") || d2.equalsIgnoreCase("NA"))
+      }.flatMap { line =>
         def format(date:String) = {
           val formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm")
           Try{new DateTime(formatter.parse(date))} match {
             case Success(d) => d.toInstant
-            case Failure(e) => {
-              new DateTime(new SimpleDateFormat("dd/MM/yyyy").parse(date)).toInstant
-            }
+            case Failure(e) => new DateTime(new SimpleDateFormat("dd/MM/yyyy").parse(date)).toInstant
           }
         }
         //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
         val date_start = format(line("heure_deb").trim)
         val date_end = format(line("heure_fin").trim)
-        val duration =
-          if (date_start.compareTo(date_end) < 0) new Interval(date_start, date_end).toDuration.getStandardMinutes
-          else 0
-        val firstDate = format("01/01/2010 04:00")
-        if (date_start.compareTo(firstDate) <0) {
-          println(date_start)
-          println(line)
-        }
+
+//        val duration =
+//          if (date_start.compareTo(date_end) < 0) new Interval(date_start, date_end).toDuration.getStandardMinutes
+//          else 0
+        val midnight = format("02/01/2010 00:00")
+
         //val duree = line(10).toInt
         //val overlapMinutes = Option(interval.overlap(reqInterval)).map(_.toDuration.toStandardMinutes.getMinutes)
         val sex = line("sexe").toInt match {
@@ -613,25 +609,20 @@ object generation {
         val point_y = line("POINT_Y").trim.replaceAll(",",".").toDouble
         val res_x = line("POINT_X_RES").trim.replaceAll(",",".").toDouble
         val res_y = line("POINT_Y_RES").trim.replaceAll(",",".").toDouble
-        new Flow(line("ID_pers"), new Interval(date_start, date_end), duration, sex, age, dipl, location(new Coordinate(point_x,point_y)),location(new Coordinate(res_x,res_y)))
-      }.filter(_.duration > 0)
+
+        val timeSlices =
+          if(date_start.isBefore(midnight) && date_end.isAfter(midnight)) Vector(TimeSlice(date_start.get(DateTimeFieldType.minuteOfDay()), 24 * 60), TimeSlice(0, date_end.get(DateTimeFieldType.minuteOfDay())))
+          else Vector(TimeSlice(date_start.get(DateTimeFieldType.minuteOfDay()),  date_end.get(DateTimeFieldType.minuteOfDay())))
+
+        timeSlices.map(s => Flow(line("ID_pers"), s, sex, age, dipl, location(new Coordinate(point_x,point_y)),location(new Coordinate(res_x,res_y))))
+      }
     }
   }
-  //type TimeLapse = Vector[Vector[Cell]]
-  //type Cell = Map[Category, Vector[Move]]
-  //type Move = (Location, Double)
-
-  def intersects(t:Int, interval:Interval): Boolean = {
-    true
-  }
-
-
   import MoveMatrix._
 
 
   def addFlowToCell(c: Cell, flow: Flow, timeSlice: TimeSlice): Cell = {
-    val jodaInterval = interval(timeSlice)
-    val intersection = jodaInterval.overlap(flow.interval)
+    val intersection = overlap(flow.timeSlice, timeSlice).toDouble
 
     val cat = Category(age = flow.age, sex = flow.sex, education = flow.education)
 
@@ -646,12 +637,12 @@ object generation {
     c.get(cat) match {
       case Some(moves) =>
         val index = moves.indexWhere { m => m._1._1 == flow.activity._1 && m._1._2 == flow.activity._2 }
-        if (index == -1) c + (cat -> moves.:+(flow.activity, intersection.toDurationMillis.toDouble))
+        if (index == -1) c + (cat -> moves.:+(flow.activity, intersection))
         else {
           val v = moves(index)._2
-          c + (cat -> moves.updated(index, (flow.activity, v + intersection.toDurationMillis.toDouble)))
+          c + (cat -> moves.updated(index, (flow.activity, v + intersection)))
         }
-      case None => c + (cat -> Vector((flow.activity, intersection.toDurationMillis.toDouble)))
+      case None => c + (cat -> Vector((flow.activity, intersection)))
     }
   }
 
@@ -667,14 +658,29 @@ object generation {
     }.toMap
 
   val timeSlices = Vector(
-    MoveMatrix.TimeSlice(0, 6),
-    MoveMatrix.TimeSlice(6, 12),
-    MoveMatrix.TimeSlice(12, 18),
-    MoveMatrix.TimeSlice(18, 24)
+    MoveMatrix.TimeSlice.fromHours(0, 6),
+    MoveMatrix.TimeSlice.fromHours(6, 12),
+    MoveMatrix.TimeSlice.fromHours(12, 18),
+    MoveMatrix.TimeSlice.fromHours(18, 24)
   )
 
-  def interval(timeSlice: MoveMatrix.TimeSlice) =
+  def overlap(t1: TimeSlice, t2: TimeSlice) = {
+    def isIncluded(t1: TimeSlice, t2: TimeSlice) =
+      t1.from >= t2.from && t1.to <= t2.to
+
+    if(t1.to <= t2.from) 0
+    else if(t2.to <= t1.from) 0
+    else if(isIncluded(t1, t2)) t1.length
+    else if(isIncluded(t2, t1)) t2.length
+    else if(t1.from < t2.from && t1.to > t2.from) t1.to - t2.from
+    else if(t1.to > t2.to && t1.from < t2.to) t2.to - t1.from
+    else throw new RuntimeException("overlap does'nt take into account all configurations")
+  }
+
+  def interval(timeSlice: MoveMatrix.TimeSlice) = {
+    val initialDate = new DateTime(2010, 1, 1, 0)
     new Interval(new DateTime(2010, 1, 1, timeSlice.from, 0), new DateTime(2010, 1, 1, timeSlice.to, 0))
+  }
 
 
   def flowsFromEGT(aFile: File, slices: Vector[TimeSlice] = timeSlices) = {
