@@ -20,15 +20,10 @@ object EGTTestMatrixWrite extends App {
   val path = File("../données/EGT 2010/presence semaine EGT")
   val outputPath = File("results")
   outputPath.createDirectories()
-  val outFileRes = outputPath / "matrix.bin"
-  val intervals = Vector(
-    new Interval(new DateTime(2010,1,1,0,0), new DateTime(2010,1,1,6,0)),
-    new Interval(new DateTime(2010,1,1,6,0), new DateTime(2010,1,1,12,0)),
-    new Interval(new DateTime(2010,1,1,12,0), new DateTime(2010,1,1,18,0)),
-    new Interval(new DateTime(2010,1,1,18,0), new DateTime(2010,1,2,0,0))
-  )
 
-  generation.flowsFromEGT(path / "presence_semaine_GLeRoux.csv.lzma",intervals).foreach {
+  val outFileRes = outputPath / "matrix.bin"
+
+  generation.flowsFromEGT(path / "presence_semaine_GLeRoux.csv.lzma").foreach {
     newMatrix => MoveMatrix.save(newMatrix, outFileRes)
   }
 }

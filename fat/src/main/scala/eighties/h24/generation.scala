@@ -649,7 +649,14 @@ object generation {
   def noMove(intervals: Int, i: Int, j: Int) =
     Vector.tabulate(intervals, i, j) {(it, ii, jj) => Category.all.map { c => c -> Vector[Move]() }.toMap }
 
-  def flowsFromEGT(aFile: File, intervals:Vector[Interval]) = {
+  val intervals = Vector(
+    new Interval(new DateTime(2010,1,1,0,0), new DateTime(2010,1,1,6,0)),
+    new Interval(new DateTime(2010,1,1,6,0), new DateTime(2010,1,1,12,0)),
+    new Interval(new DateTime(2010,1,1,12,0), new DateTime(2010,1,1,18,0)),
+    new Interval(new DateTime(2010,1,1,18,0), new DateTime(2010,1,2,0,0))
+  )
+
+  def flowsFromEGT(aFile: File, intervals:Vector[Interval] = intervals) = {
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(l2eCRS, outCRS, true)
