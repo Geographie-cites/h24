@@ -649,7 +649,7 @@ object generation {
   def noMove(intervals: Int, i: Int, j: Int) =
     Vector.tabulate(intervals, i, j) {(it, ii, jj) => Category.all.map { c => c -> Vector[Move]() }.toMap }
 
-  def flowsFromEGT(aFile: File, intervals:Vector[Interval], outFile: File) = {
+  def flowsFromEGT(aFile: File, intervals:Vector[Interval]) = {
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(l2eCRS, outCRS, true)
@@ -669,9 +669,6 @@ object generation {
     //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
     //val startDate = new DateTime(formatter.parse("01/01/2010 04:00"))
 
-    readFlowsFromEGT(aFile, location) map { lf =>
-      val newmatrix = lf.foldLeft(noMove(intervals.size,149,132))(addFlowToMatrix(intervals))
-      MoveMatrix.save(newmatrix, outFile)
-    }
+    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(intervals.size,149,132))(addFlowToMatrix(intervals)) }
   }
 }

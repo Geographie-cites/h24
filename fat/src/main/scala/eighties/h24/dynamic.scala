@@ -64,6 +64,17 @@ object dynamic {
     type Cell = Map[Category, Vector[Move]]
     type Move = (Location, Double)
 
+    import monocle.std.all._
+
+    def moves(category: Category) =
+      each[Moves, TimeLapse] composeTraversal
+        each[TimeLapse, Vector[Cell]] composeTraversal
+        each[Vector[Cell], Cell] composeTraversal
+        filterIndex[Cell, Category, Vector[Move]](_ == category) composeTraversal
+        each[Vector[Move], Move]
+
+    def location = first[Move, Location]
+
     object Category {
       def apply(individual: Individual): Category =
         Category(

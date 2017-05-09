@@ -4,6 +4,7 @@ import java.text.SimpleDateFormat
 
 import better.files.File
 import com.vividsolutions.jts.geom.{Coordinate, GeometryFactory}
+import eighties.h24.dynamic.MoveMatrix
 import eighties.h24.generation.Flow
 import eighties.h24.{generation, space}
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
@@ -26,5 +27,8 @@ object EGTTestMatrixWrite extends App {
     new Interval(new DateTime(2010,1,1,12,0), new DateTime(2010,1,1,18,0)),
     new Interval(new DateTime(2010,1,1,18,0), new DateTime(2010,1,2,0,0))
   )
-  generation.flowsFromEGT(path / "presence_semaine_GLeRoux.csv.lzma",intervals,outFileRes).get
+
+  generation.flowsFromEGT(path / "presence_semaine_GLeRoux.csv.lzma",intervals).foreach {
+    newMatrix => MoveMatrix.save(newMatrix, outFileRes)
+  }
 }
