@@ -669,12 +669,9 @@ object generation {
     //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
     //val startDate = new DateTime(formatter.parse("01/01/2010 04:00"))
 
-    readFlowsFromEGT(aFile, location) match {
-      case Success(lf) => {
-        val newmatrix = lf.foldLeft(noMove(intervals.size,149,132))(addFlowToMatrix(intervals))
-        MoveMatrix.save(newmatrix, outFile)
-      }
-      case Failure(e) => println("sorry")
+    readFlowsFromEGT(aFile, location) map { lf =>
+      val newmatrix = lf.foldLeft(noMove(intervals.size,149,132))(addFlowToMatrix(intervals))
+      MoveMatrix.save(newmatrix, outFile)
     }
   }
 }
