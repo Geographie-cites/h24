@@ -59,43 +59,34 @@ object dynamic {
   def getTimeIndices(i: Interval, intervals: Vector[Interval]) = intervals.zipWithIndex.filter(v => v._1.contains(i)).map(_._2)
 
   object MoveMatrix {
-    type Moves = Vector[TimeLapse]
-    type TimeLapse = Vector[Vector[Cell]]
+    case class TimeSlice(from: Int, to: Int)
+
+    type TimeSlices = Map[TimeSlice, CellMatrix]
+    type CellMatrix = Vector[Vector[Cell]]
     type Cell = Map[Category, Vector[Move]]
     type Move = (Location, Double)
 
-    import monocle.std.all._
+    def cell(location: Location) =
+      index[Vector[Vector[Cell]], Int, Vector[Cell]](location._1) composeOptional index(location._2)
+
+    def cells =
+      each[TimeSlices, CellMatrix] composeTraversal
+        each[CellMatrix, Vector[Cell]] composeTraversal
+        each[Vector[Cell], Cell]
+
+    def allMoves =
+      cells composeTraversal
+        each[Cell, Vector[Move]] composeTraversal each[Vector[Move], Move]
 
     def moves(category: Category) =
-      each[Moves, TimeLapse] composeTraversal
-        each[TimeLapse, Vector[Cell]] composeTraversal
-        each[Vector[Cell], Cell] composeTraversal
+      cells composeTraversal
         filterIndex[Cell, Category, Vector[Move]](_ == category) composeTraversal
         each[Vector[Move], Move]
 
     def location = first[Move, Location]
 
-    object Category {
-      def apply(individual: Individual): Category =
-        Category(
-          age = individual.age,
-          sex = individual.sex,
-          education = individual.education
-        )
-
-      def all =
-        for {
-          age <- Age.all
-          sex <- Sex.all
-          education <- Education.all
-        } yield Category(age, sex, education)
-    }
-
-    case class Category(age: Age, sex: Sex, education: Education)
-
     def noMove(i: Int, j: Int) =
       Vector.tabulate(i, j) {(ii, jj) => Category.all.map { c => c -> Vector((ii, jj) -> 1.0) }.toMap }
-
 
     import boopickle.Default._
 
@@ -103,7 +94,7 @@ object dynamic {
     implicit val sexPickler = transformPickler((i: Int) => Sex.all(i))(s => Sex.all.indexOf(s))
     implicit val educationPickler = transformPickler((i: Int) => Education.all(i))(s => Education.all.indexOf(s))
 
-    def save(moves: Moves, file: File) = {
+    def save(moves: TimeSlices, file: File) = {
       val os = new FileOutputStream(file.toJava)
       try os.getChannel.write(Pickle.intoBytes(moves))
       finally os.close()
@@ -111,17 +102,17 @@ object dynamic {
 
     def load(file: File) = {
       val is = new FileInputStream(file.toJava)
-      try Unpickle[Moves].fromBytes(is.getChannel.toMappedByteBuffer)
+      try Unpickle[TimeSlices].fromBytes(is.getChannel.toMappedByteBuffer)
       finally is.close()
     }
 
   }
 
-  def moveInMoveMatrix(world: World, moves: MoveMatrix.TimeLapse, random: Random) = {
+  def moveInMoveMatrix(world: World, moves: MoveMatrix.CellMatrix, random: Random) = {
     def sampleMoveInEGT(individual: Individual) = {
       val location = Individual.location.get(individual)
       val move = moves(location._1)(location._2)
-      val destination = multinomial(move(MoveMatrix.Category(individual)))(random)
+      val destination = multinomial(move(Category(individual)))(random)
       Individual.location.set(destination)(individual)
     }
     (World.allIndividuals modify sampleMoveInEGT)(world)

@@ -60,6 +60,11 @@ object space {
     }
 
     def translate(boundingBox: BoundingBox)(location: Location) = (location._1 - boundingBox.minI, location._2 - boundingBox.minJ)
+    def allLocations(boundingBox: BoundingBox) =
+      for {
+        i <- boundingBox.minI to boundingBox.maxI
+        j <- boundingBox.minJ to boundingBox.maxJ
+      } yield (i, j)
   }
 
   case class BoundingBox(minI: Int, maxI: Int, minJ: Int, maxJ: Int) {

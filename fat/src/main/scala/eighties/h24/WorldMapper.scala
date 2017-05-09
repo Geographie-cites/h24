@@ -13,10 +13,9 @@ import population._
 object WorldMapper {
   val format = new GeoTiffFormat()
   def cat(ind: Individual) = AggregatedEducation(ind.education) match {
-    case Some(AggregatedEducation.Low) => 0
-    case Some(AggregatedEducation.Middle) => 1
-    case Some(AggregatedEducation.High) => 2
-    case None => -1
+    case AggregatedEducation.Low => 0
+    case AggregatedEducation.Middle => 1
+    case AggregatedEducation.High => 2
   }
   def mapRGB(world: space.World, file: File,
              geValue: Individual => Int = cat(_),

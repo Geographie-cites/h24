@@ -27,10 +27,10 @@ import com.github.tototoshi.csv.{CSVFormat, CSVReader, DefaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
 import eighties.h24.dynamic.MoveMatrix
-import eighties.h24.dynamic.MoveMatrix.{Category, Cell, Move, TimeLapse}
+import eighties.h24.dynamic.MoveMatrix.{Cell, Move, CellMatrix}
 import eighties.h24.space.{BoundingBox, Index, Location}
 import eighties.h24.population.Sex.{Female, Male}
-import eighties.h24.population.{Age, AggregatedEducation, Education, Sex}
+import eighties.h24.population._
 import monocle.macros.Lenses
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
 import org.geotools.data.shapefile.ShapefileDataStore
@@ -47,16 +47,20 @@ import org.opengis.referencing.operation.MathTransform
 import scalaz.Memo
 
 object generation {
+
+  sealed class SchoolAge(val from: Int, val to: Option[Int])
+
   object SchoolAge {
-    val From0To1 = Age(0, Some(1))
-    val From2To5 = Age(2, Some(5))
-    val From6To10 = Age(6, Some(10))
-    val From11To14 = Age(11, Some(14))
-    val From15To17 = Age(15, Some(17))
-    val From18To24 = Age(18, Some(24))
-    val From25To29 = Age(25, Some(29))
-    val Above30 = Age(30, None)
-    def all = Vector(From0To1, From2To5, From6To10, From11To14, From15To17, From18To24, From25To29, Above30)
+    object From0To1 extends SchoolAge(0, Some(1))
+    object From2To5 extends SchoolAge(2, Some(5))
+    object From6To10 extends SchoolAge(6, Some(10))
+    object From11To14 extends SchoolAge(11, Some(14))
+    object From15To17 extends SchoolAge(15, Some(17))
+    object From18To24 extends SchoolAge(18, Some(24))
+    object From25To29 extends SchoolAge(25, Some(29))
+    object Above30 extends SchoolAge(30, None)
+
+    def all = Vector[SchoolAge](From0To1, From2To5, From6To10, From11To14, From15To17, From18To24, From25To29, Above30)
     def index(age: Double) = SchoolAge.all.lastIndexWhere(value => age > value.from)
   }
 
@@ -610,42 +614,66 @@ object generation {
         val res_x = line("POINT_X_RES").trim.replaceAll(",",".").toDouble
         val res_y = line("POINT_Y_RES").trim.replaceAll(",",".").toDouble
         new Flow(line("ID_pers"), new Interval(date_start, date_end), duration, sex, age, dipl, location(new Coordinate(point_x,point_y)),location(new Coordinate(res_x,res_y)))
-      }.filter(p=> {p.duration > 0})
+      }.filter(_.duration > 0)
     }
   }
   //type TimeLapse = Vector[Vector[Cell]]
   //type Cell = Map[Category, Vector[Move]]
   //type Move = (Location, Double)
 
-  def addFlowToCell(c: Cell, flow: Flow):Cell={
-    val cat = new Category(age = flow.age, sex = flow.sex, education = flow.education)
+
+  import MoveMatrix._
+
+
+  def addFlowToCell(c: Cell, flow: Flow, timeSlice: TimeSlice): Cell = {
+    val jodaInterval = interval(timeSlice)
+    val intersection = jodaInterval.overlap(flow.interval)
+
+    val cat = Category(age = flow.age, sex = flow.sex, education = flow.education)
+
+//    val add =
+//      for {
+//        moves <- c.get(cat)
+//        (v, i) <- moves.zipWithIndex.find { m => m._1._1 == flow.activity._1 && m._1._2 == flow.activity._2 }
+//      } yield cat -> moves.updated(i, (flow.activity, v._2 + intersection.toDurationMillis))
+//
+//    moves + add.getOrElse()
+
     c.get(cat) match {
-      case Some(moves) => {
-        val index = moves.indexWhere((m) => m._1._1 == flow.activity._1 && m._1._2 == flow.activity._2)
-        if (index == -1) c + (cat -> moves.:+(flow.activity, 1.0))
+      case Some(moves) =>
+        val index = moves.indexWhere { m => m._1._1 == flow.activity._1 && m._1._2 == flow.activity._2 }
+        if (index == -1) c + (cat -> moves.:+(flow.activity, intersection.toDurationMillis.toDouble))
         else {
           val v = moves(index)._2
-          c + (cat -> moves.updated(index, (flow.activity, v + 1.0)))
+          c + (cat -> moves.updated(index, (flow.activity, v + intersection.toDurationMillis.toDouble)))
         }
-      }
-      case None => c + (cat -> Vector((flow.activity,1.0)))
+      case None => c + (cat -> Vector((flow.activity, intersection.toDurationMillis.toDouble)))
     }
   }
 
-  def addFlowToMatrix(intervals:Vector[Interval])(mat:Vector[TimeLapse], flow: Flow):Vector[TimeLapse]={
-    val indices = dynamic.getTimeIndices(flow.interval,intervals)
-    indices.foldLeft(mat)((m,index) => {
-      val mi = m(index)
-      val mix = mi(flow.residence._1)
-      val mixy = mix(flow.residence._2)
-      m.updated(index, mi.updated(flow.residence._1, mix.updated(flow.residence._2, addFlowToCell(mixy,flow))))
-    })
-  }
+  def addFlowToMatrix(slices: TimeSlices, flow: Flow): TimeSlices =
+    slices.map { case (time, slice) =>
+     time ->
+       MoveMatrix.cell(flow.residence).modify { current => addFlowToCell(current, flow, time) }(slice)
+    }
 
-  def noMove(intervals: Int, i: Int, j: Int) =
-    Vector.tabulate(intervals, i, j) {(it, ii, jj) => Category.all.map { c => c -> Vector[Move]() }.toMap }
+  def noMove(timeSlices: Vector[TimeSlice], i: Int, j: Int): TimeSlices =
+    timeSlices.map { ts =>
+      ts -> Vector.tabulate(i, j) { (ii, jj) => Category.all.map { c => c -> Vector[Move]() }.toMap }
+    }.toMap
 
-  def flowsFromEGT(aFile: File, intervals:Vector[Interval]) = {
+  val timeSlices = Vector(
+    MoveMatrix.TimeSlice(0, 6),
+    MoveMatrix.TimeSlice(6, 12),
+    MoveMatrix.TimeSlice(12, 18),
+    MoveMatrix.TimeSlice(18, 24)
+  )
+
+  def interval(timeSlice: MoveMatrix.TimeSlice) =
+    new Interval(new DateTime(2010, 1, 1, timeSlice.from, 0), new DateTime(2010, 1, 1, timeSlice.to, 0))
+
+
+  def flowsFromEGT(aFile: File, slices: Vector[TimeSlice] = timeSlices) = {
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(l2eCRS, outCRS, true)
@@ -665,6 +693,6 @@ object generation {
     //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
     //val startDate = new DateTime(formatter.parse("01/01/2010 04:00"))
 
-    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(intervals.size,149,132))(addFlowToMatrix(intervals)) }
+    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(slices, 149, 132))(addFlowToMatrix) }
   }
 }
