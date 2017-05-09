@@ -617,10 +617,6 @@ object generation {
   //type Cell = Map[Category, Vector[Move]]
   //type Move = (Location, Double)
 
-  def intersects(t:Int, interval:Interval): Boolean = {
-    true
-  }
-
   def addFlowToCell(c: Cell, flow: Flow):Cell={
     val cat = new Category(age = flow.age, sex = flow.sex, education = flow.education)
     c.get(cat) match {
