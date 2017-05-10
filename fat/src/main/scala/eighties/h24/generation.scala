@@ -266,7 +266,6 @@ object generation {
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(inCRS, outCRS, true)
 
-
     irises.map { id =>
       val ageSexV = ageSex.get(id).get
       val schoolAgeV = schoolAge.get(id).get
@@ -315,8 +314,8 @@ object generation {
         val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
 
         // Should decide first if has an activity
-        val working = true
-        val commune = id.id.take(5)
+        //val working = true
+        //val commune = id.id.take(5)
 
         IndividualFeature(
           ageCategory = ageIndex,
@@ -324,7 +323,7 @@ object generation {
           education = education,
           location = space.cell(point.getX, point.getY)
         )
-      }
+      }.filter(f=>f.ageCategory>0)//remove people with age in 0-14
       res
     }
   }
@@ -577,14 +576,7 @@ object generation {
         //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
         val date_start = format(line("heure_deb").trim)
         val date_end = format(line("heure_fin").trim)
-
-//        val duration =
-//          if (date_start.compareTo(date_end) < 0) new Interval(date_start, date_end).toDuration.getStandardMinutes
-//          else 0
         val midnight = format("02/01/2010 00:00")
-
-        //val duree = line(10).toInt
-        //val overlapMinutes = Option(interval.overlap(reqInterval)).map(_.toDuration.toStandardMinutes.getMinutes)
         val sex = line("sexe").toInt match {
           case 1 => Male
           case 2 => Female
@@ -615,7 +607,7 @@ object generation {
           else Vector(TimeSlice(date_start.get(DateTimeFieldType.minuteOfDay()),  date_end.get(DateTimeFieldType.minuteOfDay())))
 
         timeSlices.map(s => Flow(line("ID_pers"), s, sex, age, dipl, location(new Coordinate(point_x,point_y)),location(new Coordinate(res_x,res_y))))
-      }
+      }.filter(_.age.from >= 15)
     }
   }
   import MoveMatrix._
