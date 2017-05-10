@@ -35,7 +35,7 @@ object EGTTest extends App {
       //      dx+dy*row
       space.cell(dx, dy)
     }
-    val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
+    //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
     //val startDate = new DateTime(formatter.parse("01/01/2010 04:00"))
 
     val factory = new ShapefileDataStoreFactory
@@ -43,20 +43,16 @@ object EGTTest extends App {
 
     //val resx=64
     //val resy=81
-    println(res)
     val file = DataUtilities.urlToFile(res.toJava.toURI.toURL)
-    println(file.isFile)
     val dataStoreRes = factory.createDataStore(res.toJava.toURI.toURL)
-    println(dataStoreRes)
     val featureTypeNameRes = "Res"
     val specsRes = "geom:Point:srid=3035,id:String,start:String,end:String"
-    println(specsRes)
     val featureTypeRes = DataUtilities.createType(featureTypeNameRes, specsRes)
     dataStoreRes.createSchema(featureTypeRes)
     val typeNameRes = dataStoreRes.getTypeNames()(0)
     val writerRes = dataStoreRes.getFeatureWriterAppend(typeNameRes, Transaction.AUTO_COMMIT)
 
-      val index = space.Index[Flow](
+    val index = space.Index[Flow](
         generation.readFlowsFromEGT(aFile, location).get.iterator,
         (_: Flow).residence,
         149,
@@ -69,7 +65,6 @@ object EGTTest extends App {
           val s = interval.from
           val e = interval.to
           val id = v._3
-          val fmt = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")
           val valuesRes = Array[AnyRef](
             geomfactory.createPoint(new Coordinate(x_laea_min + v._1._1 * 1000, y_laea_min + v._1._2 * 1000)),
             id,
@@ -87,6 +82,6 @@ object EGTTest extends App {
   val path = File("../données/EGT 2010/presence semaine EGT")
   val outputPath = File("results")
   outputPath.createDirectories()
-  val outFileRes = outputPath / "OUT_laea_all_better_end.shp"
+  val outFileRes = outputPath / "TEST.shp"
   flowsFromEGT(path / "presence_semaine_GLeRoux.csv.lzma",outFileRes)
 }
