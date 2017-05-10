@@ -18,6 +18,7 @@
 package eighties.h24
 
 
+import eighties.h24.dynamic.MoveMatrix.TimeSlice
 import generation._
 import space._
 import monocle.function.all._
@@ -162,7 +163,7 @@ object population {
   type Behaviour = Double
 
   object Individual {
-    def apply(feature: IndividualFeature, behaviour: (IndividualFeature, Random) => Behaviour, random: Random): Option[Individual] = {
+    def apply(feature: IndividualFeature, behaviour: (IndividualFeature, Random) => Behaviour, random: Random, stableDestinations: Map[TimeSlice, Location] = Map.empty): Option[Individual] = {
       for {
         age <- Age(feature.ageCategory)
         sex <- Sex(feature.sex)
@@ -174,7 +175,8 @@ object population {
           education,
           behaviour(feature, random),
           feature.location,
-          feature.location
+          feature.location,
+          stableDestinations
         )
     }
 
@@ -190,7 +192,8 @@ object population {
     education: Education,
     behaviour: Behaviour,
     home: Location,
-    location: Location)
+    location: Location,
+    stableDestinations: Map[TimeSlice, Location])
 
 
   object AggregatedIndividual {

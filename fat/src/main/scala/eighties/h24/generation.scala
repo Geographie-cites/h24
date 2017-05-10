@@ -649,12 +649,42 @@ object generation {
       ts -> Vector.tabulate(i, j) { (ii, jj) => Map.empty[AggregatedCategory, Vector[Move]] }
     }
 
+  def idw(power: Double)(location: Location, moves: Vector[(Location, Double)], neighborhood: Vector[(Location, Vector[(Location, Double)])]) = {
+    if (moves.isEmpty) {
+      val weights = neighborhood.map(v => (v._1 -> 1.0 / scala.math.pow(space.distance(location, v._1), power))).toMap
+      val destinations = neighborhood.flatMap(_._2).map(_._1).distinct
+      destinations.map { d =>
+        val v = for {
+          n <- neighborhood
+          value <- n._2.filter(_._1 == d).map(_._2)
+        } yield (n._1, value)
+        val values = v.map(t => {
+          val w = weights(t._1)
+          (w, w * t._2)
+        })
+        val weightsum = values.map(_._1).sum
+        val valuessum = values.map(_._2).sum
+        d -> valuessum / weightsum
+      }
+    } else moves
+  }
+
+  def interpolateFlows(c: Cell, location: Location,
+                       cellMatrix:CellMatrix,
+                       neighbor: Location => Location => Boolean,
+                       interpolate: (Location, Vector[(Location, Double)], Vector[(Location, Vector[(Location, Double)])]) => Vector[(Location, Double)]): Cell =
+    c.map { case (category, moves) =>
+      val m = movesInNeighborhood(cellMatrix, category, neighbor(location))
+      category -> interpolate(location, moves, m)
+    }
+
   val timeSlices = Vector(
-    MoveMatrix.TimeSlice.fromHours(0, 6),
-    MoveMatrix.TimeSlice.fromHours(6, 12),
-    MoveMatrix.TimeSlice.fromHours(12, 18),
-    MoveMatrix.TimeSlice.fromHours(18, 24)
+    MoveMatrix.TimeSlice.fromHours(0, 8),
+    MoveMatrix.TimeSlice.fromHours(8, 16),
+    MoveMatrix.TimeSlice.fromHours(16, 24)
   )
+
+  val workTimeSlice = timeSlices(1)
 
   def overlap(t1: TimeSlice, t2: TimeSlice) = {
     def isIncluded(t1: TimeSlice, t2: TimeSlice) =
@@ -674,7 +704,6 @@ object generation {
     new Interval(new DateTime(2010, 1, 1, timeSlice.from, 0), new DateTime(2010, 1, 1, timeSlice.to, 0))
   }
 
-
   def flowsFromEGT(i: Int, j: Int, aFile: File, slices: Vector[TimeSlice] = timeSlices) = {
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
@@ -689,13 +718,8 @@ object generation {
       // replace by cell...
       val dx = (laea_coord.x - x_laea_min)
       val dy = (laea_coord.y - y_laea_min)
-//      dx+dy*row
       space.cell(dx, dy)
     }
-    //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
-    //val startDate = new DateTime(formatter.parse("01/01/2010 04:00"))
-
-
     readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(slices, i, j))(addFlowToMatrix) } map {
       cells modify normalizeFlows
     }

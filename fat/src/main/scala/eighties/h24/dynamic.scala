@@ -20,10 +20,10 @@ package eighties.h24
 import java.io.{FileInputStream, FileOutputStream}
 
 import better.files._
+import eighties.h24.dynamic.MoveMatrix.TimeSlice
 import eighties.h24.population._
 import eighties.h24.space._
 import monocle.Monocle._
-import org.jfree.data.time.TimePeriod
 import org.joda.time.{DateTime, Instant, Interval}
 import squants._
 
@@ -73,6 +73,9 @@ object dynamic {
     type Cell = Map[AggregatedCategory, Vector[Move]]
     type Move = (Location, Double)
 
+    def modifyCellMatrix(f: (Cell, Location) => Cell)(matrix: CellMatrix): CellMatrix =
+      matrix.zipWithIndex.map { case(line, i) => line.zipWithIndex.map { case(c, j) => f(c, (i, j)) } }
+
     def cell(location: Location) =
       index[Vector[Vector[Cell]], Int, Vector[Cell]](location._1) composeOptional index(location._2)
 
@@ -91,6 +94,14 @@ object dynamic {
         filterIndex[Cell, AggregatedCategory, Vector[Move]](category) composeTraversal
         each[Vector[Move], Move]
 
+    def movesInNeighborhood(cellMatrix: CellMatrix, category: AggregatedCategory, neighbor: Location => Boolean) =
+      for {
+        (line, i) <- cellMatrix.zipWithIndex
+        (cell, j) <- line.zipWithIndex
+        loc = Location(i,j)
+        if (neighbor(loc))
+        moves <- cell.get(category).toSeq
+      } yield (loc -> moves)
 
     def location = first[Move, Location]
     def moveRatio = second[Move, Double]
@@ -121,15 +132,22 @@ object dynamic {
 
   }
 
-  def moveInMoveMatrix(world: World, moves: MoveMatrix.CellMatrix, random: Random) = {
-    def sampleMoveInMatrix(individual: Individual) = {
-      val location = Individual.location.get(individual)
-      moves(location._1)(location._2).get(AggregatedCategory(Category(individual))) match {
-        case None => individual
-        case Some(move) =>
-          val destination = multinomial(move)(random)
-          Individual.location.set(destination)(individual)
-      }
+  def sampleDestinationInMoveMatrix(individual: Individual, moves: MoveMatrix.CellMatrix, random: Random) = {
+    val location = Individual.location.get(individual)
+    moves(location._1)(location._2).get(AggregatedCategory(Category(individual))) map { move =>
+      multinomial(move)(random)
+    }
+  }
+
+  def moveInMoveMatrix(world: World, moves: MoveMatrix.CellMatrix, timeSlice: TimeSlice, random: Random) = {
+    def sampleMoveInMatrix(individual: Individual) =
+      individual.stableDestinations.get(timeSlice) match {
+        case None =>
+          sampleDestinationInMoveMatrix(individual, moves, random)  match {
+            case None => individual
+            case Some(destination) => Individual.location.set(destination)(individual)
+          }
+        case Some(destination) => Individual.location.set(destination)(individual)
     }
     (World.allIndividuals modify sampleMoveInMatrix)(world)
   }
