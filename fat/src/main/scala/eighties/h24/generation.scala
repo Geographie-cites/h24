@@ -649,14 +649,31 @@ object generation {
       ts -> Vector.tabulate(i, j) { (ii, jj) => Map.empty[AggregatedCategory, Vector[Move]] }
     }
 
-  def interpolateFlows(c: Cell, slices: TimeSlices): Cell =
-    c.map { case (category, moves) =>
-      if (moves.isEmpty) {
-        MoveMatrix.moves(_ == category)
-        category -> moves
-      } else {
-        category -> moves
+  def idw(power: Double)(location: Location, moves: Vector[(Location, Double)], neighborhood: Vector[(Location, Vector[(Location, Double)])]) = {
+    if (moves.isEmpty) {
+      val weights = neighborhood.map(v => (v._1 -> 1.0 / scala.math.pow(space.distance(location, v._1), power))).toMap
+      val destinations = neighborhood.flatMap(_._2).map(_._1).distinct
+      destinations.map { d =>
+        val v = for {
+          n <- neighborhood
+          value <- n._2.filter(_._1 == d).map(_._2)
+        } yield (n._1, value)
+        val sums = v.map(t => {
+          val w = weights(t._1)
+          (w, w * t._2)
+        }).sum
+        d -> sums._2 / sums._1
       }
+    } else moves
+  }
+
+  def interpolateFlows(c: Cell, location: Location,
+                       cellMatrix:CellMatrix,
+                       neighbor: Location => Location => Boolean,
+                       interpolate: (Location, Vector[(Location, Double)], Vector[(Location, Vector[(Location, Double)])]) => Vector[(Location, Double)]): Cell =
+    c.map { case (category, moves) =>
+      val m = movesInNeighborhood(cellMatrix, category, neighbor(location))
+      category -> interpolate(location, moves, m)
     }
 
   val timeSlices = Vector(
@@ -699,13 +716,8 @@ object generation {
       // replace by cell...
       val dx = (laea_coord.x - x_laea_min)
       val dy = (laea_coord.y - y_laea_min)
-//      dx+dy*row
       space.cell(dx, dy)
     }
-    //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
-    //val startDate = new DateTime(formatter.parse("01/01/2010 04:00"))
-
-
     readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(slices, i, j))(addFlowToMatrix) } map {
       cells modify normalizeFlows
     }
