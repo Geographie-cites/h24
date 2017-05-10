@@ -658,11 +658,13 @@ object generation {
           n <- neighborhood
           value <- n._2.filter(_._1 == d).map(_._2)
         } yield (n._1, value)
-        val sums = v.map(t => {
+        val values = v.map(t => {
           val w = weights(t._1)
           (w, w * t._2)
-        }).sum
-        d -> sums._2 / sums._1
+        })
+        val weightsum = values.map(_._1).sum
+        val valuessum = values.map(_._2).sum
+        d -> valuessum / weightsum
       }
     } else moves
   }
