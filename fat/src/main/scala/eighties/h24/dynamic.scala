@@ -68,7 +68,7 @@ object dynamic {
       def length = to - from
     }
 
-    type TimeSlices = Map[TimeSlice, CellMatrix]
+    type TimeSlices = Vector[(TimeSlice, CellMatrix)]
     type CellMatrix = Vector[Vector[Cell]]
     type Cell = Map[AggregatedCategory, Vector[Move]]
     type Move = (Location, Double)
@@ -77,7 +77,8 @@ object dynamic {
       index[Vector[Vector[Cell]], Int, Vector[Cell]](location._1) composeOptional index(location._2)
 
     def cells =
-      each[TimeSlices, CellMatrix] composeTraversal
+      each[TimeSlices, (TimeSlice, CellMatrix)] composeLens
+        second[(TimeSlice, CellMatrix), CellMatrix] composeTraversal
         each[CellMatrix, Vector[Cell]] composeTraversal
         each[Vector[Cell], Cell]
 
@@ -124,13 +125,16 @@ object dynamic {
   }
 
   def moveInMoveMatrix(world: World, moves: MoveMatrix.CellMatrix, random: Random) = {
-    def sampleMoveInEGT(individual: Individual) = {
+    def sampleMoveInMatrix(individual: Individual) = {
       val location = Individual.location.get(individual)
-      val move = moves(location._1)(location._2)
-      val destination = multinomial(move(AggregatedCategory(Category(individual))))(random)
-      Individual.location.set(destination)(individual)
+      moves(location._1)(location._2).get(AggregatedCategory(Category(individual))) match {
+        case None => individual
+        case Some(move) =>
+          val destination = multinomial(move)(random)
+          Individual.location.set(destination)(individual)
+      }
     }
-    (World.allIndividuals modify sampleMoveInEGT)(world)
+    (World.allIndividuals modify sampleMoveInMatrix)(world)
   }
 
   def localConviction(gama: Double, world: World, random: Random) = {

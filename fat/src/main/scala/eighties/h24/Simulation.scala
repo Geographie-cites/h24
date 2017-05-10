@@ -23,6 +23,7 @@ import java.util.zip.GZIPOutputStream
 
 import better.files._
 import eighties.h24.dynamic.MoveMatrix
+import eighties.h24.dynamic.MoveMatrix._
 import eighties.h24.generation._
 import eighties.h24.population._
 import eighties.h24.space._
@@ -37,7 +38,7 @@ object Simulation extends App {
   outputPath.createDirectories()
 
   val rng = new Random(42)
-  val steps = 10
+  val days = 10
   val workers = 1.0
   val sigmaInitialOpinion = 0.05
   val gamaOpinion = 2
@@ -46,14 +47,27 @@ object Simulation extends App {
   def features = IndividualFeature.load(File("results/population.bin"))
   val world = generateWorld(features, (_,_) => 0.5, rng)
 
-  val moveTimeLapse = MoveMatrix.noMove(world.sideI, world.sideJ)
+  val pathEGT = File("../données/EGT 2010/presence semaine EGT")
 
-  val last =
-    (1 to steps).foldLeft(world) {
-      (w, s) =>
-        def nw = dynamic.moveInMoveMatrix(w, moveTimeLapse, rng)
-        dynamic.localConviction(gamaOpinion, nw, rng)
+  //val outFileRes = outputPath / "matrix.bin"
+
+  val moveTimeLapse = generation.flowsFromEGT(world.sideI,world.sideJ, pathEGT / "presence_semaine_GLeRoux.csv.lzma").get
+  //val moveTimeLapse = MoveMatrix.noMove(world.sideI, world.sideJ)
+
+
+  def simulateOnDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)]): World =
+    lapses match {
+      case Nil => world
+      case (time, moveMatrix) :: t =>
+        def moved = dynamic.moveInMoveMatrix(world, moveMatrix, rng)
+        def convicted = dynamic.localConviction(gamaOpinion, moved, rng)
+        simulateOnDay(convicted, t)
     }
+
+
+  (1 to days).foldLeft(world) {
+    (w, s) => simulateOnDay(w, moveTimeLapse.toList)
+  }
 
   
 }

@@ -23,7 +23,7 @@ object EGTTestMatrixWrite extends App {
 
   val outFileRes = outputPath / "matrix.bin"
 
-  generation.flowsFromEGT(path / "presence_semaine_GLeRoux.csv.lzma").foreach {
+  generation.flowsFromEGT(149, 132, path / "presence_semaine_GLeRoux.csv.lzma").foreach {
     newMatrix => MoveMatrix.save(newMatrix, outFileRes)
   }
 }
