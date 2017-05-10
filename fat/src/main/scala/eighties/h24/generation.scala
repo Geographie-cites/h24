@@ -616,15 +616,7 @@ object generation {
   def addFlowToCell(c: Cell, flow: Flow, timeSlice: TimeSlice): Cell = {
     val intersection = overlap(flow.timeSlice, timeSlice).toDouble
 
-    val cat = Category(age = flow.age, sex = flow.sex, education = flow.education)
-
-//    val add =
-//      for {
-//        moves <- c.get(cat)
-//        (v, i) <- moves.zipWithIndex.find { m => m._1._1 == flow.activity._1 && m._1._2 == flow.activity._2 }
-//      } yield cat -> moves.updated(i, (flow.activity, v._2 + intersection.toDurationMillis))
-//
-//    moves + add.getOrElse()
+    val cat = AggregatedCategory(Category(age = flow.age, sex = flow.sex, education = flow.education))
 
     c.get(cat) match {
       case Some(moves) =>
@@ -638,6 +630,8 @@ object generation {
     }
   }
 
+  //def normalizeFlow()
+
   def addFlowToMatrix(slices: TimeSlices, flow: Flow): TimeSlices =
     slices.map { case (time, slice) =>
      time ->
@@ -646,7 +640,7 @@ object generation {
 
   def noMove(timeSlices: Vector[TimeSlice], i: Int, j: Int): TimeSlices =
     timeSlices.map { ts =>
-      ts -> Vector.tabulate(i, j) { (ii, jj) => Category.all.map { c => c -> Vector[Move]() }.toMap }
+      ts -> Vector.tabulate(i, j) { (ii, jj) => AggregatedCategory.all.map { c => c -> Vector[Move]() }.toMap }
     }.toMap
 
   val timeSlices = Vector(
