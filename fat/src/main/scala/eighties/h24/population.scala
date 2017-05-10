@@ -135,9 +135,7 @@ object population {
       }
   }
 
-  sealed trait AggregatedEducation {
-    override def toString = getClass.getName
-  }
+  sealed trait AggregatedEducation
 
   object AggregatedEducation {
     object Low extends AggregatedEducation {
@@ -243,7 +241,12 @@ object population {
         education = AggregatedEducation(category.education)
       )
 
-    def all = Category.all.map(c => AggregatedCategory(c)).distinct
+    def all =
+      for {
+        age <- AggregatedAge.all
+        sex <- Sex.all
+        education <- AggregatedEducation.all
+      } yield AggregatedCategory(age, sex, education)
   }
 
   case class AggregatedCategory(

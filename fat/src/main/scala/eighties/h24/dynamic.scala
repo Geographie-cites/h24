@@ -70,7 +70,7 @@ object dynamic {
 
     type TimeSlices = Map[TimeSlice, CellMatrix]
     type CellMatrix = Vector[Vector[Cell]]
-    type Cell = Map[Category, Vector[Move]]
+    type Cell = Map[AggregatedCategory, Vector[Move]]
     type Move = (Location, Double)
 
     def cell(location: Location) =
@@ -85,22 +85,25 @@ object dynamic {
       cells composeTraversal
         each[Cell, Vector[Move]] composeTraversal each[Vector[Move], Move]
 
-    def moves(category: Category => Boolean) =
+    def moves(category: AggregatedCategory => Boolean) =
       cells composeTraversal
-        filterIndex[Cell, Category, Vector[Move]](category) composeTraversal
+        filterIndex[Cell, AggregatedCategory, Vector[Move]](category) composeTraversal
         each[Vector[Move], Move]
 
 
     def location = first[Move, Location]
 
     def noMove(i: Int, j: Int) =
-      Vector.tabulate(i, j) {(ii, jj) => Category.all.map { c => c -> Vector((ii, jj) -> 1.0) }.toMap }
+      Vector.tabulate(i, j) {(ii, jj) => AggregatedCategory.all.map { c => c -> Vector((ii, jj) -> 1.0) }.toMap }
 
     import boopickle.Default._
 
-    implicit val agePickler = transformPickler((i: Int) => Age.all(i))(s => Age.all.indexOf(s))
-    implicit val sexPickler = transformPickler((i: Int) => Sex.all(i))(s => Sex.all.indexOf(s))
-    implicit val educationPickler = transformPickler((i: Int) => Education.all(i))(s => Education.all.indexOf(s))
+    implicit val categoryPickler = transformPickler((i: Int) => Category.all(i))(s => Category.all.indexOf(s))
+    implicit val aggregatedCategoryPickler = transformPickler((i: Int) => AggregatedCategory.all(i))(s => Category.all.indexOf(s))
+
+//    implicit val agePickler = transformPickler((i: Int) => Age.all(i))(s => Age.all.indexOf(s))
+//    implicit val sexPickler = transformPickler((i: Int) => Sex.all(i))(s => Sex.all.indexOf(s))
+//    implicit val educationPickler = transformPickler((i: Int) => Education.all(i))(s => Education.all.indexOf(s))
 
     def save(moves: TimeSlices, file: File) = {
       val os = new FileOutputStream(file.toJava)
@@ -120,7 +123,7 @@ object dynamic {
     def sampleMoveInEGT(individual: Individual) = {
       val location = Individual.location.get(individual)
       val move = moves(location._1)(location._2)
-      val destination = multinomial(move(Category(individual)))(random)
+      val destination = multinomial(move(AggregatedCategory(Category(individual))))(random)
       Individual.location.set(destination)(individual)
     }
     (World.allIndividuals modify sampleMoveInEGT)(world)
