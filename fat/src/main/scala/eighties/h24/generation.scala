@@ -649,6 +649,16 @@ object generation {
       ts -> Vector.tabulate(i, j) { (ii, jj) => Map.empty[AggregatedCategory, Vector[Move]] }
     }.toMap
 
+  def interpolateFlows(c: Cell, slices: TimeSlices): Cell =
+    c.map { case (category, moves) =>
+      if (moves.isEmpty) {
+        MoveMatrix.moves(_ == category)
+        category -> moves
+      } else {
+        category -> moves
+      }
+    }
+
   val timeSlices = Vector(
     MoveMatrix.TimeSlice.fromHours(0, 6),
     MoveMatrix.TimeSlice.fromHours(6, 12),

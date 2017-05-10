@@ -90,6 +90,9 @@ object dynamic {
         filterIndex[Cell, AggregatedCategory, Vector[Move]](category) composeTraversal
         each[Vector[Move], Move]
 
+//    def movesInNeighborhood(matrix: TimeSlices, timeSlice: TimeSlice => Boolean, category: AggregatedCategory => Boolean, neighbor: Location => Boolean) =
+//      matrix.
+
 
     def location = first[Move, Location]
     def moveRatio = second[Move, Double]
