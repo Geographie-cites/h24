@@ -48,27 +48,26 @@ object Simulation extends App {
   val world = generateWorld(features, (_,_) => 0.5, rng)
 
   val pathEGT = File("../données/EGT 2010/presence semaine EGT")
-//  val outputPath = File("results")
-//  outputPath.createDirectories()
 
   //val outFileRes = outputPath / "matrix.bin"
 
   val moveTimeLapse = generation.flowsFromEGT(world.sideI,world.sideJ, pathEGT / "presence_semaine_GLeRoux.csv.lzma").get
   //val moveTimeLapse = MoveMatrix.noMove(world.sideI, world.sideJ)
 
-  //println(world.sideI -> world.sideJ)
 
-//  def simulateOnDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)]) = {
-//
-//  }
-
-  val last =
-    (1 to days).foldLeft(world) {
-      (w, s) =>
-
-        def nw = dynamic.moveInMoveMatrix(w, moveTimeLapse.head._2, rng)
-        dynamic.localConviction(gamaOpinion, nw, rng)
+  def simulateOnDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)]): World =
+    lapses match {
+      case Nil => world
+      case (time, moveMatrix) :: t =>
+        def moved = dynamic.moveInMoveMatrix(world, moveMatrix, rng)
+        def convicted = dynamic.localConviction(gamaOpinion, moved, rng)
+        simulateOnDay(convicted, t)
     }
+
+
+  (1 to days).foldLeft(world) {
+    (w, s) => simulateOnDay(w, moveTimeLapse.toList)
+  }
 
   
 }
