@@ -160,10 +160,10 @@ object population {
 
   }
 
-  type Behaviour = Double
+  type Opinion = Double
 
   object Individual {
-    def apply(feature: IndividualFeature, behaviour: (IndividualFeature, Random) => Behaviour, random: Random, stableDestinations: Map[TimeSlice, Location] = Map.empty): Option[Individual] = {
+    def apply(feature: IndividualFeature, opinion: (IndividualFeature, Random) => Opinion, constrains: (IndividualFeature, Random) => ChangeConstrains, random: Random, stableDestinations: Map[TimeSlice, Location] = Map.empty): Option[Individual] = {
       for {
         age <- Age(feature.ageCategory)
         sex <- Sex(feature.sex)
@@ -173,9 +173,10 @@ object population {
           age,
           sex,
           education,
-          behaviour(feature, random),
+          opinion(feature, random),
           feature.location,
           feature.location,
+          constrains(feature, random),
           stableDestinations
         )
     }
@@ -186,36 +187,16 @@ object population {
   }
 
 
+
   @Lenses case class Individual(
-    age: Age,
-    sex: Sex,
-    education: Education,
-    behaviour: Behaviour,
-    home: Location,
-    location: Location,
-    stableDestinations: Map[TimeSlice, Location])
-
-
-  object AggregatedIndividual {
-    def apply(individual: Individual): AggregatedIndividual =
-      new AggregatedIndividual(
-        age = AggregatedAge(individual.age),
-        sex = individual.sex,
-        education = AggregatedEducation(individual.education),
-        behaviour = individual.behaviour,
-        home = individual.home,
-        location = individual.location
-      )
-  }
-
-  @Lenses case class AggregatedIndividual(
-    age: AggregatedAge,
-    sex: Sex,
-    education: AggregatedEducation,
-    behaviour: Behaviour,
-    home: Location,
-    location: Location)
-
+     age: Age,
+     sex: Sex,
+     education: Education,
+     opinion: Opinion,
+     home: Location,
+     location: Location,
+     changeConstrains: ChangeConstrains,
+     stableDestinations: Map[TimeSlice, Location])
 
   object Category {
     def apply(individual: Individual): Category =
@@ -256,6 +237,8 @@ object population {
     age: AggregatedAge,
     sex: Sex,
     education: AggregatedEducation)
+
+  case class ChangeConstrains(habit: Boolean, budget: Boolean, time: Boolean)
 
 
 }

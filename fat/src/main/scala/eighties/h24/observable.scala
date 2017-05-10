@@ -28,7 +28,7 @@ object observable {
       for {
         ed <- AggregatedEducation.all
         level = world.individuals.filter(i => AggregatedEducation(i.education)  == ed)
-      } yield ed -> b(level.map(i => i.behaviour))
+      } yield ed -> b(level.map(i => i.opinion))
 
 //  def medianByEducation = byEducation { v => median(DenseVector(v: _*)) }
 //  def mseByEducation = byEducation(b => scala.math.sqrt(variance(b)))
