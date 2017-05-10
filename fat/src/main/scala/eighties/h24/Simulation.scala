@@ -23,6 +23,7 @@ import java.util.zip.GZIPOutputStream
 
 import better.files._
 import eighties.h24.dynamic.MoveMatrix
+import eighties.h24.dynamic.MoveMatrix._
 import eighties.h24.generation._
 import eighties.h24.population._
 import eighties.h24.space._
@@ -37,7 +38,7 @@ object Simulation extends App {
   outputPath.createDirectories()
 
   val rng = new Random(42)
-  val steps = 10
+  val days = 10
   val workers = 1.0
   val sigmaInitialOpinion = 0.05
   val gamaOpinion = 2
@@ -57,9 +58,14 @@ object Simulation extends App {
 
   //println(world.sideI -> world.sideJ)
 
+//  def simulateOnDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)]) = {
+//
+//  }
+
   val last =
-    (1 to steps).foldLeft(world) {
+    (1 to days).foldLeft(world) {
       (w, s) =>
+
         def nw = dynamic.moveInMoveMatrix(w, moveTimeLapse.head._2, rng)
         dynamic.localConviction(gamaOpinion, nw, rng)
     }

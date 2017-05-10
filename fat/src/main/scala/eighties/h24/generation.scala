@@ -647,7 +647,7 @@ object generation {
   def noMove(timeSlices: Vector[TimeSlice], i: Int, j: Int): TimeSlices =
     timeSlices.map { ts =>
       ts -> Vector.tabulate(i, j) { (ii, jj) => Map.empty[AggregatedCategory, Vector[Move]] }
-    }.toMap
+    }
 
   val timeSlices = Vector(
     MoveMatrix.TimeSlice.fromHours(0, 6),

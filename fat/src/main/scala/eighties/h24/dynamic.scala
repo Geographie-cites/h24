@@ -68,7 +68,7 @@ object dynamic {
       def length = to - from
     }
 
-    type TimeSlices = Map[TimeSlice, CellMatrix]
+    type TimeSlices = Vector[(TimeSlice, CellMatrix)]
     type CellMatrix = Vector[Vector[Cell]]
     type Cell = Map[AggregatedCategory, Vector[Move]]
     type Move = (Location, Double)
@@ -77,7 +77,8 @@ object dynamic {
       index[Vector[Vector[Cell]], Int, Vector[Cell]](location._1) composeOptional index(location._2)
 
     def cells =
-      each[TimeSlices, CellMatrix] composeTraversal
+      each[TimeSlices, (TimeSlice, CellMatrix)] composeLens
+        second[(TimeSlice, CellMatrix), CellMatrix] composeTraversal
         each[CellMatrix, Vector[Cell]] composeTraversal
         each[Vector[Cell], Cell]
 
