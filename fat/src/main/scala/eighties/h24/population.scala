@@ -28,16 +28,16 @@ import scala.util.Random
 
 object population {
 
-  case class Age private(from: Int, to: Option[Int])
+  sealed class Age(val from: Int, val to: Option[Int])
 
   object Age {
 
-    val From0To14 = Age(0, Some(14))
-    val From15To29 = Age(15, Some(29))
-    val From30To44 = Age(30, Some(44))
-    val From45To59 = Age(45, Some(59))
-    val From60To74 = Age(60, Some(74))
-    val Above75 = Age(75, None)
+    object From0To14 extends Age(0, Some(14))
+    object From15To29 extends Age(15, Some(29))
+    object From30To44 extends Age(30, Some(44))
+    object From45To59 extends Age(45, Some(59))
+    object From60To74 extends Age(60, Some(74))
+    object Above75 extends Age(75, None)
 
     def all = Vector(From0To14, From15To29, From30To44, From45To59, From60To74, Above75)
 
@@ -51,6 +51,7 @@ object population {
         case 5 => Some(Above75)
         case _ => None
       }
+
     def parse(age:Int) =
       if (age < 15) From0To14 else
       if (age < 30) From15To29 else
@@ -59,11 +60,40 @@ object population {
       if (age < 75) From60To74 else Above75
   }
 
+
+  sealed trait AggregatedAge
+
+  object AggregatedAge {
+    object Junior extends AggregatedAge {
+      override def toString = "Junior"
+    }
+
+    object Senior extends AggregatedAge{
+      override def toString = "Senior"
+    }
+
+    object Veteran extends AggregatedAge {
+      override def toString = "Veteran"
+    }
+
+    def apply(age: Age) = age match {
+      case Age.From0To14 | Age.From15To29 => Junior
+      case Age.From30To44 | Age.From45To59 => Senior
+      case Age.From60To74 | Age.Above75 => Veteran
+    }
+
+    def all = Vector(Junior, Senior, Veteran)
+  }
+
   sealed trait Sex
 
   object Sex {
-    object Male extends Sex
-    object Female extends Sex
+    object Male extends Sex {
+      override def toString = "Male"
+    }
+    object Female extends Sex{
+      override def toString = "Female"
+    }
 
     def all = Vector(Male, Female)
 
@@ -105,23 +135,26 @@ object population {
       }
   }
 
-  sealed trait AggregatedEducation {
-    override def toString = getClass.getName
-  }
+  sealed trait AggregatedEducation
 
   object AggregatedEducation {
-    object Low extends AggregatedEducation
-    object Middle extends AggregatedEducation
-    object High extends AggregatedEducation
+    object Low extends AggregatedEducation {
+      override def toString = "Low"
+    }
+    object Middle extends AggregatedEducation {
+      override def toString = "Middle"
+    }
+    object High extends AggregatedEducation{
+      override def toString = "High"
+    }
 
     def all = Vector(Low, Middle, High)
 
     def apply(education: Education) =
       education match {
-        case Education.Dipl0 | Education.BEPC | Education.CAPBEP | Education.CEP => Some(Low)
-        case Education.BAC | Education.BACP2 => Some(Middle)
-        case Education.SUP => Some(High)
-        case _ => None
+        case Education.Schol | Education.Dipl0 | Education.BEPC | Education.CAPBEP | Education.CEP => Low
+        case Education.BAC | Education.BACP2 => Middle
+        case Education.SUP => High
       }
 
   }
@@ -158,5 +191,68 @@ object population {
     behaviour: Behaviour,
     home: Location,
     location: Location)
+
+
+  object AggregatedIndividual {
+    def apply(individual: Individual): AggregatedIndividual =
+      new AggregatedIndividual(
+        age = AggregatedAge(individual.age),
+        sex = individual.sex,
+        education = AggregatedEducation(individual.education),
+        behaviour = individual.behaviour,
+        home = individual.home,
+        location = individual.location
+      )
+  }
+
+  @Lenses case class AggregatedIndividual(
+    age: AggregatedAge,
+    sex: Sex,
+    education: AggregatedEducation,
+    behaviour: Behaviour,
+    home: Location,
+    location: Location)
+
+
+  object Category {
+    def apply(individual: Individual): Category =
+      Category(
+        age = individual.age,
+        sex = individual.sex,
+        education = individual.education
+      )
+
+    def all =
+      for {
+        age <- Age.all
+        sex <- Sex.all
+        education <- Education.all
+      } yield Category(age, sex, education)
+  }
+
+  case class Category(age: Age, sex: Sex, education: Education)
+
+
+  object AggregatedCategory {
+    def apply(category: Category): AggregatedCategory =
+      new AggregatedCategory(
+        age = AggregatedAge(category.age),
+        sex = category.sex,
+        education = AggregatedEducation(category.education)
+      )
+
+    def all =
+      for {
+        age <- AggregatedAge.all
+        sex <- Sex.all
+        education <- AggregatedEducation.all
+      } yield AggregatedCategory(age, sex, education)
+  }
+
+  case class AggregatedCategory(
+    age: AggregatedAge,
+    sex: Sex,
+    education: AggregatedEducation)
+
 
 }

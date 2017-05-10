@@ -3,7 +3,7 @@ organization := "eighties"
 
 name := "h24"
 
-version := "1.0.0-SNAPSHOT"
+version := "1.0-SNAPSHOT"
 
 scalaVersion := "2.12.1"
 
@@ -13,7 +13,7 @@ val geotoolsVersion = "14.3"
 
 val jtsVersion = "1.13"
 
-val breezeVersion = "latest.integration"
+val breezeVersion = "0.13.1"
 
 resolvers ++= Seq(
   "osgeo" at "http://download.osgeo.org/webdav/geotools/",

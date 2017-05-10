@@ -23,6 +23,8 @@ import better.files._
 import eighties.h24.population._
 import eighties.h24.space._
 import monocle.Monocle._
+import org.jfree.data.time.TimePeriod
+import org.joda.time.{DateTime, Instant, Interval}
 import squants._
 
 import scala.util.Random
@@ -52,41 +54,60 @@ object dynamic {
     (World.allIndividuals modify m)(world)
   }
 
+  def getTimeIndex(i: Instant, intervals: Vector[Interval]) = intervals.indexWhere(p=>p.contains(i))
+
+  def getTimeIndices(i: Interval, intervals: Vector[Interval]) = intervals.zipWithIndex.filter(v => v._1.contains(i)).map(_._2)
+
   object MoveMatrix {
-    type Moves = Vector[TimeLapse]
-    type TimeLapse = Vector[Vector[Cell]]
-    type Cell = Map[Category, Vector[Move]]
-    type Move = (Location, Double)
 
-    object Category {
-      def apply(individual: Individual): Category =
-        Category(
-          age = individual.age,
-          sex = individual.sex,
-          education = individual.education
-        )
-
-      def all =
-        for {
-          age <- Age.all
-          sex <- Sex.all
-          education <- Education.all
-        } yield Category(age, sex, education)
+    object TimeSlice {
+      def fromHours(from: Int, to: Int): TimeSlice = new TimeSlice(from * 60, to * 60)
     }
 
-    case class Category(age: Age, sex: Sex, education: Education)
+    case class TimeSlice(from: Int, to: Int) {
+      def length = to - from
+    }
+
+    type TimeSlices = Vector[(TimeSlice, CellMatrix)]
+    type CellMatrix = Vector[Vector[Cell]]
+    type Cell = Map[AggregatedCategory, Vector[Move]]
+    type Move = (Location, Double)
+
+    def cell(location: Location) =
+      index[Vector[Vector[Cell]], Int, Vector[Cell]](location._1) composeOptional index(location._2)
+
+    def cells =
+      each[TimeSlices, (TimeSlice, CellMatrix)] composeLens
+        second[(TimeSlice, CellMatrix), CellMatrix] composeTraversal
+        each[CellMatrix, Vector[Cell]] composeTraversal
+        each[Vector[Cell], Cell]
+
+    def allMoves =
+      cells composeTraversal
+        each[Cell, Vector[Move]] composeTraversal each[Vector[Move], Move]
+
+    def moves(category: AggregatedCategory => Boolean) =
+      cells composeTraversal
+        filterIndex[Cell, AggregatedCategory, Vector[Move]](category) composeTraversal
+        each[Vector[Move], Move]
+
+
+    def location = first[Move, Location]
+    def moveRatio = second[Move, Double]
 
     def noMove(i: Int, j: Int) =
-      Vector.tabulate(i, j) {(ii, jj) => Category.all.map { c => c -> Vector((ii, jj) -> 1.0) }.toMap }
-
+      Vector.tabulate(i, j) {(ii, jj) => AggregatedCategory.all.map { c => c -> Vector((ii, jj) -> 1.0) }.toMap }
 
     import boopickle.Default._
 
-    implicit val agePickler = transformPickler((i: Int) => Age.all(i))(s => Age.all.indexOf(s))
-    implicit val sexPickler = transformPickler((i: Int) => Sex.all(i))(s => Sex.all.indexOf(s))
-    implicit val educationPickler = transformPickler((i: Int) => Education.all(i))(s => Education.all.indexOf(s))
+    implicit val categoryPickler = transformPickler((i: Int) => Category.all(i))(s => Category.all.indexOf(s))
+    implicit val aggregatedCategoryPickler = transformPickler((i: Int) => AggregatedCategory.all(i))(s => Category.all.indexOf(s))
 
-    def save(moves: Moves, file: File) = {
+//    implicit val agePickler = transformPickler((i: Int) => Age.all(i))(s => Age.all.indexOf(s))
+//    implicit val sexPickler = transformPickler((i: Int) => Sex.all(i))(s => Sex.all.indexOf(s))
+//    implicit val educationPickler = transformPickler((i: Int) => Education.all(i))(s => Education.all.indexOf(s))
+
+    def save(moves: TimeSlices, file: File) = {
       val os = new FileOutputStream(file.toJava)
       try os.getChannel.write(Pickle.intoBytes(moves))
       finally os.close()
@@ -94,20 +115,23 @@ object dynamic {
 
     def load(file: File) = {
       val is = new FileInputStream(file.toJava)
-      try Unpickle[Moves].fromBytes(is.getChannel.toMappedByteBuffer)
+      try Unpickle[TimeSlices].fromBytes(is.getChannel.toMappedByteBuffer)
       finally is.close()
     }
 
   }
 
-  def moveInMoveMatrix(world: World, moves: MoveMatrix.TimeLapse, random: Random) = {
-    def sampleMoveInEGT(individual: Individual) = {
+  def moveInMoveMatrix(world: World, moves: MoveMatrix.CellMatrix, random: Random) = {
+    def sampleMoveInMatrix(individual: Individual) = {
       val location = Individual.location.get(individual)
-      val move = moves(location._1)(location._2)
-      val destination = multinomial(move(MoveMatrix.Category(individual)))(random)
-      Individual.location.set(destination)(individual)
+      moves(location._1)(location._2).get(AggregatedCategory(Category(individual))) match {
+        case None => individual
+        case Some(move) =>
+          val destination = multinomial(move)(random)
+          Individual.location.set(destination)(individual)
+      }
     }
-    (World.allIndividuals modify sampleMoveInEGT)(world)
+    (World.allIndividuals modify sampleMoveInMatrix)(world)
   }
 
   def localConviction(gama: Double, world: World, random: Random) = {
