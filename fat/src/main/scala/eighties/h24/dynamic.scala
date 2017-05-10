@@ -121,13 +121,16 @@ object dynamic {
   }
 
   def moveInMoveMatrix(world: World, moves: MoveMatrix.CellMatrix, random: Random) = {
-    def sampleMoveInEGT(individual: Individual) = {
+    def sampleMoveInMatrix(individual: Individual) = {
       val location = Individual.location.get(individual)
-      val move = moves(location._1)(location._2)
-      val destination = multinomial(move(AggregatedCategory(Category(individual))))(random)
-      Individual.location.set(destination)(individual)
+      moves(location._1)(location._2).get(AggregatedCategory(Category(individual))) match {
+        case None => individual
+        case Some(move) =>
+          val destination = multinomial(move)(random)
+          Individual.location.set(destination)(individual)
+      }
     }
-    (World.allIndividuals modify sampleMoveInEGT)(world)
+    (World.allIndividuals modify sampleMoveInMatrix)(world)
   }
 
   def localConviction(gama: Double, world: World, random: Random) = {

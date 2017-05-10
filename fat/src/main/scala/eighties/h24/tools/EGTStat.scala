@@ -18,7 +18,7 @@ object EGTStat extends App {
 
   //val outFileRes = outputPath / "matrix.bin"
 
-  val newMatrix = generation.flowsFromEGT(path / "presence_semaine_GLeRoux.csv.lzma").get
+  val newMatrix = generation.flowsFromEGT(149, 132, path / "presence_semaine_GLeRoux.csv.lzma").get
 
   val allMovesValue = MoveMatrix.allMoves.getAll(newMatrix).toVector
   val allLocations = allMovesValue.unzip._1

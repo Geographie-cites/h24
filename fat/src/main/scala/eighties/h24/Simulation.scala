@@ -46,12 +46,21 @@ object Simulation extends App {
   def features = IndividualFeature.load(File("results/population.bin"))
   val world = generateWorld(features, (_,_) => 0.5, rng)
 
-  val moveTimeLapse = MoveMatrix.noMove(world.sideI, world.sideJ)
+  val pathEGT = File("../données/EGT 2010/presence semaine EGT")
+//  val outputPath = File("results")
+//  outputPath.createDirectories()
+
+  //val outFileRes = outputPath / "matrix.bin"
+
+  val moveTimeLapse = generation.flowsFromEGT(world.sideI,world.sideJ, pathEGT / "presence_semaine_GLeRoux.csv.lzma").get
+  //val moveTimeLapse = MoveMatrix.noMove(world.sideI, world.sideJ)
+
+  //println(world.sideI -> world.sideJ)
 
   val last =
     (1 to steps).foldLeft(world) {
       (w, s) =>
-        def nw = dynamic.moveInMoveMatrix(w, moveTimeLapse, rng)
+        def nw = dynamic.moveInMoveMatrix(w, moveTimeLapse.head._2, rng)
         dynamic.localConviction(gamaOpinion, nw, rng)
     }
 

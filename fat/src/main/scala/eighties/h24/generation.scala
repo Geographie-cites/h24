@@ -675,7 +675,7 @@ object generation {
   }
 
 
-  def flowsFromEGT(aFile: File, slices: Vector[TimeSlice] = timeSlices) = {
+  def flowsFromEGT(i: Int, j: Int, aFile: File, slices: Vector[TimeSlice] = timeSlices) = {
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(l2eCRS, outCRS, true)
@@ -696,7 +696,7 @@ object generation {
     //val startDate = new DateTime(formatter.parse("01/01/2010 04:00"))
 
 
-    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(slices, 149, 132))(addFlowToMatrix) } map {
+    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(slices, i, j))(addFlowToMatrix) } map {
       cells modify normalizeFlows
     }
   }
