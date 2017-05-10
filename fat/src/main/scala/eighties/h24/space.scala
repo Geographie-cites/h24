@@ -131,7 +131,8 @@ object space {
 
   def generateWorld(
     features: Vector[IndividualFeature],
-    behaviour: (IndividualFeature, Random) => Behaviour,
+    opinion: (IndividualFeature, Random) => Opinion,
+    changeConstraints: (IndividualFeature, Random) => ChangeConstraints,
     rng: Random) = {
 
     def included(individual: Individual) = individual.education != Education.Schol && individual.age != Age.From0To14
@@ -147,7 +148,7 @@ object space {
 //      (age: Age, sex: Sex, education: Education, rng: Random) => behaviour(education, rng)
 //    }
 
-    def individuals = features.flatMap(f => Individual(f, behaviour, rng)).filter(included)
+    def individuals = features.flatMap(f => Individual(f, opinion, changeConstraints, rng)).filter(included)
 
     /*def equipements =
       for {

@@ -669,10 +669,9 @@ object generation {
     } else moves
   }
 
-  def interpolateFlows(c: Cell, location: Location,
-                       cellMatrix:CellMatrix,
-                       neighbor: Location => Location => Boolean,
-                       interpolate: (Location, Vector[(Location, Double)], Vector[(Location, Vector[(Location, Double)])]) => Vector[(Location, Double)]): Cell =
+  def interpolateFlows(cellMatrix:CellMatrix, neighbor: Location => Location => Boolean,
+                       interpolate: (Location, Vector[(Location, Double)], Vector[(Location, Vector[(Location, Double)])]) => Vector[(Location, Double)])
+                      (c: Cell, location: Location): Cell =
     c.map { case (category, moves) =>
       val m = movesInNeighborhood(cellMatrix, category, neighbor(location))
       category -> interpolate(location, moves, m)
@@ -720,7 +719,15 @@ object generation {
       val dy = (laea_coord.y - y_laea_min)
       space.cell(dx, dy)
     }
-    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(slices, i, j))(addFlowToMatrix) } map {
+
+    def interpolate(matrix: TimeSlices): TimeSlices = matrix.map {
+      case (time, cellMatrix) => {
+        def nei(l1: Location)(l2: Location) = space.distance(l1, l2) < 2000
+        (time, modifyCellMatrix(interpolateFlows(cellMatrix, nei, idw(2.0)))(cellMatrix))
+      }
+    }
+
+    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(slices, i, j))(addFlowToMatrix) } map(interpolate) map {
       cells modify normalizeFlows
     }
   }

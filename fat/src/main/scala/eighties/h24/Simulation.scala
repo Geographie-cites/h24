@@ -41,7 +41,11 @@ object Simulation extends App {
   val activityRatio = 0.3
 
   def features = IndividualFeature.load(File("results/population.bin"))
-  val world = generateWorld(features, (_,_) => 0.5, rng)
+
+  def opinion(f: IndividualFeature, rng: Random) = 0.5
+  def changeConstraints(f: IndividualFeature, rng: Random) = ChangeConstraints(habit = false, budget = false, time = false)
+
+  val world = generateWorld(features, opinion, changeConstraints, rng)
 
   val pathEGT = File("../données/EGT 2010/presence semaine EGT")
 
@@ -57,15 +61,6 @@ object Simulation extends App {
       }
     }
 
-//  val fixedWorkPlace = fixWorkPlace(world)
-//
-//  def homeWorker =
-//    fixedWorkPlace.individuals.count {
-//      i => i.stableDestinations(workTimeSlice) == i.home
-//    }
-//
-//  println(homeWorker.toDouble / world.individuals.size)
-
   def simulateOnDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)]): World =
     lapses match {
       case Nil => world
@@ -75,12 +70,8 @@ object Simulation extends App {
         simulateOnDay(convicted, t)
     }
 
-
   (1 to days).foldLeft(fixWorkPlace(world)) {
     (w, s) => simulateOnDay(w, moveTimeLapse.toList)
   }
 
-
-
-  
 }
