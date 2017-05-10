@@ -34,6 +34,7 @@ object space {
   object Location {
     def lowerBound(l1: Location, l2: Location): Location = (math.min(l1._1, l2._1), math.min(l1._2, l2._2))
     def upperBound(l1: Location, l2: Location): Location = (math.max(l1._1, l2._1), math.max(l1._2, l2._2))
+    def apply(i:Int, j:Int) = (i,j)
   }
 
   /* définition d'un voisinage*/
@@ -51,6 +52,11 @@ object space {
 
   def cell(p: Coordinate) = ((p._1 / 1000.0).toInt, (p._2 / 1000.0).toInt)
 
+  def distance(l1: Location, l2: Location) = {
+    val c1 = new com.vividsolutions.jts.geom.Coordinate(l1._1, l1._2)
+    val c2 = new com.vividsolutions.jts.geom.Coordinate(l2._1, l2._2)
+    c1.distance(c2)
+  }
 
   object BoundingBox {
     def apply[T](content: Vector[T], location: T => Location): BoundingBox = {

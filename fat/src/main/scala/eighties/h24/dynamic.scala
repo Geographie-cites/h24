@@ -94,6 +94,14 @@ object dynamic {
         filterIndex[Cell, AggregatedCategory, Vector[Move]](category) composeTraversal
         each[Vector[Move], Move]
 
+    def movesInNeighborhood(cellMatrix: CellMatrix, category: AggregatedCategory, neighbor: Location => Boolean) =
+      for {
+        (line, i) <- cellMatrix.zipWithIndex
+        (cell, j) <- line.zipWithIndex
+        loc = Location(i,j)
+        if (neighbor(loc))
+        moves <- cell.get(category).toSeq
+      } yield (loc -> moves)
 
     def location = first[Move, Location]
     def moveRatio = second[Move, Double]

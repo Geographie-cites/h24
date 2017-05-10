@@ -24,8 +24,10 @@ object EGTStat extends App {
   val allLocations = allMovesValue.unzip._1
   val locationCount = allLocations.size
 
-//  def unreached =
-//    AggregatedCategory.all.map { ac =>
+//  val cellsValue = MoveMatrix.cells.getAll(newMatrix).toVector
+
+  //  def unreached =
+  //    AggregatedCategory.all.map { ac =>
 //      val cat = ls(ac).getAll(newMatrix).groupBy(x => x)
 //      ac -> allLocations.count(l => !cat.contains(l)).toDouble / locationCount
 //    }

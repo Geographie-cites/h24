@@ -649,6 +649,34 @@ object generation {
       ts -> Vector.tabulate(i, j) { (ii, jj) => Map.empty[AggregatedCategory, Vector[Move]] }
     }
 
+  def idw(power: Double)(location: Location, moves: Vector[(Location, Double)], neighborhood: Vector[(Location, Vector[(Location, Double)])]) = {
+    if (moves.isEmpty) {
+      val weights = neighborhood.map(v => (v._1 -> 1.0 / scala.math.pow(space.distance(location, v._1), power))).toMap
+      val destinations = neighborhood.flatMap(_._2).map(_._1).distinct
+      destinations.map { d =>
+        val v = for {
+          n <- neighborhood
+          value <- n._2.filter(_._1 == d).map(_._2)
+        } yield (n._1, value)
+        val values = v.map(t => {
+          val w = weights(t._1)
+          (w, w * t._2)
+        })
+        val weightsum = values.map(_._1).sum
+        val valuessum = values.map(_._2).sum
+        d -> valuessum / weightsum
+      }
+    } else moves
+  }
+
+  def interpolateFlows(cellMatrix:CellMatrix, neighbor: Location => Location => Boolean,
+                       interpolate: (Location, Vector[(Location, Double)], Vector[(Location, Vector[(Location, Double)])]) => Vector[(Location, Double)])
+                      (c: Cell, location: Location): Cell =
+    c.map { case (category, moves) =>
+      val m = movesInNeighborhood(cellMatrix, category, neighbor(location))
+      category -> interpolate(location, moves, m)
+    }
+
   val timeSlices = Vector(
     MoveMatrix.TimeSlice.fromHours(0, 8),
     MoveMatrix.TimeSlice.fromHours(8, 16),
@@ -689,14 +717,17 @@ object generation {
       // replace by cell...
       val dx = (laea_coord.x - x_laea_min)
       val dy = (laea_coord.y - y_laea_min)
-//      dx+dy*row
       space.cell(dx, dy)
     }
-    //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
-    //val startDate = new DateTime(formatter.parse("01/01/2010 04:00"))
 
+    def interpolate(matrix: TimeSlices): TimeSlices = matrix.map {
+      case (time, cellMatrix) => {
+        def nei(l1: Location)(l2: Location) = space.distance(l1, l2) < 2000
+        (time, modifyCellMatrix(interpolateFlows(cellMatrix, nei, idw(2.0)))(cellMatrix))
+      }
+    }
 
-    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(slices, i, j))(addFlowToMatrix) } map {
+    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(slices, i, j))(addFlowToMatrix) } map(interpolate) map {
       cells modify normalizeFlows
     }
   }
