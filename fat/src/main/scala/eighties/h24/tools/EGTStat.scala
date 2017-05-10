@@ -16,7 +16,7 @@ object EGTStat extends App {
   val outputPath = File("results")
   outputPath.createDirectories()
 
-  val outFileRes = outputPath / "matrix.bin"
+  //val outFileRes = outputPath / "matrix.bin"
 
   val newMatrix = generation.flowsFromEGT(path / "presence_semaine_GLeRoux.csv.lzma").get
 
@@ -24,12 +24,19 @@ object EGTStat extends App {
   val allLocations = allMovesValue.unzip._1
   val locationCount = allLocations.size
 
-  def unreached =
-    AggregatedCategory.all.map { ac =>
-      val cat = ls(ac).getAll(newMatrix).groupBy(x => x)
-      ac -> allLocations.count(l => !cat.contains(l)).toDouble / locationCount
-    }
+//  def unreached =
+//    AggregatedCategory.all.map { ac =>
+//      val cat = ls(ac).getAll(newMatrix).groupBy(x => x)
+//      ac -> allLocations.count(l => !cat.contains(l)).toDouble / locationCount
+//    }
 
-  unreached.foreach(println)
+//  unreached.foreach(println)
+
+
+//  MoveMatrix.cells.getAll(newMatrix).map { cell =>
+//    cell.map {case (k, v) => println(k -> v.unzip._2.sum)}
+//
+//  }
+
 
 }

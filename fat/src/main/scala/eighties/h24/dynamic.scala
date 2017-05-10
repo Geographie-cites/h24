@@ -92,6 +92,7 @@ object dynamic {
 
 
     def location = first[Move, Location]
+    def moveRatio = second[Move, Double]
 
     def noMove(i: Int, j: Int) =
       Vector.tabulate(i, j) {(ii, jj) => AggregatedCategory.all.map { c => c -> Vector((ii, jj) -> 1.0) }.toMap }

@@ -626,19 +626,25 @@ object generation {
 
     val cat = AggregatedCategory(Category(age = flow.age, sex = flow.sex, education = flow.education))
 
-    c.get(cat) match {
-      case Some(moves) =>
-        val index = moves.indexWhere { m => m._1._1 == flow.activity._1 && m._1._2 == flow.activity._2 }
-        if (index == -1) c + (cat -> moves.:+(flow.activity, intersection))
-        else {
-          val v = moves(index)._2
-          c + (cat -> moves.updated(index, (flow.activity, v + intersection)))
-        }
-      case None => c + (cat -> Vector((flow.activity, intersection)))
-    }
+    if(intersection <= 0.0) c
+    else
+      c.get(cat) match {
+        case Some(moves) =>
+          val index = moves.indexWhere { m => m._1._1 == flow.activity._1 && m._1._2 == flow.activity._2 }
+          if (index == -1) c + (cat -> moves.:+(flow.activity, intersection))
+          else {
+            val v = moves(index)._2
+            c + (cat -> moves.updated(index, (flow.activity, v + intersection)))
+          }
+        case None => c + (cat -> Vector((flow.activity, intersection)))
+      }
   }
 
-  //def normalizeFlow()
+  def normalizeFlows(c: Cell): Cell =
+    c.map { case (category, moves) =>
+      val total = moves.unzip._2.sum
+      category -> moves.map { case(destination, effective) => destination -> effective / total }
+    }
 
   def addFlowToMatrix(slices: TimeSlices, flow: Flow): TimeSlices =
     slices.map { case (time, slice) =>
@@ -648,7 +654,7 @@ object generation {
 
   def noMove(timeSlices: Vector[TimeSlice], i: Int, j: Int): TimeSlices =
     timeSlices.map { ts =>
-      ts -> Vector.tabulate(i, j) { (ii, jj) => AggregatedCategory.all.map { c => c -> Vector[Move]() }.toMap }
+      ts -> Vector.tabulate(i, j) { (ii, jj) => Map.empty[AggregatedCategory, Vector[Move]] }
     }.toMap
 
   val timeSlices = Vector(
@@ -697,6 +703,9 @@ object generation {
     //val formatter = new SimpleDateFormat("dd/MM/yy hh:mm")
     //val startDate = new DateTime(formatter.parse("01/01/2010 04:00"))
 
-    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(slices, 149, 132))(addFlowToMatrix) }
+
+    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(slices, 149, 132))(addFlowToMatrix) } map {
+      cells modify normalizeFlows
+    }
   }
 }
