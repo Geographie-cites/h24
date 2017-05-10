@@ -224,6 +224,8 @@ object population {
         sex = category.sex,
         education = AggregatedEducation(category.education)
       )
+
+    def all = Category.all.map(c => AggregatedCategory(c)).distinct
   }
 
   case class AggregatedCategory(
