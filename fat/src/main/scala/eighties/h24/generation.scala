@@ -677,11 +677,12 @@ object generation {
     }
 
   val timeSlices = Vector(
-    MoveMatrix.TimeSlice.fromHours(0, 6),
-    MoveMatrix.TimeSlice.fromHours(6, 12),
-    MoveMatrix.TimeSlice.fromHours(12, 18),
-    MoveMatrix.TimeSlice.fromHours(18, 24)
+    MoveMatrix.TimeSlice.fromHours(0, 8),
+    MoveMatrix.TimeSlice.fromHours(8, 16),
+    MoveMatrix.TimeSlice.fromHours(16, 24)
   )
+
+  val workTimeSlice = timeSlices(1)
 
   def overlap(t1: TimeSlice, t2: TimeSlice) = {
     def isIncluded(t1: TimeSlice, t2: TimeSlice) =
@@ -700,7 +701,6 @@ object generation {
     val initialDate = new DateTime(2010, 1, 1, 0)
     new Interval(new DateTime(2010, 1, 1, timeSlice.from, 0), new DateTime(2010, 1, 1, timeSlice.to, 0))
   }
-
 
   def flowsFromEGT(i: Int, j: Int, aFile: File, slices: Vector[TimeSlice] = timeSlices) = {
     val l2eCRS = CRS.decode("EPSG:27572")

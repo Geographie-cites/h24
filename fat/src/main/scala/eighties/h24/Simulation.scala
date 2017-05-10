@@ -17,17 +17,12 @@
   */
 package eighties.h24
 
-import java.io.FileOutputStream
-import java.nio.file.Files
-import java.util.zip.GZIPOutputStream
-
 import better.files._
 import eighties.h24.dynamic.MoveMatrix
 import eighties.h24.dynamic.MoveMatrix._
 import eighties.h24.generation._
 import eighties.h24.population._
 import eighties.h24.space._
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream
 
 import scala.util.Random
 
@@ -38,6 +33,7 @@ object Simulation extends App {
   outputPath.createDirectories()
 
   val rng = new Random(42)
+
   val days = 10
   val workers = 1.0
   val sigmaInitialOpinion = 0.05
@@ -49,25 +45,42 @@ object Simulation extends App {
 
   val pathEGT = File("../données/EGT 2010/presence semaine EGT")
 
-  //val outFileRes = outputPath / "matrix.bin"
-
   val moveTimeLapse = generation.flowsFromEGT(world.sideI,world.sideJ, pathEGT / "presence_semaine_GLeRoux.csv.lzma").get
   //val moveTimeLapse = MoveMatrix.noMove(world.sideI, world.sideJ)
 
+  val workTimeMoves = moveTimeLapse.toMap.apply(workTimeSlice)
+  def fixWorkPlace =
+    World.allIndividuals.modify { individual =>
+      dynamic.sampleDestinationInMoveMatrix(individual, workTimeMoves, rng) match {
+        case Some(d) => Individual.stableDestinations.modify(_ + (workTimeSlice -> d))(individual)
+        case None => Individual.stableDestinations.modify(_ + (workTimeSlice -> individual.home))(individual)
+      }
+    }
+
+//  val fixedWorkPlace = fixWorkPlace(world)
+//
+//  def homeWorker =
+//    fixedWorkPlace.individuals.count {
+//      i => i.stableDestinations(workTimeSlice) == i.home
+//    }
+//
+//  println(homeWorker.toDouble / world.individuals.size)
 
   def simulateOnDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)]): World =
     lapses match {
       case Nil => world
       case (time, moveMatrix) :: t =>
-        def moved = dynamic.moveInMoveMatrix(world, moveMatrix, rng)
+        def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)
         def convicted = dynamic.localConviction(gamaOpinion, moved, rng)
         simulateOnDay(convicted, t)
     }
 
 
-  (1 to days).foldLeft(world) {
+  (1 to days).foldLeft(fixWorkPlace(world)) {
     (w, s) => simulateOnDay(w, moveTimeLapse.toList)
   }
+
+
 
   
 }
