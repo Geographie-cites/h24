@@ -163,7 +163,7 @@ object population {
   type Opinion = Double
 
   object Individual {
-    def apply(feature: IndividualFeature, opinion: (IndividualFeature, Random) => Opinion, constrains: (IndividualFeature, Random) => ChangeConstrains, random: Random, stableDestinations: Map[TimeSlice, Location] = Map.empty): Option[Individual] = {
+    def apply(feature: IndividualFeature, opinion: (IndividualFeature, Random) => Opinion, constraints: (IndividualFeature, Random) => ChangeConstraints, random: Random, stableDestinations: Map[TimeSlice, Location] = Map.empty): Option[Individual] = {
       for {
         age <- Age(feature.ageCategory)
         sex <- Sex(feature.sex)
@@ -176,7 +176,7 @@ object population {
           opinion(feature, random),
           feature.location,
           feature.location,
-          constrains(feature, random),
+          constraints(feature, random),
           stableDestinations
         )
     }
@@ -189,14 +189,14 @@ object population {
 
 
   @Lenses case class Individual(
-     age: Age,
-     sex: Sex,
-     education: Education,
-     opinion: Opinion,
-     home: Location,
-     location: Location,
-     changeConstrains: ChangeConstrains,
-     stableDestinations: Map[TimeSlice, Location])
+    age: Age,
+    sex: Sex,
+    education: Education,
+    opinion: Opinion,
+    home: Location,
+    location: Location,
+    changeConstraints: ChangeConstraints,
+    stableDestinations: Map[TimeSlice, Location])
 
   object Category {
     def apply(individual: Individual): Category =
@@ -238,7 +238,7 @@ object population {
     sex: Sex,
     education: AggregatedEducation)
 
-  case class ChangeConstrains(habit: Boolean, budget: Boolean, time: Boolean)
+  case class ChangeConstraints(habit: Boolean, budget: Boolean, time: Boolean)
 
 
 }

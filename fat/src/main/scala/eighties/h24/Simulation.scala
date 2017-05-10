@@ -43,9 +43,9 @@ object Simulation extends App {
   def features = IndividualFeature.load(File("results/population.bin"))
 
   def opinion(f: IndividualFeature, rng: Random) = 0.5
-  def changeConstrains(f: IndividualFeature, rng: Random) = ChangeConstrains(habit = false, budget = false, time = false)
-  
-  val world = generateWorld(features, opinion, changeConstrains, rng)
+  def changeConstraints(f: IndividualFeature, rng: Random) = ChangeConstraints(habit = false, budget = false, time = false)
+
+  val world = generateWorld(features, opinion, changeConstraints, rng)
 
   val pathEGT = File("../données/EGT 2010/presence semaine EGT")
 
