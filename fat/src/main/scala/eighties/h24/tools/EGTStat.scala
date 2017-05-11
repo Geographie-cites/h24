@@ -32,7 +32,7 @@ object EGTStat extends App {
 //      ac -> allLocations.count(l => !cat.contains(l)).toDouble / locationCount
 //    }
 
-  unreached.foreach(println)
+//  unreached.foreach(println)
 
 
 //  MoveMatrix.cells.getAll(newMatrix).map { cell =>
