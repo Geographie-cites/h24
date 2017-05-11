@@ -112,7 +112,7 @@ object dynamic {
     import boopickle.Default._
 
     implicit val categoryPickler = transformPickler((i: Int) => SocialCategory.all(i))(s => SocialCategory.all.indexOf(s))
-    implicit val aggregatedCategoryPickler = transformPickler((i: Int) => AggregatedSocialCategory.all(i))(s => SocialCategory.all.indexOf(s))
+    implicit val aggregatedCategoryPickler = transformPickler((i: Int) => AggregatedSocialCategory.all(i))(s => AggregatedSocialCategory.all.indexOf(s))
 
 //    implicit val agePickler = transformPickler((i: Int) => Age.all(i))(s => Age.all.indexOf(s))
 //    implicit val sexPickler = transformPickler((i: Int) => Sex.all(i))(s => Sex.all.indexOf(s))

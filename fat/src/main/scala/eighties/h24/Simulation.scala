@@ -24,33 +24,30 @@ import eighties.h24.generation._
 import eighties.h24.population._
 import eighties.h24.space._
 import eighties.h24.opinion._
+import eighties.h24.observable._
 
 import scala.util.Random
 
 object Simulation extends App {
 
-//  val outputPath = File("results") / "paris"
-//  outputPath.createDirectories()
-
   val rng = new Random(42)
 
-  val days = 10
-  val workers = 1.0
-  val sigmaInitialOpinion = 0.05
+  val days = 2
   val gamaOpinion = 2
-  val activityRatio = 0.3
 
-  def features = IndividualFeature.load(File("results/population.bin"))
+  val outputPath = File("results")
+
+  def features = IndividualFeature.load(outputPath / "/population.bin")
 
   val dataDirectory = File("../données/")
   val pathEGT = dataDirectory / "EGT 2010/presence semaine EGT"
   val distributionConstraints = dataDirectory / "initialisation_distribution_par_cat.csv"
 
-  val healthCategory = generateHealthCategory(distributionConstraints)
 
+  val healthCategory = generateHealthCategory(distributionConstraints)
   val world = generateWorld(features, healthCategory, rng)
 
-  val moveTimeLapse = generation.flowsFromEGT(world.sideI,world.sideJ, pathEGT / "presence_semaine_GLeRoux.csv.lzma").get
+  val moveTimeLapse = MoveMatrix.load(outputPath / "matrix.bin")
   //val moveTimeLapse = MoveMatrix.noMove(world.sideI, world.sideJ)
 
   val workTimeMoves = moveTimeLapse.toMap.apply(workTimeSlice)
@@ -62,17 +59,19 @@ object Simulation extends App {
       }
     }
 
-  def simulateOnDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)]): World =
+
+  def simulateOneDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0): World =
     lapses match {
       case Nil => world
       case (time, moveMatrix) :: t =>
         def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)
         def convicted = dynamic.localConviction(gamaOpinion, moved, rng)
-        simulateOnDay(convicted, t)
+        saveEffectivesAsCSV(convicted, outputPath / s"steps/world${day}_${slice}.csv")
+        simulateOneDay(convicted, t, day, slice + 1)
     }
 
   (1 to days).foldLeft(fixWorkPlace(world)) {
-    (w, s) => simulateOnDay(w, moveTimeLapse.toList)
+    (w, s) => simulateOneDay(w, moveTimeLapse.toList, s)
   }
 
 }
