@@ -8,7 +8,7 @@ import eighties.h24.space._
 
 import scala.util.Random
 
-object CountEmpty extends App {
+object CountEmptyFlows extends App {
 
   val rng = new Random(42)
   val outputPath = File("results")
@@ -18,7 +18,7 @@ object CountEmpty extends App {
   val boundingBox = BoundingBox[IndividualFeature](features, _.location)
 
   val indexedWorld = Index[IndividualFeature](features.iterator, IndividualFeature.location.get(_), boundingBox.sideI, boundingBox.sideJ)
-  
+
   val moveTimeLapse = MoveMatrix.load(outputPath / "matrix.bin")
 
   AggregatedSocialCategory.all.map { ac =>
