@@ -18,6 +18,7 @@
 package eighties.h24
 
 import better.files._
+import eighties.h24.dynamic._
 import eighties.h24.dynamic.MoveMatrix
 import eighties.h24.dynamic.MoveMatrix._
 import eighties.h24.generation._
@@ -25,6 +26,7 @@ import eighties.h24.population._
 import eighties.h24.space._
 import eighties.h24.opinion._
 import eighties.h24.observable._
+
 
 import scala.util.Random
 
@@ -43,22 +45,13 @@ object Simulation extends App {
   val pathEGT = dataDirectory / "EGT 2010/presence semaine EGT"
   val distributionConstraints = dataDirectory / "initialisation_distribution_par_cat.csv"
 
-
   val healthCategory = generateHealthCategory(distributionConstraints)
+  val interactionMap = generateInteractionMap(distributionConstraints)
+
   val world = generateWorld(features, healthCategory, rng)
   val indexedWorld = Index.indexIndividuals(world, Individual.home.get)
 
-  val moveTimeLapse = MoveMatrix.load(outputPath / "matrix.bin")
-  //val moveTimeLapse = MoveMatrix.noMove(world.sideI, world.sideJ)
-
-  val workTimeMoves = moveTimeLapse.toMap.apply(workTimeSlice)
-  def fixWorkPlace =
-    World.allIndividuals.modify { individual =>
-      dynamic.sampleDestinationInMoveMatrix(individual, workTimeMoves, rng) match {
-        case Some(d) => Individual.stableDestinations.modify(_ + (workTimeSlice -> d))(individual)
-        case None => Individual.stableDestinations.modify(_ + (workTimeSlice -> individual.home))(individual)
-      }
-    }
+  val timeSlices = MoveMatrix.load(outputPath / "matrix.bin")
 
   def simulateOneDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0): World =
     lapses match {
@@ -66,12 +59,11 @@ object Simulation extends App {
       case (time, moveMatrix) :: t =>
         def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)
         def convicted = dynamic.localConviction(gamaOpinion, moved, rng)
-        //saveEffectivesAsCSV(convicted, outputPath / s"steps/world${day}_${slice}.csv")
         simulateOneDay(convicted, t, day, slice + 1)
     }
 
-  (1 to days).foldLeft(fixWorkPlace(world)) {
-    (w, s) => simulateOneDay(w, moveTimeLapse.toList, s)
+  (1 to days).foldLeft(fixWorkPlace(world, timeSlices, rng)) {
+    (w, s) => simulateOneDay(w, timeSlices.toList, s)
   }
 
 }

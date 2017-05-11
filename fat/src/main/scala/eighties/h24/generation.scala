@@ -735,14 +735,12 @@ object generation {
   }
 
 
-  type OpinionGenerator = (SocialCategory, Random) => Opinion
-  type BehaviourGenerator = (SocialCategory, Random) => Behaviour
-  type ConstraintsGenerator = (SocialCategory, Random) => ChangeConstraints
 
-  case class BehaviourOpinion(consomation1996: Double, habit: Double, budget: Double, time: Double, opinionDistribution: Vector[Double])
-
-  def generateHealthCategory(file: File): (SocialCategory, Random) => HealthCategory = {
-    val parser = new CSVParser(defaultCSVFormat)
+  object HealthMatrix {
+    def headers(file: File) = {
+      val parser = new CSVParser(defaultCSVFormat)
+      parser.parseLine(file.lines.head).get.zipWithIndex.toMap
+    }
 
     def sex(v: String) =
       v match {
@@ -764,23 +762,32 @@ object generation {
         case "3" => AggregatedEducation.High
       }
 
-    def extract(l: List[String]) = {
+  }
 
-    }
+  def generateHealthCategory(file: File): (SocialCategory, Random) => HealthCategory = {
+    import HealthMatrix._
+    val parser = new CSVParser(defaultCSVFormat)
 
-    val header = parser.parseLine(file.lines.head).get.zipWithIndex.toMap
+
+    case class CSVLine(
+      consomation1996: Double,
+      habit: Double,
+      budget: Double,
+      time: Double,
+      opinionDistribution: Vector[Double])
+
+    val header = headers(file)
 
     val stats =
       file.lines.drop(1).flatMap(l => parser.parseLine(l)).map {
         cs =>
           AggregatedSocialCategory(sex = sex(cs(header("Sex"))), age = age(cs(header("Age"))), education = education(cs(header("Edu")))) ->
-            BehaviourOpinion(
+            CSVLine(
               consomation1996 = cs(header("conso_5_1996")).toDouble,
               habit = cs(header("contrainte_foyer")).toDouble,
               budget = cs(header("contrainte_budget")).toDouble,
               time = cs(header("contrainte_temps")).toDouble,
-              opinionDistribution = cs.takeRight(5).map(_.toDouble).toVector
-            )
+              opinionDistribution = cs.takeRight(5).map(_.toDouble).toVector)
       }.toMap
 
     (category: SocialCategory, random: Random) => {
@@ -798,5 +805,25 @@ object generation {
 
       HealthCategory(opinion, behaviour, constraints)
     }
+  }
+
+  case class Interactions(
+    breakfastInteraction: Double,
+    lunchInteraction: Double,
+    dinnerInteraction: Double)
+
+  def generateInteractionMap(file: File) = {
+    import HealthMatrix._
+    val header = headers(file)
+    val parser = new CSVParser(defaultCSVFormat)
+    file.lines.drop(1).flatMap(l => parser.parseLine(l)).map {
+      cs =>
+        AggregatedSocialCategory(sex = sex(cs(header("Sex"))), age = age(cs(header("Age"))), education = education(cs(header("Edu")))) ->
+          Interactions(
+            breakfastInteraction = cs(header("social_context_breakfast")).toDouble,
+            lunchInteraction = cs(header("social_context_lunch")).toDouble,
+            dinnerInteraction = cs(header("social_context_dinner")).toDouble)
+    }.toMap
+
   }
 }
