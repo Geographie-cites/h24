@@ -260,7 +260,8 @@ object generation {
     geometry: AreaID => Option[MultiPolygon],
     ageSex: Map[AreaID, Vector[Double]],
     schoolAge: Map[AreaID, Vector[Double]],
-    educationSex: Map[AreaID, Vector[Vector[Double]]]) = {
+    educationSex: Map[AreaID, Vector[Vector[Double]]],
+    cells: Map[Polygon, (Double, Int, Int)]) = {
 
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
@@ -271,7 +272,7 @@ object generation {
       val schoolAgeV = schoolAge.get(id).get
       val educationSexV = educationSex.get(id).get
 
-      val sampler = new PolygonSampler(geometry(id).get)
+      //val sampler = new PolygonSampler(geometry(id).get)
 
       val total = ageSexV.sum
 
@@ -284,6 +285,14 @@ object generation {
         new RasterVariate(educationSexV(1).toArray, educationSexSizes))
 
       def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
+      val transformedIris = JTS.transform(geometry(id).get, transform)
+      val relevantCells = cells.filterKeys(_.intersects(transformedIris))
+      val relevantCellsArea = relevantCells.map{
+        case (p,v) => {
+          val g = p.intersection(transformedIris)
+          ((v._2, v._3), v._1 * g.getArea / p.getArea)
+        }
+      }.toVector.filter{case (d,v) => v>0}
 
       val res = (0 until total.toInt).map{ _ =>
         val sample = ageSexVariate.compute(rnd)
@@ -309,19 +318,15 @@ object generation {
           if (ageIndex > 0) (educationSexVariates(sex).compute(rnd)(0) * educationSexSizes(0)).toInt + 1
           else 1
         }
-        val coordinate = sampler.apply(rnd)
-        val transformed = JTS.transform(coordinate, null, transform)
-        val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
-
-        // Should decide first if has an activity
-        //val working = true
-        //val commune = id.id.take(5)
-
+        //val coordinate = sampler.apply(rnd)
+        //val transformed = JTS.transform(coordinate, null, transform)
+        //val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
+        val cell = multinomial(relevantCellsArea)
         IndividualFeature(
           ageCategory = ageIndex,
           sex = sex,
           education = education,
-          location = space.cell(point.getX, point.getY)
+          location = cell
         )
       }.filter(f=>f.ageCategory>0)//remove people with age in 0-14
       res
@@ -334,6 +339,7 @@ object generation {
     val baseICDiplomesFormationPopFileName = inputDirectory.toScala / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
     val workFlowsFile = inputDirectory.toScala /"base-texte-flux-mobilite-domicile-lieu-travail-2012.txt.lzma"
     val studyFlowsFile = inputDirectory.toScala /"base-texte-flux-mobilite-domicile-lieu-etude-2012.txt.lzma"
+    val cellFile = inputDirectory.toScala /""
 
     for {
       (irises, geom) <- readGeometry(contourIRISFile, filter)
