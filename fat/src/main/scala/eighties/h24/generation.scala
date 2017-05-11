@@ -23,13 +23,14 @@ import java.io.{BufferedInputStream, FileInputStream, FileOutputStream, OutputSt
 import java.text.SimpleDateFormat
 
 import better.files.{File, _}
+import boopickle.Default.{Pickle, Unpickle}
 import com.github.tototoshi.csv.{CSVFormat, CSVParser, CSVReader, DefaultCSVFormat, defaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.index.quadtree.Quadtree
 import com.vividsolutions.jts.index.strtree.STRtree
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
 import eighties.h24.dynamic.MoveMatrix
-import eighties.h24.dynamic.MoveMatrix.{Cell, CellMatrix, Move, TimeSlice}
+import eighties.h24.dynamic.MoveMatrix.{Cell, CellMatrix, Move, TimeSlice, TimeSlices}
 import eighties.h24.space.{BoundingBox, Index, Location}
 import eighties.h24.population.Sex.{Female, Male}
 import eighties.h24.population.{SocialCategory, _}
@@ -69,65 +70,19 @@ object generation {
   case class AreaID(id: String) extends AnyVal
 
   object IndividualFeature {
-    def save(features: Vector[IndividualFeature], file: File) = {
-      val os = new OutputStreamWriter(new GZIPOutputStream(new FileOutputStream(file.toJava)))
-      try {
-        val cells = {
-          val bounds = BoundingBox(features, IndividualFeature.location.get)
+    import boopickle.Default._
 
-          def relocate = IndividualFeature.location.modify(BoundingBox.translate(bounds))
-
-          Index(features.iterator.map(relocate), IndividualFeature.location.get, bounds.sideI, bounds.sideJ)
-        }
-
-        def formatFeature(feature: IndividualFeature) = Vector(feature.ageCategory, feature.sex, feature.education)
-
-        os.append(s"${cells.sideI},${cells.sideJ}\n")
-
-        for {
-          i <- (0 until cells.sideI)
-          j <- (0 until cells.sideJ)
-          cell = cells.cells(i)(j)
-        } {
-          val line = cell.map(f => formatFeature(f).mkString(",")).mkString("\t")
-          os.append(line + "\n")
-        }
-      } finally os.close
+    def save(features: Vector[IndividualFeature], file: File)  = {
+      val os = new FileOutputStream(file.toJava)
+      try os.getChannel.write(Pickle.intoBytes(features))
+      finally os.close()
     }
 
     def load(file: File) = {
-      val is = Source.fromInputStream(new GZIPInputStream(new FileInputStream(file.toJava)))
-      try {
-        val lines = is.getLines()
-
-        val header = lines.next().split(",")
-        val (sideI, sideJ) = (header(0).toInt, header(1).toInt)
-
-        val locations =
-          for {
-            i <- 0 until sideI
-            j <- 0 until sideJ
-          } yield (i, j)
-
-        val features =
-          for {
-            (line, location) <- lines zip locations.toIterator
-            if !line.isEmpty
-            indiv <- line.split("\t")
-          } yield {
-            val features = indiv.split(",").map(_.toInt)
-            IndividualFeature(
-              features(0),
-              features(1),
-              features(2),
-              location
-            )
-          }
-
-        features.toVector
-      } finally is.close
+      val is = new FileInputStream(file.toJava)
+      try Unpickle[Vector[IndividualFeature]].fromBytes(is.getChannel.toMappedByteBuffer)
+      finally is.close()
     }
-
   }
 
   @Lenses case class IndividualFeature(

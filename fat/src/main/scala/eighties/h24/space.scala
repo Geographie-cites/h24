@@ -154,7 +154,7 @@ object space {
 //      (age: Age, sex: Sex, education: Education, rng: Random) => behaviour(education, rng)
 //    }
 
-    def individuals = features.flatMap(f => Individual(f, healthCategory, rng)).filter(included)
+    def individuals = features.map(f => Individual(f, healthCategory, rng)).filter(included)
 
     /*def equipements =
       for {

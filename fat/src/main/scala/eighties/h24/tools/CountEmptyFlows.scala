@@ -24,7 +24,8 @@ object CountEmptyFlows extends App {
   AggregatedSocialCategory.all.map { ac =>
     ac ->
       MoveMatrix.getLocatedCells(moveTimeLapse).count { case(_, location, c) =>
-        c.get(ac).map(_.isEmpty).getOrElse(false) && !indexedWorld.cells(location._1)(location._2).isEmpty
+        c.get(ac).map(_.isEmpty).getOrElse(false) &&
+          indexedWorld.cells(location._1)(location._2).exists(f => AggregatedSocialCategory(f) == ac)
       }
   }.foreach(println)
 

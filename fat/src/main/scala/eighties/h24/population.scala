@@ -44,18 +44,17 @@ object population {
 
     def all = Vector(From0To14, From15To29, From30To44, From45To59, From60To74, Above75)
 
-    def apply(code: Int): Option[Age] =
+    def apply(code: Int): Age =
       code match {
-        case 0 => Some(From0To14)
-        case 1 => Some(From15To29)
-        case 2 => Some(From30To44)
-        case 3 => Some(From45To59)
-        case 4 => Some(From60To74)
-        case 5 => Some(Above75)
-        case _ => None
+        case 0 => From0To14
+        case 1 => From15To29
+        case 2 => From30To44
+        case 3 => From45To59
+        case 4 => From60To74
+        case 5 => Above75
       }
 
-    def parse(age:Int) =
+    def parse(age: Int) =
       if (age < 15) From0To14 else
       if (age < 30) From15To29 else
       if (age < 45) From30To44 else
@@ -100,11 +99,10 @@ object population {
 
     def all = Vector(Male, Female)
 
-    def apply(code: Int) =
+    def apply(code: Int): Sex =
       code match {
-        case 0 => Some(Male)
-        case 1 => Some(Female)
-        case _ => None
+        case 0 => Male
+        case 1 => Female
       }
   }
 
@@ -124,17 +122,16 @@ object population {
 
     def all = Vector(Schol, Dipl0, CEP, BEPC, CAPBEP, BAC, BACP2, SUP)
 
-    def apply(code: Int) =
+    def apply(code: Int): Education =
       code match {
-        case 0 => Some(Schol)
-        case 1 => Some(Dipl0)
-        case 2 => Some(CEP)
-        case 3 => Some(BEPC)
-        case 4 => Some(CAPBEP)
-        case 5 => Some(BAC)
-        case 6 => Some(BACP2)
-        case 7 => Some(SUP)
-        case _ => None
+        case 0 => Schol
+        case 1 => Dipl0
+        case 2 => CEP
+        case 3 => BEPC
+        case 4 => CAPBEP
+        case 5 => BAC
+        case 6 => BACP2
+        case 7 => SUP
       }
   }
 
@@ -170,6 +167,13 @@ object population {
         sex <- Sex.all
         education <- Education.all
       } yield SocialCategory(age, sex, education)
+
+    def apply(feature: IndividualFeature): SocialCategory =
+      new SocialCategory(
+        sex = Sex(feature.sex),
+        age = Age(feature.ageCategory),
+        education = Education(feature.education))
+
   }
 
   @Lenses case class SocialCategory(age: Age, sex: Sex, education: Education)
@@ -182,6 +186,9 @@ object population {
         sex = category.sex,
         education = AggregatedEducation(category.education)
       )
+
+    def apply(feature: IndividualFeature): AggregatedSocialCategory =
+      AggregatedSocialCategory(SocialCategory(feature))
 
     def all =
       for {
@@ -219,22 +226,16 @@ object population {
       feature: IndividualFeature,
       healthCategory: (SocialCategory, Random) => HealthCategory,
       random: Random,
-      stableDestinations: Map[TimeSlice, Location] = Map.empty): Option[Individual] = {
-      for {
-        sex <- Sex(feature.sex)
-        age <- Age(feature.ageCategory)
-        education <- Education(feature.education)
-      } yield {
-        val socialCategory = SocialCategory(age, sex, education)
+      stableDestinations: Map[TimeSlice, Location] = Map.empty): Individual = {
+      val socialCategory = SocialCategory(feature)
 
-        Individual(
-          socialCategory = socialCategory,
-          healthCategory = healthCategory(socialCategory, random),
-          feature.location,
-          feature.location,
-          stableDestinations
-        )
-      }
+      Individual(
+        socialCategory = socialCategory,
+        healthCategory = healthCategory(socialCategory, random),
+        feature.location,
+        feature.location,
+        stableDestinations
+      )
     }
 
     def opinion = Individual.healthCategory composeLens HealthCategory.opinion
