@@ -42,18 +42,17 @@ object Simulation extends App {
 
   def features = IndividualFeature.load(File("results/population.bin"))
 
-  def opinion(f: IndividualFeature, rng: Random) = 0.5
-  def behaviour(f: IndividualFeature, rng: Random) = false
-  def changeConstraints(f: IndividualFeature, rng: Random) = ChangeConstraints(habit = false, budget = false, time = false)
-
-  val world = generateWorld(features, opinion, behaviour, changeConstraints, rng)
-
   val dataDirectory = File("../données/")
   val pathEGT = dataDirectory / "EGT 2010/presence semaine EGT"
   val distributionConstraints = dataDirectory / "initialisation_distribution_par_cat.csv"
 
+  val healthCategory = generateHealthCategory(distributionConstraints)
 
-  println(readConstraints(distributionConstraints))
+  val world = generateWorld(features, healthCategory, rng)
+
+
+
+ // println(behaviourOpinion(distributionConstraints))
 
 
 //  val moveTimeLapse = generation.flowsFromEGT(world.sideI,world.sideJ, pathEGT / "presence_semaine_GLeRoux.csv.lzma").get

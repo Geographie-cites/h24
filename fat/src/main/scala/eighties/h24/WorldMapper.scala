@@ -12,7 +12,7 @@ import population._
 
 object WorldMapper {
   val format = new GeoTiffFormat()
-  def cat(ind: Individual) = AggregatedEducation(ind.education) match {
+  def cat(ind: Individual) = AggregatedEducation(Individual.education.get(ind)) match {
     case AggregatedEducation.Low => 0
     case AggregatedEducation.Middle => 1
     case AggregatedEducation.High => 2

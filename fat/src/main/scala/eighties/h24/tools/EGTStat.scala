@@ -9,7 +9,7 @@ object EGTStat extends App {
 
   import eighties.h24.dynamic._
 
-  def ls(c: AggregatedCategory) =
+  def ls(c: AggregatedSocialCategory) =
     MoveMatrix.moves { category => category == c } composeLens MoveMatrix.location
 
   val path = File("../données/EGT 2010/presence semaine EGT")

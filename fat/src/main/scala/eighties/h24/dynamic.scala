@@ -70,7 +70,7 @@ object dynamic {
 
     type TimeSlices = Vector[(TimeSlice, CellMatrix)]
     type CellMatrix = Vector[Vector[Cell]]
-    type Cell = Map[AggregatedCategory, Vector[Move]]
+    type Cell = Map[AggregatedSocialCategory, Vector[Move]]
     type Move = (Location, Double)
 
     def modifyCellMatrix(f: (Cell, Location) => Cell)(matrix: CellMatrix): CellMatrix =
@@ -89,12 +89,12 @@ object dynamic {
       cells composeTraversal
         each[Cell, Vector[Move]] composeTraversal each[Vector[Move], Move]
 
-    def moves(category: AggregatedCategory => Boolean) =
+    def moves(category: AggregatedSocialCategory => Boolean) =
       cells composeTraversal
-        filterIndex[Cell, AggregatedCategory, Vector[Move]](category) composeTraversal
+        filterIndex[Cell, AggregatedSocialCategory, Vector[Move]](category) composeTraversal
         each[Vector[Move], Move]
 
-    def movesInNeighborhood(cellMatrix: CellMatrix, category: AggregatedCategory, neighbor: Location => Boolean) =
+    def movesInNeighborhood(cellMatrix: CellMatrix, category: AggregatedSocialCategory, neighbor: Location => Boolean) =
       for {
         (line, i) <- cellMatrix.zipWithIndex
         (cell, j) <- line.zipWithIndex
@@ -107,12 +107,12 @@ object dynamic {
     def moveRatio = second[Move, Double]
 
     def noMove(i: Int, j: Int) =
-      Vector.tabulate(i, j) {(ii, jj) => AggregatedCategory.all.map { c => c -> Vector((ii, jj) -> 1.0) }.toMap }
+      Vector.tabulate(i, j) {(ii, jj) => AggregatedSocialCategory.all.map { c => c -> Vector((ii, jj) -> 1.0) }.toMap }
 
     import boopickle.Default._
 
-    implicit val categoryPickler = transformPickler((i: Int) => Category.all(i))(s => Category.all.indexOf(s))
-    implicit val aggregatedCategoryPickler = transformPickler((i: Int) => AggregatedCategory.all(i))(s => Category.all.indexOf(s))
+    implicit val categoryPickler = transformPickler((i: Int) => SocialCategory.all(i))(s => SocialCategory.all.indexOf(s))
+    implicit val aggregatedCategoryPickler = transformPickler((i: Int) => AggregatedSocialCategory.all(i))(s => SocialCategory.all.indexOf(s))
 
 //    implicit val agePickler = transformPickler((i: Int) => Age.all(i))(s => Age.all.indexOf(s))
 //    implicit val sexPickler = transformPickler((i: Int) => Sex.all(i))(s => Sex.all.indexOf(s))
@@ -134,7 +134,7 @@ object dynamic {
 
   def sampleDestinationInMoveMatrix(individual: Individual, moves: MoveMatrix.CellMatrix, random: Random) = {
     val location = Individual.location.get(individual)
-    moves(location._1)(location._2).get(AggregatedCategory(Category(individual))) map { move =>
+    moves(location._1)(location._2).get(AggregatedSocialCategory(Individual.socialCategory.get(individual))) map { move =>
       multinomial(move)(random)
     }
   }
@@ -161,7 +161,7 @@ object dynamic {
         if (size == 0) cell
         else {
           //val cellBehaviours = random.shuffle(cell.map(_.behaviour)).take((size * 0.01).toInt + 1).toArray
-          val cellBehaviours = cell.map(_.opinion).toArray
+          val cellBehaviours = cell.map(i => Individual.opinion.get(i)).toArray
           cell applyTraversal (each[Vector[Individual], Individual] composeLens Individual.opinion) modify { b: Double =>
             opinion.binomialAdoption(b, cellBehaviours, gama, random)
           }
