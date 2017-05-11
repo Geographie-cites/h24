@@ -671,11 +671,19 @@ object generation {
 
   def interpolateFlows(cellMatrix:CellMatrix, neighbor: Location => Location => Boolean,
                        interpolate: (Location, Vector[(Location, Double)], Vector[(Location, Vector[(Location, Double)])]) => Vector[(Location, Double)])
-                      (c: Cell, location: Location): Cell =
-    c.map { case (category, moves) =>
-      val m = movesInNeighborhood(cellMatrix, category, neighbor(location))
-      category -> interpolate(location, moves, m)
-    }
+                      (c: Cell, location: Location): Cell = {
+    AggregatedCategory.all.map {
+      category => {
+        val moves = c.get(category).getOrElse(Vector())
+        val m = movesInNeighborhood(cellMatrix, category, neighbor(location))
+        category -> interpolate(location, moves, m)
+      }
+    }.toMap
+  }
+//    c.map { case (category, moves) =>
+//      val m = movesInNeighborhood(cellMatrix, category, neighbor(location))
+//      category -> interpolate(location, moves, m)
+//    }
 
   val timeSlices = Vector(
     MoveMatrix.TimeSlice.fromHours(0, 8),
@@ -722,7 +730,7 @@ object generation {
 
     def interpolate(matrix: TimeSlices): TimeSlices = matrix.map {
       case (time, cellMatrix) => {
-        def nei(l1: Location)(l2: Location) = space.distance(l1, l2) < 2000
+        def nei(l1: Location)(l2: Location) = space.distance(l1, l2) < 10
         (time, modifyCellMatrix(interpolateFlows(cellMatrix, nei, idw(2.0)))(cellMatrix))
       }
     }
