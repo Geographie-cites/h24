@@ -41,6 +41,7 @@ object Simulation extends App {
   val activityRatio = 0.3
 
   def features = IndividualFeature.load(File("results/population.bin"))
+  println(features.size + " features")
 
   val dataDirectory = File("../données/")
   val pathEGT = dataDirectory / "EGT 2010/presence semaine EGT"

@@ -66,6 +66,6 @@ object EGTDestination extends App {
   val path = File("../données/EGT 2010/presence semaine EGT")
   val outputPath = File("results")
   outputPath.createDirectories()
-  val outFileRes = outputPath / "TEST_DEST.shp"
+  val outFileRes = outputPath / "TEST_DEST_IDW.shp"
   flowsFromEGT(path / "presence_semaine_GLeRoux.csv.lzma",outFileRes)
 }

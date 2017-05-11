@@ -11,4 +11,8 @@ pom.xml
 tags
 results/
 results/*
+Data_clem/
+data/
+Data_clem/*
+data/*
 

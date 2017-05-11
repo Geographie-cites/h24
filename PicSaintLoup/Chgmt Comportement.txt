@@ -1,0 +1,31 @@
+Loi de changement de comportement de santé
+=> Étapes du changement de comportement:
+1) Mise en interaction
+–avec une personne de ma cellule, en fonction de la probabilité de manger (pt dej./lunch/ dinner) avec une personne extérieure au foyer
+* breakfast : entre 1 % et 12 % selon les 18 catégories
+* lunch : entre 3% et 35% selon les 18 catégories
+* dinner : entre 2% et 21% selon les 18 catégories
+
+–avec le voisinage (toutes les personnes de ma cellule)
+
+2) Changement d'opinion
+opinion initiale (en continu) qui va être affectée par
+–mon partenaire inter-personnel
+–son opinion (en continu)
+–son comportement  (en binaire)
+=> force de conviction de mon partenaire inter-personnel : moyenne entre son opinion et son comportement
+
+–mon voisinage
+–son comportement moyen
+
+=> force de conviction totale : moyenne entre la force de conviction de mon partenaire inter-personnel et le comportement moyen de mon voisinage
+
+=> nouvelle opinion : moyenne pondérée entre mon opinion initiale et la  force de conviction totale (en donnant beaucoup plus de poids à mon opinion initiale)
+
+3) Changement de comportement
+en fonction de :
+–comportement initial (binaire)
+–nouvelle opinion (continu)
+–ensemble des contraintes : habitudes du foyer (binaire) & temps de préparation (binaire) & budget (binaire)
+
+Comment ????
