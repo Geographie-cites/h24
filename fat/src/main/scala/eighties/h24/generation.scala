@@ -672,7 +672,7 @@ object generation {
   def interpolateFlows(cellMatrix:CellMatrix, neighbor: Location => Location => Boolean,
                        interpolate: (Location, Vector[(Location, Double)], Vector[(Location, Vector[(Location, Double)])]) => Vector[(Location, Double)])
                       (c: Cell, location: Location): Cell = {
-    AggregatedCategory.all.map {
+    AggregatedSocialCategory.all.map {
       category => {
         val moves = c.get(category).getOrElse(Vector())
         val m = movesInNeighborhood(cellMatrix, category, neighbor(location))

@@ -1,10 +1,10 @@
 package eighties.h24.tools
 
 import better.files.File
-import eighties.h24.generation.IndividualFeature
-import eighties.h24.population.ChangeConstraints
+import eighties.h24.generation._
+import eighties.h24.population._
 import eighties.h24.space._
-import eighties.h24.WorldMapper
+import eighties.h24.{WorldMapper, generation}
 
 import scala.util.Random
 
@@ -19,10 +19,11 @@ object MapPopulation extends App {
 
   def features = IndividualFeature.load(File("results/population.bin"))
 
-  def opinion(f: IndividualFeature, rng: Random) = 0.5
-  def behaviour(f: IndividualFeature, rng: Random) = false
-  def changeConstraints(f: IndividualFeature, rng: Random) = ChangeConstraints(habit = false, budget = false, time = false)
+  val dataDirectory = File("../données/")
+  val distributionConstraints = dataDirectory / "initialisation_distribution_par_cat.csv"
 
-  val world = generateWorld(features, opinion, behaviour, changeConstraints, rng)
+  val healthCategory = generation.generateHealthCategory(distributionConstraints)
+
+  val world = generateWorld(features, healthCategory, rng)
   WorldMapper.mapRGB(world, File("results") / "map.tiff")
 }
