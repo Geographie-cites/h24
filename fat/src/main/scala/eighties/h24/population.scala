@@ -160,10 +160,16 @@ object population {
 
   }
 
-  type Behaviour = Double
+  type Opinion = Double
+  type Behaviour = Boolean
 
   object Individual {
-    def apply(feature: IndividualFeature, behaviour: (IndividualFeature, Random) => Behaviour, random: Random, stableDestinations: Map[TimeSlice, Location] = Map.empty): Option[Individual] = {
+    def apply(
+      feature: IndividualFeature,
+      opinion: (IndividualFeature, Random) => Opinion,
+      behaviour: (IndividualFeature, Random) => Behaviour,
+      constraints: (IndividualFeature, Random) => ChangeConstraints,
+      random: Random, stableDestinations: Map[TimeSlice, Location] = Map.empty): Option[Individual] = {
       for {
         age <- Age(feature.ageCategory)
         sex <- Sex(feature.sex)
@@ -173,11 +179,14 @@ object population {
           age,
           sex,
           education,
+          opinion(feature, random),
           behaviour(feature, random),
           feature.location,
           feature.location,
+          constraints(feature, random),
           stableDestinations
         )
+
     }
 
 
@@ -186,36 +195,17 @@ object population {
   }
 
 
+
   @Lenses case class Individual(
     age: Age,
     sex: Sex,
     education: Education,
+    opinion: Opinion,
     behaviour: Behaviour,
     home: Location,
     location: Location,
+    changeConstraints: ChangeConstraints,
     stableDestinations: Map[TimeSlice, Location])
-
-
-  object AggregatedIndividual {
-    def apply(individual: Individual): AggregatedIndividual =
-      new AggregatedIndividual(
-        age = AggregatedAge(individual.age),
-        sex = individual.sex,
-        education = AggregatedEducation(individual.education),
-        behaviour = individual.behaviour,
-        home = individual.home,
-        location = individual.location
-      )
-  }
-
-  @Lenses case class AggregatedIndividual(
-    age: AggregatedAge,
-    sex: Sex,
-    education: AggregatedEducation,
-    behaviour: Behaviour,
-    home: Location,
-    location: Location)
-
 
   object Category {
     def apply(individual: Individual): Category =
@@ -256,6 +246,8 @@ object population {
     age: AggregatedAge,
     sex: Sex,
     education: AggregatedEducation)
+
+  case class ChangeConstraints(habit: Boolean, budget: Boolean, time: Boolean)
 
 
 }
