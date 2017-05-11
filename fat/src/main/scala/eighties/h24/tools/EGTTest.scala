@@ -66,7 +66,7 @@ object EGTTest extends App {
           val e = interval.to
           val id = v._3
           val valuesRes = Array[AnyRef](
-            geomfactory.createPoint(new Coordinate(x_laea_min + v._1._1 * 1000, y_laea_min + v._1._2 * 1000)),
+            geomfactory.createPoint(new Coordinate(x_laea_min + v._1._1 * 1000 + 500.0, y_laea_min + v._1._2 * 1000 + 500.0)),
             id,
             s.toString,
             e.toString

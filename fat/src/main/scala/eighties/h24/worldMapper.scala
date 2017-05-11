@@ -10,15 +10,14 @@ import org.geotools.referencing.CRS
 import org.opengis.referencing.crs.CoordinateReferenceSystem
 import population._
 
-object WorldMapper {
+object worldMapper {
   val format = new GeoTiffFormat()
   def cat(ind: Individual) = AggregatedEducation(Individual.education.get(ind)) match {
     case AggregatedEducation.Low => 0
     case AggregatedEducation.Middle => 1
     case AggregatedEducation.High => 2
   }
-  def mapRGB(world: space.World, file: File,
-             geValue: Individual => Int = cat(_),
+  def mapRGB(world: space.World, file: File, getValue: Individual => Int = cat(_),
              cellSize: Int = 1000, crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
     val minX = world.originI
     val minY = world.originJ
@@ -29,16 +28,16 @@ object WorldMapper {
     val bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
     val raster = bufferedImage.getRaster
     val index = space.Index.indexIndividuals(world)
-
     for {
       (l, i) <- index.cells.zipWithIndex
       (c, j) <- l.zipWithIndex
     } yield {
       val jj = height - j - 1
-      val value = c map geValue
+      val value = c map getValue
       val size = value.size
-      val vec = if (size == 0) Array(0,0,0)
-      else Array(value.count(_ == 0)*255/size, value.count(_ == 1)*255/size, value.count(_ == 2)*255/size)
+      val vec = 
+        if (size == 0) Array(0,0,0)
+        else Array(value.count(_ == 0)*255/size, value.count(_ == 1)*255/size, value.count(_ == 2)*255/size)
       raster.setPixel(i, jj, vec)
     }
     val referencedEnvelope = new ReferencedEnvelope(minX * cellSize, maxX * cellSize, minY * cellSize, maxY * cellSize, crs)

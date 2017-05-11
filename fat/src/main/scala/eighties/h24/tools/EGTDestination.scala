@@ -54,7 +54,7 @@ object EGTDestination extends App {
       v=>
       val loc = v._1
         val valuesRes = Array[AnyRef](
-          geomfactory.createPoint(new Coordinate(x_laea_min + loc._1 * 1000, y_laea_min + loc._2 * 1000))
+          geomfactory.createPoint(new Coordinate(x_laea_min + loc._1 * 1000 + 500.0, y_laea_min + loc._2 * 1000 + 500.0))
         )
         val simpleFeatureRes = writerRes.next
         simpleFeatureRes.setAttributes(valuesRes)
