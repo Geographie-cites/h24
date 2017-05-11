@@ -30,7 +30,7 @@ import eighties.h24.dynamic.MoveMatrix
 import eighties.h24.dynamic.MoveMatrix.{Cell, CellMatrix, Move, TimeSlice}
 import eighties.h24.space.{BoundingBox, Index, Location}
 import eighties.h24.population.Sex.{Female, Male}
-import eighties.h24.population._
+import eighties.h24.population.{SocialCategory, _}
 import monocle.macros.Lenses
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
 import org.geotools.data.shapefile.ShapefileDataStore
@@ -616,7 +616,7 @@ object generation {
   def addFlowToCell(c: Cell, flow: Flow, timeSlice: TimeSlice): Cell = {
     val intersection = overlap(flow.timeSlice, timeSlice).toDouble
 
-    val cat = AggregatedCategory(Category(age = flow.age, sex = flow.sex, education = flow.education))
+    val cat = AggregatedSocialCategory(SocialCategory(age = flow.age, sex = flow.sex, education = flow.education))
 
     if(intersection <= 0.0) c
     else
@@ -646,7 +646,7 @@ object generation {
 
   def noMove(timeSlices: Vector[TimeSlice], i: Int, j: Int): TimeSlices =
     timeSlices.map { ts =>
-      ts -> Vector.tabulate(i, j) { (ii, jj) => Map.empty[AggregatedCategory, Vector[Move]] }
+      ts -> Vector.tabulate(i, j) { (ii, jj) => Map.empty[AggregatedSocialCategory, Vector[Move]] }
     }
 
   def idw(power: Double)(location: Location, moves: Vector[(Location, Double)], neighborhood: Vector[(Location, Vector[(Location, Double)])]) = {
@@ -672,7 +672,7 @@ object generation {
   def interpolateFlows(cellMatrix:CellMatrix, neighbor: Location => Location => Boolean,
                        interpolate: (Location, Vector[(Location, Double)], Vector[(Location, Vector[(Location, Double)])]) => Vector[(Location, Double)])
                       (c: Cell, location: Location): Cell = {
-    AggregatedCategory.all.map {
+    AggregatedSocialCategory.all.map {
       category => {
         val moves = c.get(category).getOrElse(Vector())
         val m = movesInNeighborhood(cellMatrix, category, neighbor(location))
@@ -740,9 +740,14 @@ object generation {
     }
   }
 
-  case class BehaviourOpinion(consomation1996: Double, habit: Double, budget: Double, time: Double, behaviourDistribution: Vector[Double])
 
-  def readConstraints(file: File) = {
+  type OpinionGenerator = (SocialCategory, Random) => Opinion
+  type BehaviourGenerator = (SocialCategory, Random) => Behaviour
+  type ConstraintsGenerator = (SocialCategory, Random) => ChangeConstraints
+
+  case class BehaviourOpinion(consomation1996: Double, habit: Double, budget: Double, time: Double, opinionDistribution: Vector[Double])
+
+  def generateHealthCategory(file: File): (SocialCategory, Random) => HealthCategory = {
     val parser = new CSVParser(defaultCSVFormat)
 
     def sex(v: String) =
@@ -771,16 +776,38 @@ object generation {
 
     val header = parser.parseLine(file.lines.head).get.zipWithIndex.toMap
 
-    file.lines.drop(1).flatMap(l => parser.parseLine(l)).map {
-      cs =>
-        AggregatedCategory(sex = sex(cs(header("Sex"))), age = age(cs(header("Age"))), education = education(cs(header("Edu")))) ->
-          BehaviourOpinion(
-            consomation1996 = cs(header("conso_5_1996")).toDouble,
-            habit = cs(header("contrainte_foyer")).toDouble,
-            budget = cs(header("contrainte_budget")).toDouble,
-            time = cs(header("contrainte_temps")).toDouble,
-            behaviourDistribution = cs.takeRight(5).map(_.toDouble).toVector
-          )
+    val stats =
+      file.lines.drop(1).flatMap(l => parser.parseLine(l)).map {
+        cs =>
+          AggregatedSocialCategory(sex = sex(cs(header("Sex"))), age = age(cs(header("Age"))), education = education(cs(header("Edu")))) ->
+            BehaviourOpinion(
+              consomation1996 = cs(header("conso_5_1996")).toDouble,
+              habit = cs(header("contrainte_foyer")).toDouble,
+              budget = cs(header("contrainte_budget")).toDouble,
+              time = cs(header("contrainte_temps")).toDouble,
+              opinionDistribution = cs.takeRight(5).map(_.toDouble).toVector
+            )
+      }.toMap
+
+    (category: SocialCategory, random: Random) => {
+      val line = stats(AggregatedSocialCategory(category))
+      val constraints = ChangeConstraints(budget = random.nextDouble() < line.budget, habit = random.nextDouble() < line.habit, time = random.nextDouble() < line.time)
+
+      val distribution = stats(AggregatedSocialCategory(category)).opinionDistribution
+      val opinion = new RasterVariate(distribution.toArray, Seq(distribution.size)).compute(random).head
+
+      val behaviour =
+        random.nextDouble() < stats(AggregatedSocialCategory(category)).consomation1996 match {
+          case false => Unhealthy
+          case true => Healthy
+        }
+
+      HealthCategory(opinion, behaviour, constraints)
     }
+
   }
+
+
+
+
 }

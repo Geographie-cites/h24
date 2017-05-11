@@ -24,6 +24,7 @@ import monocle.macros._
 import better.files._
 import eighties.h24.generation.IndividualFeature
 
+import scala.collection.SeqView
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
@@ -106,8 +107,8 @@ object space {
 
   object Index {
 
-    def indexIndividuals(world: World) =
-      Index[Individual](World.individuals.get(world).iterator, Individual.location.get(_), world.sideI, world.sideJ)
+    def indexIndividuals(world: World, location: Individual => Location = Individual.location.get(_)) =
+      Index[Individual](World.individuals.get(world).iterator, location, world.sideI, world.sideJ)
 
     def indexAttraction(world: World) =
       Index[Attraction](World.attractions.get(world).iterator, Attraction.location.get(_), world.sideI, world.sideJ)
@@ -123,6 +124,12 @@ object space {
       Index[T](cellBuffer.toVector.map(_.toVector.map(_.toVector)), sideI, sideJ)
     }
 
+    def getLocatedCells[T, U](index: Index[T]) =
+      for {
+        (l, i) <- index.cells.view.zipWithIndex
+        (c, j) <- l.zipWithIndex
+      } yield (c, Location(i, j))
+
     def allCells[T] = cells[T] composeTraversal each composeTraversal each
     def allIndividuals[T] = allCells[T] composeTraversal each
   }
@@ -131,12 +138,10 @@ object space {
 
   def generateWorld(
     features: Vector[IndividualFeature],
-    opinion: (IndividualFeature, Random) => Opinion,
-    behaviour: (IndividualFeature, Random) => Behaviour,
-    changeConstraints: (IndividualFeature, Random) => ChangeConstraints,
+    healthCategory: (SocialCategory, Random) => HealthCategory,
     rng: Random) = {
 
-    def included(individual: Individual) = individual.education != Education.Schol && individual.age != Age.From0To14
+    def included(individual: Individual) = Individual.education.get(individual) != Education.Schol && Individual.age.get(individual) != Age.From0To14
 
 //    def byEducation = {
 //      def behaviour(ed: Education, random: Random) =
@@ -149,7 +154,7 @@ object space {
 //      (age: Age, sex: Sex, education: Education, rng: Random) => behaviour(education, rng)
 //    }
 
-    def individuals = features.flatMap(f => Individual(f, opinion, behaviour, changeConstraints, rng)).filter(included)
+    def individuals = features.flatMap(f => Individual(f, healthCategory, rng)).filter(included)
 
     /*def equipements =
       for {

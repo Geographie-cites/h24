@@ -17,18 +17,20 @@
   */
 package eighties.h24
 
+import better.files.File
 import eighties.h24.population._
 import eighties.h24.space._
 import breeze.linalg._
 import breeze.stats._
+import eighties.h24.tools.CellCSV.world
 
 object observable {
 
   def byEducation[T](b: scala.Vector[Double] => T)(world: World) =
       for {
         ed <- AggregatedEducation.all
-        level = world.individuals.filter(i => AggregatedEducation(i.education)  == ed)
-      } yield ed -> b(level.map(i => i.opinion))
+        level = world.individuals.filter(i => AggregatedEducation(Individual.education.get(i))  == ed)
+      } yield ed -> b(level.map(Individual.opinion.get))
 
 //  def medianByEducation = byEducation { v => median(DenseVector(v: _*)) }
 //  def mseByEducation = byEducation(b => scala.math.sqrt(variance(b)))
@@ -36,5 +38,16 @@ object observable {
 
   def resume(world: World) =
     byEducation[Vector[Double]](b => Vector(mean(b), scala.math.sqrt(variance(DenseVector(b: _*))), median(DenseVector(b: _*))))(world)
+
+  def saveEffectivesAsCSV(world: World, output: File) = {
+    output.parent.createDirectories()
+    output.delete(swallowIOExceptions = true)
+
+    Index.getLocatedCells(Index.indexIndividuals(world)).foreach {
+      case (c, l) =>
+        def numbers = AggregatedSocialCategory.all.map { cat => c.count(i => AggregatedSocialCategory(i.socialCategory) == cat)}
+        output << s"""${l._1},${l._2},${numbers.mkString(",")}"""
+    }
+  }
 
 }

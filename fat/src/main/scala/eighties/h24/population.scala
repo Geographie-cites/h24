@@ -29,6 +29,8 @@ import scala.util.Random
 
 object population {
 
+  /* -------------------------- Social Category -------------------------- */
+
   sealed class Age(val from: Int, val to: Option[Int])
 
   object Age {
@@ -160,75 +162,22 @@ object population {
 
   }
 
-  type Opinion = Double
-  type Behaviour = Boolean
 
-  object Individual {
-    def apply(
-      feature: IndividualFeature,
-      opinion: (IndividualFeature, Random) => Opinion,
-      behaviour: (IndividualFeature, Random) => Behaviour,
-      constraints: (IndividualFeature, Random) => ChangeConstraints,
-      random: Random, stableDestinations: Map[TimeSlice, Location] = Map.empty): Option[Individual] = {
-      for {
-        age <- Age(feature.ageCategory)
-        sex <- Sex(feature.sex)
-        education <- Education(feature.education)
-      } yield
-        Individual(
-          age,
-          sex,
-          education,
-          opinion(feature, random),
-          behaviour(feature, random),
-          feature.location,
-          feature.location,
-          constraints(feature, random),
-          stableDestinations
-        )
-
-    }
-
-
-    def i = Individual.location composeLens first
-    def j = Individual.location composeLens second
-  }
-
-
-
-  @Lenses case class Individual(
-    age: Age,
-    sex: Sex,
-    education: Education,
-    opinion: Opinion,
-    behaviour: Behaviour,
-    home: Location,
-    location: Location,
-    changeConstraints: ChangeConstraints,
-    stableDestinations: Map[TimeSlice, Location])
-
-  object Category {
-    def apply(individual: Individual): Category =
-      Category(
-        age = individual.age,
-        sex = individual.sex,
-        education = individual.education
-      )
-
+  object SocialCategory {
     def all =
       for {
         age <- Age.all
         sex <- Sex.all
         education <- Education.all
-      } yield Category(age, sex, education)
+      } yield SocialCategory(age, sex, education)
   }
 
-  case class Category(age: Age, sex: Sex, education: Education)
+  @Lenses case class SocialCategory(age: Age, sex: Sex, education: Education)
 
 
-  object AggregatedCategory {
-    def apply(category: Category): AggregatedCategory =
-      new AggregatedCategory(
+  object AggregatedSocialCategory {
+    def apply(category: SocialCategory): AggregatedSocialCategory =
+      new AggregatedSocialCategory(
         age = AggregatedAge(category.age),
         sex = category.sex,
         education = AggregatedEducation(category.education)
@@ -236,18 +185,77 @@ object population {
 
     def all =
       for {
-        age <- AggregatedAge.all
         sex <- Sex.all
+        age <- AggregatedAge.all
         education <- AggregatedEducation.all
-      } yield AggregatedCategory(age, sex, education)
+      } yield AggregatedSocialCategory(age, sex, education)
   }
 
-  case class AggregatedCategory(
+  case class AggregatedSocialCategory(
     age: AggregatedAge,
     sex: Sex,
     education: AggregatedEducation)
 
-  case class ChangeConstraints(habit: Boolean, budget: Boolean, time: Boolean)
+
+  /* --------------------------- Heath Category -------------------------- */
+  type Opinion = Double
+
+  sealed trait Behaviour
+  object Healthy extends Behaviour
+  object Unhealthy extends Behaviour
+
+  @Lenses case class ChangeConstraints(habit: Boolean, budget: Boolean, time: Boolean)
+
+  @Lenses case class HealthCategory(
+    opinion: Opinion,
+    behaviour: Behaviour,
+    changeConstraints: ChangeConstraints)
+
+  /* ---------------------------- Individual ------------------------------ */
+
+
+  object Individual {
+    def apply(
+      feature: IndividualFeature,
+      healthCategory: (SocialCategory, Random) => HealthCategory,
+      random: Random,
+      stableDestinations: Map[TimeSlice, Location] = Map.empty): Option[Individual] = {
+      for {
+        sex <- Sex(feature.sex)
+        age <- Age(feature.ageCategory)
+        education <- Education(feature.education)
+      } yield {
+        val socialCategory = SocialCategory(age, sex, education)
+
+        Individual(
+          socialCategory = socialCategory,
+          healthCategory = healthCategory(socialCategory, random),
+          feature.location,
+          feature.location,
+          stableDestinations
+        )
+      }
+    }
+
+    def opinion = Individual.healthCategory composeLens HealthCategory.opinion
+    def education = Individual.socialCategory composeLens SocialCategory.education
+    def age = Individual.socialCategory composeLens SocialCategory.age
+    def sex = Individual.socialCategory composeLens SocialCategory.sex
+    def i = Individual.location composeLens first
+    def j = Individual.location composeLens second
+  }
+
+
+
+  @Lenses case class Individual(
+    socialCategory: SocialCategory,
+    healthCategory: HealthCategory,
+    home: Location,
+    location: Location,
+    stableDestinations: Map[TimeSlice, Location])
+
+
+
 
 
 }
