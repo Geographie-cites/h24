@@ -25,6 +25,8 @@ import java.text.SimpleDateFormat
 import better.files.{File, _}
 import com.github.tototoshi.csv.{CSVFormat, CSVParser, CSVReader, DefaultCSVFormat, defaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
+import com.vividsolutions.jts.index.quadtree.Quadtree
+import com.vividsolutions.jts.index.strtree.STRtree
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
 import eighties.h24.dynamic.MoveMatrix
 import eighties.h24.dynamic.MoveMatrix.{Cell, CellMatrix, Move, TimeSlice}
@@ -254,6 +256,30 @@ object generation {
     }
   }
 
+  type KMCell = (MultiPolygon, Double, Int, Int)
+
+  def readCells(aFile: File)/*: Try[Map[MultiPolygon, (Double, Int, Int)]]*/ = {
+    val store = new ShapefileDataStore(aFile.toJava.toURI.toURL)
+    try {
+      val reader = store.getFeatureReader
+      try {
+        Try {
+          val featureReader = Iterator.continually(reader.next).takeWhile(_ => reader.hasNext)
+          var index = new STRtree()
+          featureReader.foreach { feature =>
+              val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon]
+              val ind = feature.getAttribute("ind").asInstanceOf[Double]
+              val x = feature.getAttribute("x_laea").asInstanceOf[Double].toInt
+              val y = feature.getAttribute("y_laea").asInstanceOf[Double].toInt
+              index.insert(geom.getEnvelopeInternal, (geom,ind,x,y))
+              //geom -> (ind,x,y)
+            }//.toMap
+          index
+        }
+      } finally reader.close
+    } finally store.dispose
+  }
+
   def generatePopulation(
     rnd: Random,
     irises: Seq[AreaID],
@@ -261,7 +287,8 @@ object generation {
     ageSex: Map[AreaID, Vector[Double]],
     schoolAge: Map[AreaID, Vector[Double]],
     educationSex: Map[AreaID, Vector[Vector[Double]]],
-    cells: Map[Polygon, (Double, Int, Int)]) = {
+    cells: STRtree) = {
+    //cells: Map[MultiPolygon, (Double, Int, Int)]) = {
 
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
@@ -286,14 +313,27 @@ object generation {
 
       def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
       val transformedIris = JTS.transform(geometry(id).get, transform)
-      val relevantCells = cells.filterKeys(_.intersects(transformedIris))
+
+//      val relevantCells = cells.filterKeys(_.intersects(transformedIris))
+//      val relevantCellsArea = relevantCells.map{
+//        case (p,v) => {
+//          val g = p.intersection(transformedIris)
+//          ((v._2, v._3), v._1 * g.getArea / p.getArea)
+//        }
+//      }.toVector.filter{case (d,v) => v>0}
+      val relevantCells = cells.query(transformedIris.getEnvelopeInternal).toArray.toSeq.map(_.asInstanceOf[KMCell]).filter(_._1.intersects(transformedIris))
       val relevantCellsArea = relevantCells.map{
-        case (p,v) => {
-          val g = p.intersection(transformedIris)
-          ((v._2, v._3), v._1 * g.getArea / p.getArea)
+        cell => {
+          val g = cell._1.intersection(transformedIris)
+          ((cell._3, cell._4), cell._2 * g.getArea / cell._1.getArea)
         }
       }.toVector.filter{case (d,v) => v>0}
 
+      if (relevantCellsArea.isEmpty) {
+        println("ID = " + id + " => " + relevantCells.size)
+        println(transformedIris.toString)
+        println(transformedIris.getEnvelopeInternal.toString)
+      }
       val res = (0 until total.toInt).map{ _ =>
         val sample = ageSexVariate.compute(rnd)
         val ageIndex = (sample(0)*ageSexSizes(0)).toInt
@@ -321,7 +361,7 @@ object generation {
         //val coordinate = sampler.apply(rnd)
         //val transformed = JTS.transform(coordinate, null, transform)
         //val point = JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
-        val cell = multinomial(relevantCellsArea)
+        val cell = multinomial(relevantCellsArea)(rnd)
         IndividualFeature(
           ageCategory = ageIndex,
           sex = sex,
@@ -339,14 +379,15 @@ object generation {
     val baseICDiplomesFormationPopFileName = inputDirectory.toScala / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
     val workFlowsFile = inputDirectory.toScala /"base-texte-flux-mobilite-domicile-lieu-travail-2012.txt.lzma"
     val studyFlowsFile = inputDirectory.toScala /"base-texte-flux-mobilite-domicile-lieu-etude-2012.txt.lzma"
-    val cellFile = inputDirectory.toScala /""
+    val cellFile = inputDirectory.toScala /"R_rfl09_LAEA1000_IDF.shp"
 
     for {
       (irises, geom) <- readGeometry(contourIRISFile, filter)
       ageSex <- readAgeSex(baseICEvolStructPopFileName)
       schoolAge <- readAgeSchool(baseICDiplomesFormationPopFileName)
       educationSex <- readEducationSex(baseICDiplomesFormationPopFileName)
-    } yield generatePopulation(rng, irises, geom, ageSex, schoolAge, educationSex).toIterator.flatten
+      cells <- readCells(cellFile)
+    } yield generatePopulation(rng, irises, geom, ageSex, schoolAge, educationSex, cells).toIterator.flatten
   }
 
 
