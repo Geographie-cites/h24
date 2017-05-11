@@ -20,7 +20,8 @@ package eighties.h24
 import java.io.{FileInputStream, FileOutputStream}
 
 import better.files._
-import eighties.h24.dynamic.MoveMatrix.TimeSlice
+import eighties.h24.dynamic.MoveMatrix.{CellMatrix, TimeSlice, TimeSlices}
+import eighties.h24.generation.{Interactions, workTimeSlice}
 import eighties.h24.population._
 import eighties.h24.space._
 import monocle.Monocle._
@@ -175,21 +176,109 @@ object dynamic {
   }
 
 
-//  def assignWork(proportion: Double, world: World, random: Random) = {
-//    val attractions =
-//      AggregatedEducation.all.map {ed =>
-//        ed -> world.attractions.filter(_.education == ed)
-//      }.toMap.withDefaultValue(Seq.empty)
-//
-//    def assign(individual: Individual): Individual =
-//      if(random.nextDouble() < proportion) {
-//        val individualAttractions = attractions(AggregatedEducation(individual.education).get)
-//        if (individualAttractions.isEmpty) individual
-//        else Individual.work.set(Some(individualAttractions.randomElement(random).location)) (individual)
-//      } else individual
-//
-//    (World.allIndividuals modify assign)(world)
-//  }
+  def interchangeConviction(
+    world: World,
+    timeOfDay: Int,
+    interactions: Map[AggregatedSocialCategory, Interactions],
+    maxProbaToSwitch: Double,
+    constraintsStrength: Double,
+    inertiaCoefficient: Double,
+    random: Random) = {
+
+    def booleanToDouble(b: Boolean) = if(b) 1.0 else 0.0
+
+    def interactionProbability(individual: Individual) = timeOfDay match {
+      case 0 => interactions(AggregatedSocialCategory(individual.socialCategory)).breakfastInteraction
+      case 1 => interactions(AggregatedSocialCategory(individual.socialCategory)).lunchInteraction
+      case 2 => interactions(AggregatedSocialCategory(individual.socialCategory)).dinnerInteraction
+    }
+
+    def peering(cell: Vector[Individual]): (Vector[(Individual, Individual)], Vector[Individual]) = {
+      val (interactingPeople, passivePeople) = cell.partition { individual => random.nextDouble() < interactionProbability(individual) }
+
+      if(interactingPeople.size % 2 == 0) (random.shuffle(interactingPeople).grouped(2).toVector.map { case Vector(i1, i2) => (i1, i2) }, passivePeople)
+      else (random.shuffle(interactingPeople).dropRight(1).grouped(2).toVector.map { case Vector(i1, i2) => (i1, i2) }, passivePeople ++ Seq(interactingPeople.last))
+    }
+
+    def dietReward(individual: Individual, healthyDietReward: Double) = {
+      def getReward(o: Opinion): Opinion =  math.min(1.0, (1 + healthyDietReward) * o)
+      if(individual.healthCategory.behaviour == Healthy) (Individual.healthCategory composeLens HealthCategory.opinion modify getReward) (individual)
+      else individual
+    }
+
+    def opinionInertia(previousOpinion: Opinion, opinion: Opinion): Opinion =
+      previousOpinion * inertiaCoefficient + (1 - inertiaCoefficient) * opinion
+
+
+    def updateInteractingOpinion(ego: Individual, partner: Individual, healthRatio: Option[Double]): Individual = {
+      val influencePartner = (booleanToDouble(partner.healthCategory.behaviour == Healthy) + partner.healthCategory.opinion) / 2
+      Individual.opinion.modify { o =>
+        healthRatio match {
+          case Some(hr) => opinionInertia(o, 0.5 * o + 0.25 * influencePartner + 0.25 * hr)
+          case None => o // This wont happend
+        }
+      }(ego)
+    }
+
+    def updatePassiveOpinion(individual: Individual, healthRatio: Option[Double]): Individual = Individual.opinion.modify { o =>
+      healthRatio match {
+        case Some(hr) => opinionInertia(o, 0.75 * o + 0.25 * hr)
+        case None => o
+      }
+    }(individual)
+
+
+    def updateBehaviour(individual: Individual): Individual = {
+      def probaSwitchToUnhealthy = {
+        val y =
+          maxProbaToSwitch +
+            booleanToDouble(individual.healthCategory.changeConstraints.budget) * constraintsStrength +
+            booleanToDouble(individual.healthCategory.changeConstraints.time) * constraintsStrength -
+            booleanToDouble(individual.healthCategory.changeConstraints.habit) * constraintsStrength
+
+        math.max(0.0, y * (-2 * individual.healthCategory.opinion + 1))
+      }
+
+      def probaSwitchToHealthy = {
+        val y =
+          maxProbaToSwitch -
+            booleanToDouble(individual.healthCategory.changeConstraints.budget) * constraintsStrength -
+            booleanToDouble(individual.healthCategory.changeConstraints.time) * constraintsStrength -
+            booleanToDouble(individual.healthCategory.changeConstraints.habit) * constraintsStrength
+
+        math.max(0.0, y * (2 * individual.healthCategory.opinion - 1))
+      }
+
+      Individual.behaviour.modify {
+        case Healthy => if (random.nextDouble() < probaSwitchToUnhealthy) Unhealthy else Healthy
+        case Unhealthy => if (random.nextDouble() < probaSwitchToHealthy) Healthy else Unhealthy
+      }(individual)
+    }
+
+    Index.allCells[Individual].getAll(Index.indexIndividuals(world)).map {cell =>
+      val healthyRatio = if(!cell.isEmpty) Some(cell.count(_.healthCategory.behaviour == Healthy).toDouble / cell.size) else None
+      val (interactingPeople, passivePeople) = peering(cell)
+
+      val sens1 = interactingPeople.map { case(ego, partner) => updateInteractingOpinion(ego, partner, healthyRatio) }
+      val sens2 = interactingPeople.map { case(partner, ego) => updateInteractingOpinion(ego, partner, healthyRatio)  }
+
+      val afterInteractions = sens1 ++ sens2
+
+      val afterPassiveInteractions = passivePeople.map(i => updatePassiveOpinion(i, healthyRatio))
+
+      (afterInteractions ++ afterPassiveInteractions).map(updateBehaviour)
+    }
+  }
+
+
+  def fixWorkPlace(world: World, timeSlices: TimeSlices, rng: Random) =
+    World.allIndividuals.modify { individual =>
+      val workTimeMoves = timeSlices.toMap.apply(workTimeSlice)
+      dynamic.sampleDestinationInMoveMatrix(individual, workTimeMoves, rng) match {
+        case Some(d) => Individual.stableDestinations.modify(_ + (workTimeSlice -> d))(individual)
+        case None => Individual.stableDestinations.modify(_ + (workTimeSlice -> individual.home))(individual)
+      }
+    }(world)
 
   def randomiseLocation(world: World, random: Random) = {
     val reach = reachable(Index[Individual](world.individuals.iterator, Individual.location.get(_), world.sideI, world.sideJ))

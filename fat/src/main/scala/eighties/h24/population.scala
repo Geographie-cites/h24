@@ -238,6 +238,7 @@ object population {
       )
     }
 
+    def behaviour = Individual.healthCategory composeLens HealthCategory.behaviour
     def opinion = Individual.healthCategory composeLens HealthCategory.opinion
     def education = Individual.socialCategory composeLens SocialCategory.education
     def age = Individual.socialCategory composeLens SocialCategory.age
