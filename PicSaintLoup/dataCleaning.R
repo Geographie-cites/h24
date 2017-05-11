@@ -326,6 +326,7 @@ bd_evol_select = bd_evol_select[bd_evol_select$rural != 1 | bd_evol_select$idf =
 bd_evol_select$category = paste(bd_evol_select$sex, bd_evol_select$age_3cat, bd_evol_select$educ, sep="_")
 write.csv(bd_evol_select, "bsn_96_02_08_harmonisee_subset.csv")
 
+str(bd_evol_select)
 
 mean(bd_evol_select[bd_evol_select$educ == 1, "opinion_index"], na.rm = T)
 mean(bd_evol_select[bd_evol_select$fruit_leg_5 == 0, "opinion_index"], na.rm = T)
@@ -350,6 +351,16 @@ conso_5_2002 = prop.table(table(bd_evol_select[bd_evol_select$annee == 2002, "ca
 conso_5_2008 = prop.table(table(bd_evol_select[bd_evol_select$annee == 2008, "category"], bd_evol_select[bd_evol_select$annee == 2008, "fruit_leg_5"]), margin = 1)[,"1"]
 conso_5_all_years = prop.table(table(bd_evol_select$category, bd_evol_select$fruit_leg_5), margin = 1)[,"1"]
 
+bd_evol_select$breakfast_ext = ifelse(bd_evol_select$breakfast_alone == 0 & 
+                                      bd_evol_select$breakfast_family == 0, 1, 0)
+bd_evol_select$lunch_ext = ifelse(bd_evol_select$lunch_alone == 0 &
+                                      bd_evol_select$lunch_family == 0, 1, 0)
+bd_evol_select$dinner_ext = ifelse(bd_evol_select$dinner_alone == 0 &
+                                      bd_evol_select$dinner_family == 0, 1, 0)
+
+social_context_breakfast = prop.table(table(bd_evol_select$category, bd_evol_select$breakfast_ext), margin = 1)[,"1"]
+social_context_lunch = prop.table(table(bd_evol_select$category, bd_evol_select$lunch_ext), margin = 1)[,"1"]
+social_context_dinner = prop.table(table(bd_evol_select$category, bd_evol_select$dinner_ext), margin = 1)[,"1"]
 
 bd_evol_select$n = 1
 n = table(bd_evol_select$category, bd_evol_select$n)[,"1"]
@@ -370,7 +381,9 @@ opinion_index_2002$tot = opinion_index_2002$opinion_index_q1 + opinion_index_200
                             opinion_index_2002$opinion_index_q5 
 Init_categories = cbind(n, n_1996, n_2002, n_2008, 
                         conso_5_1996, conso_5_2002, conso_5_2008, conso_5_all_years,
-                        contrainte_foyer, contrainte_budget, contrainte_temps)
+                        contrainte_foyer, contrainte_budget, contrainte_temps,
+                        social_context_breakfast, social_context_lunch,
+                        social_context_dinner)
 Init_categories = cbind(Init_categories[1:24,],opinion_index_2002)
 
 Init_categories[,paste0("opinion_index_q", 1:5)] = Init_categories[,paste0("opinion_index_q", 1:5)] / Init_categories$tot
