@@ -66,7 +66,7 @@ object Simulation extends App {
       case (time, moveMatrix) :: t =>
         def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)
         def convicted = dynamic.localConviction(gamaOpinion, moved, rng)
-        saveEffectivesAsCSV(convicted, outputPath / s"steps/world${day}_${slice}.csv")
+        //saveEffectivesAsCSV(convicted, outputPath / s"steps/world${day}_${slice}.csv")
         simulateOneDay(convicted, t, day, slice + 1)
     }
 
