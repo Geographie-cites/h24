@@ -17,10 +17,12 @@
   */
 package eighties.h24
 
+import better.files.File
 import eighties.h24.population._
 import eighties.h24.space._
 import breeze.linalg._
 import breeze.stats._
+import eighties.h24.tools.CellCSV.world
 
 object observable {
 
@@ -36,5 +38,15 @@ object observable {
 
   def resume(world: World) =
     byEducation[Vector[Double]](b => Vector(mean(b), scala.math.sqrt(variance(DenseVector(b: _*))), median(DenseVector(b: _*))))(world)
+
+  def saveEffectivesAsCSV(world: World, output: File) = {
+    output.delete(swallowIOExceptions = true)
+
+    Index.getLocatedCells(Index.indexIndividuals(world)).foreach {
+      case (c, l) =>
+        def numbers = AggregatedSocialCategory.all.map { cat => c.count(i => AggregatedSocialCategory(i.socialCategory) == cat)}
+        output << s"""${l._1},${l._2},${numbers.mkString(",")}"""
+    }
+  }
 
 }

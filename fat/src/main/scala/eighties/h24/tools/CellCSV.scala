@@ -4,6 +4,7 @@ import better.files.File
 import eighties.h24.generation._
 import eighties.h24.population.AggregatedSocialCategory
 import eighties.h24.space._
+import eighties.h24.observable._
 
 import scala.util.Random
 
@@ -17,16 +18,10 @@ object CellCSV extends App {
   val distributionConstraints = dataDirectory / "initialisation_distribution_par_cat.csv"
 
   val healthCategory = generateHealthCategory(distributionConstraints)
-
-  val world = Index.indexIndividuals(generateWorld(features, healthCategory, rng))
+  val world = generateWorld(features, healthCategory, rng)
 
   val output = File("results") / "cells.csv"
-  output.delete(swallowIOExceptions = true)
 
-  Index.getLocatedCells(world).foreach {
-    case (c, l) =>
-      def numbers = AggregatedSocialCategory.all.map { cat => c.count(i => AggregatedSocialCategory(i.socialCategory) == cat)}
-      output << s"""${l._1},${l._2},${numbers.mkString(",")}"""
-  }
+  saveEffectivesAsCSV(world, output)
 
 }
