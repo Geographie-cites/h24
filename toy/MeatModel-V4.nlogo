@@ -310,19 +310,19 @@ end
 
 
 to update-opinion
+  if  Healthy? = TRUE [set opinion min (list ((1 + healthy-diet-reward) * opinion) 1)]
   let newOpinion 0
   scan-partner
   scan-behaviour-in-cell
   let o opinion
   if partner = nobody and count other parisians-here = 0 [ set newOpinion opinion]
   if partner = nobody and count other parisians-here > 0 [
-    set newOpinion 0.75 * opinion + 0.25 * influenceCell ;; add factor
+    set newOpinion 0.75 * opinion + 0.25 * influenceCell
   ]
   if partner != nobody and count other parisians-here > 0 [
     set newOpinion 0.5 * opinion + 0.25 * influencePartner + 0.25 * influenceCell
   ]
   set opinion inertiaCoeff * opinion + (1 - inertiaCoeff) * newOpinion
-
 end
 
 to update-behaviour
@@ -331,25 +331,25 @@ to update-behaviour
     if p < proba-switch-to-unhealthy opinion constraint-budget constraint-time constraint-habit [
       set Healthy? FALSE
       set switch-to-Unhealthy switch-to-Unhealthy + 1
-      print who
+
     ]
     ] [
        if p < proba-switch-to-healthy opinion constraint-budget constraint-time constraint-habit [
       set Healthy? TRUE
       set switch-to-Healthy switch-to-Healthy + 1
-      print who
+
     ]
   ]
 end
 
 
 to-report proba-switch-to-healthy [#opinion #budget #time #habit]
-  let y maxProbaToSwitch - #budget - #time - #habit
+  let y maxProbaToSwitch - contraint-strength * #budget - contraint-strength * #time - contraint-strength * #habit
  report y * (2 * #opinion - 1)
 end
 
 to-report proba-switch-to-unhealthy [#opinion #budget #time #habit]
-  let y maxProbaToSwitch + #budget + #time - #habit
+  let y maxProbaToSwitch + contraint-strength * #budget + contraint-strength * #time - contraint-strength * #habit
  report y * (-2 * #opinion + 1)
 end
 
@@ -486,10 +486,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-31
-361
-183
-406
+24
+266
+176
+311
 % healthy-eaters A1A2
 round((count parisians with [Healthy? = TRUE and act1? = 1 and act2? = 1] * 100)/ count parisians with [act1? = 1 and act2? = 1])
 17
@@ -497,10 +497,10 @@ round((count parisians with [Healthy? = TRUE and act1? = 1 and act2? = 1] * 100)
 11
 
 MONITOR
-28
-259
-166
-304
+34
+170
+172
+215
 % healthy-eaters A1
 healthyA1
 17
@@ -508,10 +508,10 @@ healthyA1
 11
 
 MONITOR
-32
-410
-170
-455
+25
+315
+163
+360
 % healthy-eaters A2
 round((count parisians with [Healthy? = 1 and act1? = 0 and act2? = 1] * 100)/ count parisians with [act1? = 0 and act2? = 1])
 17
@@ -536,10 +536,10 @@ NIL
 1
 
 BUTTON
-192
-341
-263
-374
+185
+319
+256
+352
 shrink
 ask parisians [set size 0.1]
 NIL
@@ -568,10 +568,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-28
-307
-167
-352
+34
+218
+173
+263
 % healthy-eaters Immobile
 round((count parisians with [Healthy? = TRUE and act1? = 0 and act2? = 0] * 100)/ count parisians with [act1? = 0 and act2? = 0])
 17
@@ -579,10 +579,10 @@ round((count parisians with [Healthy? = TRUE and act1? = 0 and act2? = 0] * 100)
 11
 
 MONITOR
-184
-246
-258
-291
+264
+314
+338
+359
 % healthy
 round((count parisians with [Healthy? = TRUE ] * 100)/ count parisians)
 17
@@ -590,10 +590,10 @@ round((count parisians with [Healthy? = TRUE ] * 100)/ count parisians)
 11
 
 PLOT
-35
-459
-293
-609
+28
+364
+286
+514
 % Healthy Eaters by Mobility
 NIL
 NIL
@@ -671,10 +671,10 @@ NIL
 HORIZONTAL
 
 PLOT
-296
-459
-542
-609
+289
+364
+535
+514
 % Healthy eaters by Edu Level
 NIL
 NIL
@@ -708,10 +708,10 @@ NIL
 1
 
 PLOT
-271
-230
-471
-380
+265
+156
+465
+306
 Conversions
 NIL
 NIL
@@ -742,30 +742,30 @@ NIL
 HORIZONTAL
 
 CHOOSER
-41
-631
-179
-676
+34
+536
+172
+581
 xyParisians
 xyParisians
 "gaussian" "invGaussian" "uniform"
-0
+1
 
 CHOOSER
-42
-681
-180
-726
+35
+586
+173
+631
 xyA1
 xyA1
 "gaussian" "invGaussian" "uniform"
 0
 
 SLIDER
-195
-631
-367
-664
+188
+536
+360
+569
 meanPGaussian
 meanPGaussian
 0
@@ -777,15 +777,15 @@ NIL
 HORIZONTAL
 
 SLIDER
-381
-632
-553
-665
+374
+537
+546
+570
 stdPGaussian
 stdPGaussian
 0.0
 1.0
-0.1
+0.66
 0.01
 1
 NIL
@@ -807,10 +807,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-337
-401
-458
-434
+347
+320
+468
+353
 NIL
 color-activity
 NIL
@@ -824,10 +824,10 @@ NIL
 1
 
 SLIDER
-196
-688
-378
-721
+189
+593
+371
+626
 meanA1Gaussian
 meanA1Gaussian
 0
@@ -839,10 +839,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-389
-688
-561
-721
+382
+593
+554
+626
 stdA1Gaussian
 stdA1Gaussian
 0
@@ -1006,7 +1006,7 @@ maxProbaToSwitch
 maxProbaToSwitch
 0
 1
-0.0
+0.22
 0.01
 1
 NIL
@@ -1021,8 +1021,38 @@ inertiaCoeff
 inertiaCoeff
 0
 1
-1.0
+0.6
 0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+207
+91
+379
+124
+contraint-strength
+contraint-strength
+0
+1
+0.115
+0.001
+1
+NIL
+HORIZONTAL
+
+SLIDER
+30
+125
+208
+158
+healthy-diet-reward
+healthy-diet-reward
+0
+1
+0.13
+0.01
 1
 NIL
 HORIZONTAL
