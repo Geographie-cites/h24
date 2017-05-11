@@ -27,5 +27,5 @@ object MapPopulation extends App {
   val world = generateWorld(features, healthCategory, rng)
   WorldMapper.mapRGB(world, File("results") / "map.tiff")
   val end = System.currentTimeMillis()
-  println((end - start) + " ms")
+  //println((end - start) + " ms")
 }

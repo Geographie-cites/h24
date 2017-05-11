@@ -40,6 +40,7 @@ object observable {
     byEducation[Vector[Double]](b => Vector(mean(b), scala.math.sqrt(variance(DenseVector(b: _*))), median(DenseVector(b: _*))))(world)
 
   def saveEffectivesAsCSV(world: World, output: File) = {
+    output.parent.createDirectories()
     output.delete(swallowIOExceptions = true)
 
     Index.getLocatedCells(Index.indexIndividuals(world)).foreach {

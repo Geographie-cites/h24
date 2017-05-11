@@ -107,8 +107,8 @@ object space {
 
   object Index {
 
-    def indexIndividuals(world: World) =
-      Index[Individual](World.individuals.get(world).iterator, Individual.location.get(_), world.sideI, world.sideJ)
+    def indexIndividuals(world: World, location: Individual => Location = Individual.location.get(_)) =
+      Index[Individual](World.individuals.get(world).iterator, location, world.sideI, world.sideJ)
 
     def indexAttraction(world: World) =
       Index[Attraction](World.attractions.get(world).iterator, Attraction.location.get(_), world.sideI, world.sideJ)
