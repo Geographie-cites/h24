@@ -213,7 +213,7 @@ object generation {
 
   type KMCell = (MultiPolygon, Double, Int, Int)
 
-  def readCells(aFile: File)/*: Try[Map[MultiPolygon, (Double, Int, Int)]]*/ = {
+  def readCells(aFile: File) = {
     val store = new ShapefileDataStore(aFile.toJava.toURI.toURL)
     try {
       val reader = store.getFeatureReader
@@ -224,8 +224,8 @@ object generation {
           featureReader.foreach { feature =>
               val geom = feature.getDefaultGeometry.asInstanceOf[MultiPolygon]
               val ind = feature.getAttribute("ind").asInstanceOf[Double]
-              val x = feature.getAttribute("x_laea").asInstanceOf[Double].toInt
-              val y = feature.getAttribute("y_laea").asInstanceOf[Double].toInt
+              val x = feature.getAttribute("x_laea").asInstanceOf[Double].toInt / 1000
+              val y = feature.getAttribute("y_laea").asInstanceOf[Double].toInt / 1000
               index.insert(geom.getEnvelopeInternal, (geom,ind,x,y))
               //geom -> (ind,x,y)
             }//.toMap
@@ -243,7 +243,6 @@ object generation {
     schoolAge: Map[AreaID, Vector[Double]],
     educationSex: Map[AreaID, Vector[Vector[Double]]],
     cells: STRtree) = {
-    //cells: Map[MultiPolygon, (Double, Int, Int)]) = {
 
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
@@ -269,13 +268,6 @@ object generation {
       def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
       val transformedIris = JTS.transform(geometry(id).get, transform)
 
-//      val relevantCells = cells.filterKeys(_.intersects(transformedIris))
-//      val relevantCellsArea = relevantCells.map{
-//        case (p,v) => {
-//          val g = p.intersection(transformedIris)
-//          ((v._2, v._3), v._1 * g.getArea / p.getArea)
-//        }
-//      }.toVector.filter{case (d,v) => v>0}
       val relevantCells = cells.query(transformedIris.getEnvelopeInternal).toArray.toSeq.map(_.asInstanceOf[KMCell]).filter(_._1.intersects(transformedIris))
       val relevantCellsArea = relevantCells.map{
         cell => {
@@ -806,10 +798,5 @@ object generation {
 
       HealthCategory(opinion, behaviour, constraints)
     }
-
   }
-
-
-
-
 }

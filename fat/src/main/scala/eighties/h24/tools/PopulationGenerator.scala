@@ -7,5 +7,8 @@ import eighties.h24.space._
 
 object PopulationGenerator extends App {
   def features = generateFeatures(File("data").toJava, _ => true, new util.Random(42)).get.toVector
-  IndividualFeature.save(features, File("results/population.bin"))
+  val boundingBox = BoundingBox(features, IndividualFeature.location.get)
+  def relocate = IndividualFeature.location.modify(BoundingBox.translate(boundingBox))
+  val relocatedFeatures = features.map(relocate)
+  IndividualFeature.save(relocatedFeatures, File("results/population.bin"))
 }

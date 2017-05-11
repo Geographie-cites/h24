@@ -79,7 +79,7 @@ object EGTTest extends App {
 
     writerRes.close
   }
-  val path = File("../données/EGT 2010/presence semaine EGT")
+  val path = File("../data/EGT 2010/presence semaine EGT")
   val outputPath = File("results")
   outputPath.createDirectories()
   val outFileRes = outputPath / "TEST.shp"

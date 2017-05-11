@@ -35,7 +35,7 @@ object worldMapper {
       val jj = height - j - 1
       val value = c map getValue
       val size = value.size
-      val vec = 
+      val vec =
         if (size == 0) Array(0,0,0)
         else Array(value.count(_ == 0)*255/size, value.count(_ == 1)*255/size, value.count(_ == 2)*255/size)
       raster.setPixel(i, jj, vec)
@@ -46,30 +46,38 @@ object worldMapper {
     format.getWriter(file.toJava).write(coverage, null)
   }
   def mapGray(world: space.World, file: File,
-              geValue: (Individual=>Double),
-              cellSize: Int = 1000, crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
+              getValue: (Individual=>Double),
+              cellSize: Int = 1000, pixelSize:Int = 10, crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
     val minX = world.originI
     val minY = world.originJ
     val width = world.sideI
     val height = world.sideJ
     val maxX = minX + width
     val maxY = minY + height
-    val pixelSize = 10
-    val bufferedImage = new BufferedImage(width*pixelSize, height*pixelSize, BufferedImage.TYPE_USHORT_GRAY)
+    val bufferedImage = new BufferedImage(width*pixelSize, height*pixelSize, BufferedImage.TYPE_INT_ARGB)
     val raster = bufferedImage.getRaster
     val index = space.Index.indexIndividuals(world)
 
-    val maxValue = Math.pow(2,16) - 1.0
+    val maxValue = Math.pow(2,8) - 1.0
     for {
       (l, i) <- index.cells.zipWithIndex
       (c, j) <- l.zipWithIndex
     } yield {
       val ii = i* pixelSize
       val jj = (height - j - 1) * pixelSize
-      val value = c map geValue
+      val value = c map getValue
       val size = value.size
-      val vec = if (size == 0) Array.fill(pixelSize * pixelSize)(0) else Array.fill(pixelSize * pixelSize)((value.sum*maxValue/size).toInt)
-      raster.setPixels(ii, jj, pixelSize, pixelSize, vec)
+      val vec =
+        if (size == 0) Array.fill(pixelSize * pixelSize)(Array(0,0,0,0))
+        else {
+          val v = (value.sum*maxValue/size).toInt
+          Array.fill(pixelSize * pixelSize)(Array(v,v,v,255))
+        }
+      raster.setPixels(ii, jj, pixelSize, pixelSize, vec.flatten)
+//      if (size > 0) {
+//        val vec = Array.fill(pixelSize * pixelSize)((value.sum * maxValue / size).toInt)
+//        raster.setPixels(ii, jj, pixelSize, pixelSize, vec)
+//      }
     }
     val referencedEnvelope = new ReferencedEnvelope(minX * cellSize, maxX * cellSize, minY * cellSize, maxY * cellSize, crs)
     val factory = new GridCoverageFactory
@@ -77,7 +85,7 @@ object worldMapper {
     format.getWriter(file.toJava).write(coverage, null)
   }
   def mapColorRGB(world: space.World, file: java.io.File,
-                  geValue: (Individual => Double),
+                  getValue: (Individual => Double),
                   minValue: Double = -0.5,
                   maxValue: Double = 0.5,
                   cellSize: Int = 1000, crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
@@ -117,7 +125,7 @@ object worldMapper {
     } yield {
       val ii = i* pixelSize
       val jj = (height - j - 1) * pixelSize
-      val values = c map geValue
+      val values = c map getValue
       val size = values.size
       def meanValue = values.sum / size
       if (size > 0) {

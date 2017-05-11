@@ -13,7 +13,7 @@ object CellCSV extends App {
 
   def features = IndividualFeature.load(File("results/population.bin"))
 
-  val dataDirectory = File("../données/")
+  val dataDirectory = File("../data/")
   val pathEGT = dataDirectory / "EGT 2010/presence semaine EGT"
   val distributionConstraints = dataDirectory / "initialisation_distribution_par_cat.csv"
 

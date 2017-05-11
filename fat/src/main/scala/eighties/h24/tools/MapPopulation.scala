@@ -12,15 +12,18 @@ object MapPopulation extends App {
   val rng = new Random(42)
   def features = IndividualFeature.load(File("results/population.bin"))
 
-  val dataDirectory = File("../données/")
+  val dataDirectory = File("../data")
   val distributionConstraints = dataDirectory / "initialisation_distribution_par_cat.csv"
 
   val healthCategory = generation.generateHealthCategory(distributionConstraints)
 
   val world = generateWorld(features, healthCategory, rng)
-  worldMapper.mapRGB(world, File("results") / "map.tiff")
+  val start = System.currentTimeMillis()
+//  worldMapper.mapRGB(world, File("results") / "map.tiff")
+  def getValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
+  worldMapper.mapGray(world, File("results") / "map.tiff", getValue, 1000, 10)
   val end = System.currentTimeMillis()
-  //println((end - start) + " ms")
+  println((end - start) + " ms")
 }
 
 // % de gens sains par cellule

@@ -32,7 +32,7 @@ import scala.util.Try
 
 object EGTAnalysis extends App {
 
-  val path = File("../données/EGT 2010/presence semaine EGT")
+  val path = File("../data/EGT 2010/presence semaine EGT")
   val outputPath = File("results")
   outputPath.createDirectories()
 

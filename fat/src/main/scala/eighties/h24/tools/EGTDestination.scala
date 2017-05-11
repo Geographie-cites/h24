@@ -47,7 +47,7 @@ object EGTDestination extends App {
     val typeNameRes = dataStoreRes.getTypeNames()(0)
     val writerRes = dataStoreRes.getFeatureWriterAppend(typeNameRes, Transaction.AUTO_COMMIT)
 
-    val path = File("../données/EGT 2010/presence semaine EGT")
+    val path = File("../data/EGT 2010/presence semaine EGT")
     val newMatrix = generation.flowsFromEGT(149, 132, path / "presence_semaine_GLeRoux.csv.lzma").get
 
     MoveMatrix.allMoves.getAll(newMatrix).toSeq.map {
@@ -63,7 +63,7 @@ object EGTDestination extends App {
 
     writerRes.close
   }
-  val path = File("../données/EGT 2010/presence semaine EGT")
+  val path = File("../data/EGT 2010/presence semaine EGT")
   val outputPath = File("results")
   outputPath.createDirectories()
   val outFileRes = outputPath / "TEST_DEST_IDW.shp"
