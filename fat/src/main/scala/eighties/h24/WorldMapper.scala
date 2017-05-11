@@ -19,7 +19,7 @@ object WorldMapper {
   }
   def mapRGB(world: space.World, file: File,
              geValue: Individual => Int = cat(_),
-             cellSize: Int = 200, crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
+             cellSize: Int = 1000, crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
     val minX = world.originI
     val minY = world.originJ
     val width = world.sideI
@@ -48,7 +48,7 @@ object WorldMapper {
   }
   def mapGray(world: space.World, file: File,
               geValue: (Individual=>Double),
-              cellSize: Int = 200, crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
+              cellSize: Int = 1000, crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
     val minX = world.originI
     val minY = world.originJ
     val width = world.sideI
@@ -81,7 +81,7 @@ object WorldMapper {
                   geValue: (Individual => Double),
                   minValue: Double = -0.5,
                   maxValue: Double = 0.5,
-                  cellSize: Int = 200, crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
+                  cellSize: Int = 1000, crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
     val minX = world.originI
     val minY = world.originJ
     val width = world.sideI

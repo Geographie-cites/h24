@@ -24,5 +24,8 @@ object MapPopulation extends App {
   def changeConstraints(f: IndividualFeature, rng: Random) = ChangeConstraints(habit = false, budget = false, time = false)
 
   val world = generateWorld(features, opinion, behaviour, changeConstraints, rng)
+  val start = System.currentTimeMillis()
   WorldMapper.mapRGB(world, File("results") / "map.tiff")
+  val end = System.currentTimeMillis()
+  println((end - start) + " ms")
 }
