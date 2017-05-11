@@ -48,7 +48,7 @@ object EquipmentGenerator extends App {
 
   for ((feature, i) <- generation.generateEquipments(path, _ => true, rng).get.zipWithIndex) {
     import feature._
-    def discrete(v:Double) = (v / 200.0).toInt
+    def discrete(v:Double) = (v / 1000.0).toInt
     val cellX = discrete(location._1)
     val cellY = discrete(location._2)
     val values = Array[AnyRef](

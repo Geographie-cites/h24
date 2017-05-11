@@ -246,17 +246,10 @@ object population {
     def j = Individual.location composeLens second
   }
 
-
-
   @Lenses case class Individual(
     socialCategory: SocialCategory,
     healthCategory: HealthCategory,
     home: Location,
     location: Location,
     stableDestinations: Map[TimeSlice, Location])
-
-
-
-
-
 }
