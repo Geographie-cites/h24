@@ -41,45 +41,38 @@ object Simulation extends App {
   val activityRatio = 0.3
 
   def features = IndividualFeature.load(File("results/population.bin"))
-  println(features.size + " features")
-
-  def opinion(f: IndividualFeature, rng: Random) = 0.5
-  def behaviour(f: IndividualFeature, rng: Random) = false
-  def changeConstraints(f: IndividualFeature, rng: Random) = ChangeConstraints(habit = false, budget = false, time = false)
-
-  val world = generateWorld(features, opinion, behaviour, changeConstraints, rng)
 
   val dataDirectory = File("../données/")
   val pathEGT = dataDirectory / "EGT 2010/presence semaine EGT"
   val distributionConstraints = dataDirectory / "initialisation_distribution_par_cat.csv"
 
+  val healthCategory = generateHealthCategory(distributionConstraints)
 
-  println(readConstraints(distributionConstraints))
+  val world = generateWorld(features, healthCategory, rng)
 
-
-//  val moveTimeLapse = generation.flowsFromEGT(world.sideI,world.sideJ, pathEGT / "presence_semaine_GLeRoux.csv.lzma").get
+  val moveTimeLapse = generation.flowsFromEGT(world.sideI,world.sideJ, pathEGT / "presence_semaine_GLeRoux.csv.lzma").get
   //val moveTimeLapse = MoveMatrix.noMove(world.sideI, world.sideJ)
 
-//  val workTimeMoves = moveTimeLapse.toMap.apply(workTimeSlice)
-//  def fixWorkPlace =
-//    World.allIndividuals.modify { individual =>
-//      dynamic.sampleDestinationInMoveMatrix(individual, workTimeMoves, rng) match {
-//        case Some(d) => Individual.stableDestinations.modify(_ + (workTimeSlice -> d))(individual)
-//        case None => Individual.stableDestinations.modify(_ + (workTimeSlice -> individual.home))(individual)
-//      }
-//    }
-//
-//  def simulateOnDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)]): World =
-//    lapses match {
-//      case Nil => world
-//      case (time, moveMatrix) :: t =>
-//        def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)
-//        def convicted = dynamic.localConviction(gamaOpinion, moved, rng)
-//        simulateOnDay(convicted, t)
-//    }
-//
-//  (1 to days).foldLeft(fixWorkPlace(world)) {
-//    (w, s) => simulateOnDay(w, moveTimeLapse.toList)
-//  }
+  val workTimeMoves = moveTimeLapse.toMap.apply(workTimeSlice)
+  def fixWorkPlace =
+    World.allIndividuals.modify { individual =>
+      dynamic.sampleDestinationInMoveMatrix(individual, workTimeMoves, rng) match {
+        case Some(d) => Individual.stableDestinations.modify(_ + (workTimeSlice -> d))(individual)
+        case None => Individual.stableDestinations.modify(_ + (workTimeSlice -> individual.home))(individual)
+      }
+    }
+
+  def simulateOnDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)]): World =
+    lapses match {
+      case Nil => world
+      case (time, moveMatrix) :: t =>
+        def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)
+        def convicted = dynamic.localConviction(gamaOpinion, moved, rng)
+        simulateOnDay(convicted, t)
+    }
+
+  (1 to days).foldLeft(fixWorkPlace(world)) {
+    (w, s) => simulateOnDay(w, moveTimeLapse.toList)
+  }
 
 }
