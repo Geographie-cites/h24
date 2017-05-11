@@ -24,6 +24,7 @@ import monocle.macros._
 import better.files._
 import eighties.h24.generation.IndividualFeature
 
+import scala.collection.SeqView
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
@@ -122,6 +123,12 @@ object space {
 
       Index[T](cellBuffer.toVector.map(_.toVector.map(_.toVector)), sideI, sideJ)
     }
+
+    def getLocatedCells[T, U](index: Index[T]) =
+      for {
+        (l, i) <- index.cells.view.zipWithIndex
+        (c, j) <- l.zipWithIndex
+      } yield (c, Location(i, j))
 
     def allCells[T] = cells[T] composeTraversal each composeTraversal each
     def allIndividuals[T] = allCells[T] composeTraversal each

@@ -185,8 +185,8 @@ object population {
 
     def all =
       for {
-        age <- AggregatedAge.all
         sex <- Sex.all
+        age <- AggregatedAge.all
         education <- AggregatedEducation.all
       } yield AggregatedSocialCategory(age, sex, education)
   }
@@ -221,8 +221,8 @@ object population {
       random: Random,
       stableDestinations: Map[TimeSlice, Location] = Map.empty): Option[Individual] = {
       for {
-        age <- Age(feature.ageCategory)
         sex <- Sex(feature.sex)
+        age <- Age(feature.ageCategory)
         education <- Education(feature.education)
       } yield {
         val socialCategory = SocialCategory(age, sex, education)
