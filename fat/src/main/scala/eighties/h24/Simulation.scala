@@ -60,7 +60,6 @@ object Simulation extends App {
       }
     }
 
-
   def simulateOneDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0): World =
     lapses match {
       case Nil => world

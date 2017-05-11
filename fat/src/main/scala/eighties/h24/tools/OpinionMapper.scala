@@ -20,7 +20,7 @@ object OpinionMapper extends App {
 
   def generateEducation(random: Random) = Education.apply(random.nextInt(7) + 1)
 
-  val values = (0 until 100) map {_ => behaviour(generateEducation(random).get, random)}
+  val values = (0 until 100) map {_ => behaviour(generateEducation(random), random)}
 
   println(values)
   val f = Figure()
