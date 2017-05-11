@@ -73,6 +73,13 @@ object dynamic {
     type Cell = Map[AggregatedSocialCategory, Vector[Move]]
     type Move = (Location, Double)
 
+    def getLocatedCells(timeSlice: TimeSlices) =
+      for {
+        (ts, matrix) <- timeSlice
+        (line, i) <- matrix.zipWithIndex
+        (c, j) <- line.zipWithIndex
+      } yield (ts, (i, j), c)
+
     def modifyCellMatrix(f: (Cell, Location) => Cell)(matrix: CellMatrix): CellMatrix =
       matrix.zipWithIndex.map { case(line, i) => line.zipWithIndex.map { case(c, j) => f(c, (i, j)) } }
 
@@ -113,10 +120,6 @@ object dynamic {
 
     implicit val categoryPickler = transformPickler((i: Int) => SocialCategory.all(i))(s => SocialCategory.all.indexOf(s))
     implicit val aggregatedCategoryPickler = transformPickler((i: Int) => AggregatedSocialCategory.all(i))(s => AggregatedSocialCategory.all.indexOf(s))
-
-//    implicit val agePickler = transformPickler((i: Int) => Age.all(i))(s => Age.all.indexOf(s))
-//    implicit val sexPickler = transformPickler((i: Int) => Sex.all(i))(s => Sex.all.indexOf(s))
-//    implicit val educationPickler = transformPickler((i: Int) => Education.all(i))(s => Education.all.indexOf(s))
 
     def save(moves: TimeSlices, file: File) = {
       val os = new FileOutputStream(file.toJava)
