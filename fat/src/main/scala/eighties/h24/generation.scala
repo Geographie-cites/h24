@@ -23,7 +23,7 @@ import java.io.{BufferedInputStream, FileInputStream, FileOutputStream, OutputSt
 import java.text.SimpleDateFormat
 
 import better.files.{File, _}
-import com.github.tototoshi.csv.{CSVFormat, CSVReader, DefaultCSVFormat}
+import com.github.tototoshi.csv.{CSVFormat, CSVParser, CSVReader, DefaultCSVFormat, defaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
 import eighties.h24.dynamic.MoveMatrix
@@ -729,6 +729,50 @@ object generation {
 
     readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(slices, i, j))(addFlowToMatrix) } map(interpolate) map {
       cells modify normalizeFlows
+    }
+  }
+
+  case class BehaviourOpinion(consomation1996: Double, habit: Double, budget: Double, time: Double, behaviourDistribution: Vector[Double])
+
+  def readConstraints(file: File) = {
+    val parser = new CSVParser(defaultCSVFormat)
+
+    def sex(v: String) =
+      v match {
+        case "1" => Sex.Male
+        case "2" => Sex.Female
+      }
+
+    def age(v: String) =
+      v match {
+        case "1" => AggregatedAge.Junior
+        case "2" => AggregatedAge.Senior
+        case "3" => AggregatedAge.Veteran
+      }
+
+    def education(v: String) =
+      v match {
+        case "1" => AggregatedEducation.Low
+        case "2" => AggregatedEducation.Middle
+        case "3" => AggregatedEducation.High
+      }
+
+    def extract(l: List[String]) = {
+
+    }
+
+    val header = parser.parseLine(file.lines.head).get.zipWithIndex.toMap
+
+    file.lines.drop(1).flatMap(l => parser.parseLine(l)).map {
+      cs =>
+        AggregatedCategory(sex = sex(cs(header("Sex"))), age = age(cs(header("Age"))), education = education(cs(header("Edu")))) ->
+          BehaviourOpinion(
+            consomation1996 = cs(header("conso_5_1996")).toDouble,
+            habit = cs(header("contrainte_foyer")).toDouble,
+            budget = cs(header("contrainte_budget")).toDouble,
+            time = cs(header("contrainte_temps")).toDouble,
+            behaviourDistribution = cs.takeRight(5).map(_.toDouble).toVector
+          )
     }
   }
 }

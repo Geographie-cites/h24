@@ -161,9 +161,15 @@ object population {
   }
 
   type Opinion = Double
+  type Behaviour = Boolean
 
   object Individual {
-    def apply(feature: IndividualFeature, opinion: (IndividualFeature, Random) => Opinion, constraints: (IndividualFeature, Random) => ChangeConstraints, random: Random, stableDestinations: Map[TimeSlice, Location] = Map.empty): Option[Individual] = {
+    def apply(
+      feature: IndividualFeature,
+      opinion: (IndividualFeature, Random) => Opinion,
+      behaviour: (IndividualFeature, Random) => Behaviour,
+      constraints: (IndividualFeature, Random) => ChangeConstraints,
+      random: Random, stableDestinations: Map[TimeSlice, Location] = Map.empty): Option[Individual] = {
       for {
         age <- Age(feature.ageCategory)
         sex <- Sex(feature.sex)
@@ -174,11 +180,13 @@ object population {
           sex,
           education,
           opinion(feature, random),
+          behaviour(feature, random),
           feature.location,
           feature.location,
           constraints(feature, random),
           stableDestinations
         )
+
     }
 
 
@@ -193,6 +201,7 @@ object population {
     sex: Sex,
     education: Education,
     opinion: Opinion,
+    behaviour: Behaviour,
     home: Location,
     location: Location,
     changeConstraints: ChangeConstraints,

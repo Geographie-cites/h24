@@ -3,6 +3,9 @@ package eighties.h24
 import eighties.h24.generation._
 import org.apache.commons.math3.analysis.function.Gaussian
 import org.apache.commons.math3.util.FastMath
+import better.files._
+import com.github.tototoshi.csv._
+import eighties.h24.population._
 
 import scala.util.Random
 
@@ -23,6 +26,7 @@ object opinion {
     val p = 1 / FastMath.pow(1 + distance, gama)
     if(random.nextDouble() <= p) other else current
   }
+
 
 }
 

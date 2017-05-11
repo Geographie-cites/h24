@@ -132,6 +132,7 @@ object space {
   def generateWorld(
     features: Vector[IndividualFeature],
     opinion: (IndividualFeature, Random) => Opinion,
+    behaviour: (IndividualFeature, Random) => Behaviour,
     changeConstraints: (IndividualFeature, Random) => ChangeConstraints,
     rng: Random) = {
 
@@ -148,7 +149,7 @@ object space {
 //      (age: Age, sex: Sex, education: Education, rng: Random) => behaviour(education, rng)
 //    }
 
-    def individuals = features.flatMap(f => Individual(f, opinion, changeConstraints, rng)).filter(included)
+    def individuals = features.flatMap(f => Individual(f, opinion, behaviour, changeConstraints, rng)).filter(included)
 
     /*def equipements =
       for {
