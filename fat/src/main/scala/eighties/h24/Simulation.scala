@@ -41,6 +41,7 @@ object Simulation extends App {
   val activityRatio = 0.3
 
   def features = IndividualFeature.load(File("results/population.bin"))
+  println(features.size + " features")
 
   def opinion(f: IndividualFeature, rng: Random) = 0.5
   def behaviour(f: IndividualFeature, rng: Random) = false
