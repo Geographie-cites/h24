@@ -720,13 +720,9 @@ object generation {
     def getMovesFromOppositeSex(c: Cell): Cell =
       AggregatedSocialCategory.all.flatMap { cat =>
         val moves = c.get(cat)
-        def noSex = c.find { case(c, v) => c.age == cat.age && c.education == cat.education}.map(_._2)
-        (moves orElse noSex) map (m=>cat->m)
+        def noSex = c.find { case(c, _) => c.age == cat.age && c.education == cat.education}.map(_._2)
+        (moves orElse noSex) map (m=> cat -> m)
       }.toMap
-//      c.map { case (category, moves) =>
-//        def noSex = c.find { case(c, v) => c.age == category.age && c.education == category.education}.map(_._2)
-//        category -> moves orElse noSex
-//      }
     readFlowsFromEGT(aFile, location) map {
       _.foldLeft(noMove(slices, boundingBox.sideI, boundingBox.sideJ))(addFlowToMatrix)
     } map {
