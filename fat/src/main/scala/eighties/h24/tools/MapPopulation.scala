@@ -13,7 +13,7 @@ object MapPopulation extends App {
   def features = WorldFeature.load(File("results/population.bin"))
 
   val dataDirectory = File("../data")
-  val distributionConstraints = dataDirectory / "initialisation_distribution_par_cat.csv"
+  val distributionConstraints = dataDirectory / "initialisation_distribution_per_cat.csv"
 
   val healthCategory = generation.generateHealthCategory(distributionConstraints)
 

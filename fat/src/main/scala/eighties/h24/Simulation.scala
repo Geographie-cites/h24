@@ -48,7 +48,7 @@ object Simulation extends App {
 
   val dataDirectory = File("../data/")
   val pathEGT = dataDirectory / "EGT 2010/presence semaine EGT"
-  val distributionConstraints = dataDirectory / "initialisation_distribution_par_cat.csv"
+  val distributionConstraints = dataDirectory / "initialisation_distribution_per_cat.csv"
 
   val healthCategory = generateHealthCategory(distributionConstraints)
   val interactionMap = generateInteractionMap(distributionConstraints)

@@ -787,9 +787,9 @@ object generation {
           AggregatedSocialCategory(sex = sex(cs(header("Sex"))), age = age(cs(header("Age"))), education = education(cs(header("Edu")))) ->
             CSVLine(
               consomation1996 = cs(header("conso_5_1996")).toDouble,
-              habit = cs(header("contrainte_foyer")).toDouble,
-              budget = cs(header("contrainte_budget")).toDouble,
-              time = cs(header("contrainte_temps")).toDouble,
+              habit = cs(header("habit_constraint")).toDouble,
+              budget = cs(header("budget_constraint")).toDouble,
+              time = cs(header("time_constraint")).toDouble,
               opinionDistribution = cs.takeRight(5).map(_.toDouble).toVector)
       }.toMap
 
