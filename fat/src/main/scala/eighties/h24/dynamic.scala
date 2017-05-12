@@ -136,18 +136,23 @@ object dynamic {
 
   }
 
-  def sampleDestinationInMoveMatrix(individual: Individual, moves: MoveMatrix.CellMatrix, random: Random) = {
+  def moveFlowDefaultOnOtherSex(moves: MoveMatrix.CellMatrix, individual: Individual) = {
     val location = Individual.location.get(individual)
-    moves(location._1)(location._2).get(AggregatedSocialCategory(Individual.socialCategory.get(individual))) map { move =>
-      multinomial(move)(random)
-    }
+    val cellMoves = moves(location._1)(location._2)
+    val aggregatedCategory = AggregatedSocialCategory(Individual.socialCategory.get(individual))
+    def myCategory = cellMoves.get(aggregatedCategory)
+    def noSex = cellMoves.find { case(c, v) => c.age == aggregatedCategory.age && c.education == aggregatedCategory.education}.map(_._2)
+    myCategory orElse noSex
   }
+
+  def sampleDestinationInMoveMatrix(moves: MoveMatrix.CellMatrix, individual: Individual, random: Random) =
+    moveFlowDefaultOnOtherSex(moves, individual).map(m => multinomial(m)(random))
 
   def moveInMoveMatrix(world: World, moves: MoveMatrix.CellMatrix, timeSlice: TimeSlice, random: Random) = {
     def sampleMoveInMatrix(individual: Individual) =
       individual.stableDestinations.get(timeSlice) match {
         case None =>
-          sampleDestinationInMoveMatrix(individual, moves, random)  match {
+          sampleDestinationInMoveMatrix(moves, individual, random)  match {
             case None => individual
             case Some(destination) => Individual.location.set(destination)(individual)
           }
@@ -183,7 +188,8 @@ object dynamic {
     maxProbaToSwitch: Double,
     constraintsStrength: Double,
     inertiaCoefficient: Double,
-    random: Random) = {
+    healthyDietReward: Double,
+    random: Random): World = {
 
     def booleanToDouble(b: Boolean) = if(b) 1.0 else 0.0
 
@@ -200,7 +206,7 @@ object dynamic {
       else (random.shuffle(interactingPeople).dropRight(1).grouped(2).toVector.map { case Vector(i1, i2) => (i1, i2) }, passivePeople ++ Seq(interactingPeople.last))
     }
 
-    def dietReward(individual: Individual, healthyDietReward: Double) = {
+    def dietReward(individual: Individual) = {
       def getReward(o: Opinion): Opinion =  math.min(1.0, (1 + healthyDietReward) * o)
       if(individual.healthCategory.behaviour == Healthy) (Individual.healthCategory composeLens HealthCategory.opinion modify getReward) (individual)
       else individual
@@ -255,9 +261,10 @@ object dynamic {
       }(individual)
     }
 
-    Index.allCells[Individual].getAll(Index.indexIndividuals(world)).map {cell =>
+    def cells = Index.allCells[Individual].getAll(Index.indexIndividuals(world)).map {cell =>
       val healthyRatio = if(!cell.isEmpty) Some(cell.count(_.healthCategory.behaviour == Healthy).toDouble / cell.size) else None
-      val (interactingPeople, passivePeople) = peering(cell)
+      val rewarded = cell.map(dietReward)
+      val (interactingPeople, passivePeople) = peering(rewarded)
 
       val sens1 = interactingPeople.map { case(ego, partner) => updateInteractingOpinion(ego, partner, healthyRatio) }
       val sens2 = interactingPeople.map { case(partner, ego) => updateInteractingOpinion(ego, partner, healthyRatio)  }
@@ -268,6 +275,8 @@ object dynamic {
 
       (afterInteractions ++ afterPassiveInteractions).map(updateBehaviour)
     }
+
+    World.individuals.set(cells.flatten.toVector)(world)
   }
 
 

@@ -46,7 +46,7 @@ object worldMapper {
     format.getWriter(file.toJava).write(coverage, null)
   }
   def mapGray(world: space.World, file: File,
-              getValue: (Individual=>Double),
+              getValue: Individual => Double,
               cellSize: Int = 1000, pixelSize:Int = 10, crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
     val minX = world.originI
     val minY = world.originJ
@@ -82,6 +82,7 @@ object worldMapper {
     val referencedEnvelope = new ReferencedEnvelope(minX * cellSize, maxX * cellSize, minY * cellSize, maxY * cellSize, crs)
     val factory = new GridCoverageFactory
     val coverage = factory.create("GridCoverage", bufferedImage, referencedEnvelope)
+    file.parent.createDirectories()
     format.getWriter(file.toJava).write(coverage, null)
   }
   def mapColorRGB(world: space.World, file: java.io.File,

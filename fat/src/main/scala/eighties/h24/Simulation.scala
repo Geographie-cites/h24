@@ -34,14 +34,19 @@ object Simulation extends App {
 
   val rng = new Random(42)
 
-  val days = 2
+  val days = 300
   val gamaOpinion = 2
+
+  val maxProbaToSwitch = 0.8
+  val constraintsStrength = 0.05
+  val inertiaCoefficient = 0.5
+  val healthyDietReward = 0.4
 
   val outputPath = File("results")
 
   def features = IndividualFeature.load(outputPath / "population.bin")
 
-  val dataDirectory = File("../données/")
+  val dataDirectory = File("../data/")
   val pathEGT = dataDirectory / "EGT 2010/presence semaine EGT"
   val distributionConstraints = dataDirectory / "initialisation_distribution_par_cat.csv"
 
@@ -53,14 +58,34 @@ object Simulation extends App {
 
   val timeSlices = MoveMatrix.load(outputPath / "matrix.bin")
 
-  def simulateOneDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0): World =
+  def mapWorld(world: World, file: File) = {
+    def getValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
+    worldMapper.mapGray(world, file, getValue, 1000, 10)
+  }
+
+  def simulateOneDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0): World = {
     lapses match {
       case Nil => world
       case (time, moveMatrix) :: t =>
+        mapWorld(world, outputPath / "map" / s"${day}_${slice}.tiff")
+
         def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)
-        def convicted = dynamic.localConviction(gamaOpinion, moved, rng)
+
+        //def convicted = dynamic.localConviction(gamaOpinion, moved, rng)
+        def convicted = dynamic.interchangeConviction(
+          world,
+          slice,
+          interactionMap,
+          maxProbaToSwitch = maxProbaToSwitch,
+          constraintsStrength = constraintsStrength,
+          inertiaCoefficient = inertiaCoefficient,
+          healthyDietReward = healthyDietReward,
+          rng
+        )
+
         simulateOneDay(convicted, t, day, slice + 1)
     }
+  }
 
   (1 to days).foldLeft(fixWorkPlace(world, timeSlices, rng)) {
     (w, s) => simulateOneDay(w, timeSlices.toList, s)
