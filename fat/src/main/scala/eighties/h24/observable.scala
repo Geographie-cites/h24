@@ -20,9 +20,6 @@ package eighties.h24
 import better.files.File
 import eighties.h24.population._
 import eighties.h24.space._
-import breeze.linalg._
-import breeze.stats._
-import eighties.h24.tools.CellCSV.world
 
 object observable {
 
@@ -32,12 +29,11 @@ object observable {
         level = world.individuals.filter(i => AggregatedEducation(Individual.education.get(i))  == ed)
       } yield ed -> b(level.map(Individual.opinion.get))
 
-//  def medianByEducation = byEducation { v => median(DenseVector(v: _*)) }
-//  def mseByEducation = byEducation(b => scala.math.sqrt(variance(b)))
-//  def meanByEducation = byEducation { v => mean(v) }
-
-  def resume(world: World) =
+  def resume(world: World) = {
+    import breeze.linalg._
+    import breeze.stats._
     byEducation[Vector[Double]](b => Vector(mean(b), scala.math.sqrt(variance(DenseVector(b: _*))), median(DenseVector(b: _*))))(world)
+  }
 
   def saveEffectivesAsCSV(world: World, output: File) = {
     output.parent.createDirectories()
@@ -49,5 +45,49 @@ object observable {
         output << s"""${l._1},${l._2},${numbers.mkString(",")}"""
     }
   }
+
+  def moran[T](matrix: Vector[Vector[T]], quantity: T => Double): Double = {
+    def adjacentCells(i: Int, j: Int, size: Int = 1) =
+      for {
+        oi ← -size to size
+        oj ← -size to size
+        if i != oi || j != oj
+        if i + oi >= 0
+        if j + oj >= 0
+        if i + oi < matrix.size
+        if j + oj < matrix(i + oi).size
+      } yield matrix(i + oi)(j + oj)
+
+    def localNeighbourhoodPairs =
+      for {
+        (cellI, (i, j)) ← zipWithIndices(matrix).flatten
+        cellJ ← adjacentCells(i, j)
+      } yield (cellI, cellJ, 1.0)
+
+    val flatCells = matrix.flatten
+    val totalQuantity = flatCells.map(quantity).sum
+    val averageQuantity = totalQuantity / flatCells.size
+
+    def numerator =
+      localNeighbourhoodPairs.map {
+        case (cellI, cellJ, weight) ⇒
+          val term1 = if (quantity(cellI) == 0) 0.0 else (quantity(cellI) - averageQuantity.toDouble)
+          val term2 = if (quantity(cellJ) == 0) 0.0 else (quantity(cellJ) - averageQuantity.toDouble)
+          weight * term1 * term2
+      }.sum
+
+    def denominator =
+      flatCells.map {
+        cell ⇒
+          if (quantity(cell) <= 0) 0
+          else math.pow(quantity(cell) - averageQuantity.toDouble, 2)
+      }.sum
+
+    val totalWeight = localNeighbourhoodPairs.map { case (_, _, weight) ⇒ weight }.sum
+
+    if (denominator <= 0) 0
+    else (flatCells.size.toDouble / totalWeight.toDouble) * (numerator / denominator)
+  }
+
 
 }

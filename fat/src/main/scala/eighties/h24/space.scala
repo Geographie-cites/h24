@@ -143,17 +143,6 @@ object space {
 
     def included(individual: Individual) = Individual.education.get(individual) != Education.Schol && Individual.age.get(individual) != Age.From0To14
 
-//    def byEducation = {
-//      def behaviour(ed: Education, random: Random) =
-//        AggregatedEducation(ed) match {
-//          case Some(AggregatedEducation.Low) => (-1.0 + random.nextGaussian() * sigmaInitialOpinion)
-//          case Some(AggregatedEducation.Middle) => (0.0 + random.nextGaussian() * sigmaInitialOpinion)
-//          case Some(AggregatedEducation.High) => (1.0 + random.nextGaussian() * sigmaInitialOpinion)
-//          case _ => Double.NaN
-//        }
-//      (age: Age, sex: Sex, education: Education, rng: Random) => behaviour(education, rng)
-//    }
-
     def individuals = features.map(f => Individual(f, healthCategory, rng)).filter(included)
 
     /*def equipements =

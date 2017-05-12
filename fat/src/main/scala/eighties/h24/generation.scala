@@ -69,10 +69,10 @@ object generation {
 
   case class AreaID(id: String) extends AnyVal
 
-  object IndividualFeature {
+  object WorldFeature {
     import boopickle.Default._
 
-    def save(features: Vector[IndividualFeature], file: File)  = {
+    def save(features: WorldFeature, file: File)  = {
       val os = new FileOutputStream(file.toJava)
       try os.getChannel.write(Pickle.intoBytes(features))
       finally os.close()
@@ -80,10 +80,13 @@ object generation {
 
     def load(file: File) = {
       val is = new FileInputStream(file.toJava)
-      try Unpickle[Vector[IndividualFeature]].fromBytes(is.getChannel.toMappedByteBuffer)
+      try Unpickle[WorldFeature].fromBytes(is.getChannel.toMappedByteBuffer)
       finally is.close()
     }
   }
+
+  @Lenses case class WorldFeature(individualFeatures: Vector[IndividualFeature], originalBoundingBox: BoundingBox, boundingBox: BoundingBox)
+
 
   @Lenses case class IndividualFeature(
     ageCategory: Int,
