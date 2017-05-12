@@ -21,9 +21,12 @@ object MapPopulation extends App {
   val bb = features.originalBoundingBox
   val start = System.currentTimeMillis()
 //  worldMapper.mapRGB(world, File("results") / "map.tiff")
-  def getValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
+  def getHealthyValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
   //worldMapper.mapGray(world, File("results") / "map.tiff", getValue, 1000, 10)
-  worldMapper.mapColorRGB(world, bb, File("results") / "color.tiff", getValue)
+  worldMapper.mapColorRGB(world, bb, File("results") / "health.tiff", getHealthyValue)
+
+  def getOpinionValue(individual: Individual) = individual.healthCategory.opinion
+  worldMapper.mapColorRGB(world, bb, File("results") / "opinion.tiff", getOpinionValue)
   val end = System.currentTimeMillis()
   println((end - start) + " ms")
 }

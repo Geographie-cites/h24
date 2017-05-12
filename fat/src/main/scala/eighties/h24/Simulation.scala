@@ -59,17 +59,22 @@ object Simulation extends App {
 
   val timeSlices = MoveMatrix.load(outputPath / "matrix.bin")
 
-  def mapWorld(world: World, bb: BoundingBox, file: File) = {
+  def mapHealth(world: World, bb: BoundingBox, file: File) = {
     def getValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
-    //worldMapper.mapGray(world, file, getValue, 1000, 10)
     worldMapper.mapColorRGB(world, bb, file, getValue)
   }
+  def mapOpinion(world: World, bb: BoundingBox, file: File) = {
+    def getValue(individual: Individual) = individual.healthCategory.opinion
+    worldMapper.mapColorRGB(world, bb, file, getValue)
+  }
+
 
   def simulateOneDay(world: space.World, bb: BoundingBox, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0): World = {
     lapses match {
       case Nil => world
       case (time, moveMatrix) :: t =>
-        mapWorld(world, bb, outputPath / "map" / s"${day}_${slice}.tiff")
+        mapHealth(world, bb, outputPath / "health" / s"${day}_${slice}.tiff")
+        mapOpinion(world, bb, outputPath / "opinion" / s"${day}_${slice}.tiff")
         //println(s"$day $slice " + moran[Vector[Individual]](Index.indexIndividuals(world).cells, _.count(_.healthCategory.behaviour == Healthy).toDouble))
 
         def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)

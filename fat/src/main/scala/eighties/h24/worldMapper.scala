@@ -76,10 +76,6 @@ object worldMapper {
           Array.fill(pixelSize * pixelSize)(Array(v,v,v,255))
         }
       raster.setPixels(ii, jj, pixelSize, pixelSize, vec.flatten)
-//      if (size > 0) {
-//        val vec = Array.fill(pixelSize * pixelSize)((value.sum * maxValue / size).toInt)
-//        raster.setPixels(ii, jj, pixelSize, pixelSize, vec)
-//      }
     }
     val referencedEnvelope = new ReferencedEnvelope(minX * cellSize, maxX * cellSize, minY * cellSize, maxY * cellSize, crs)
     val factory = new GridCoverageFactory
@@ -135,20 +131,18 @@ object worldMapper {
       val values = c map getValue
       val size = values.size
       def meanValue = values.sum / size
-      if (size > 0) {
+      val color = if (size > 0) {
         val value = clamp((meanValue  - minValue)/ rangeValues) * (colors.size - 1)
         val ind = value.toInt
         val lambda = value - ind
         val c0 = colors(ind)
         val color0 = Array(c0._1,c0._2,c0._3,255)
-        val color = if (ind == colors.size - 1) color0 else interpolate(lambda, colors(ind), colors(ind+1))
-        val vec = Array.fill(pixelSize * pixelSize)(color).flatten
-        raster.setPixels(ii, jj, pixelSize, pixelSize, vec)
+        if (ind == colors.size - 1) color0 else interpolate(lambda, colors(ind), colors(ind+1))
       } else {
-        val color = Array(0,0,0,0)
-        val vec = Array.fill(pixelSize * pixelSize)(color).flatten
-        raster.setPixels(ii, jj, pixelSize, pixelSize, vec)
+        Array(0.0,0.0,0.0,0.0)
       }
+      val vec = Array.fill(pixelSize * pixelSize)(color).flatten
+      raster.setPixels(ii, jj, pixelSize, pixelSize, vec)
     }
     val referencedEnvelope = new ReferencedEnvelope(minX * cellSize, maxX * cellSize, minY * cellSize, maxY * cellSize, crs)
     val factory = new GridCoverageFactory
