@@ -69,10 +69,10 @@ object generation {
 
   case class AreaID(id: String) extends AnyVal
 
-  object IndividualFeature {
+  object WorldFeature {
     import boopickle.Default._
 
-    def save(features: Vector[IndividualFeature], file: File)  = {
+    def save(features: WorldFeature, file: File)  = {
       val os = new FileOutputStream(file.toJava)
       try os.getChannel.write(Pickle.intoBytes(features))
       finally os.close()
@@ -80,10 +80,13 @@ object generation {
 
     def load(file: File) = {
       val is = new FileInputStream(file.toJava)
-      try Unpickle[Vector[IndividualFeature]].fromBytes(is.getChannel.toMappedByteBuffer)
+      try Unpickle[WorldFeature].fromBytes(is.getChannel.toMappedByteBuffer)
       finally is.close()
     }
   }
+
+  @Lenses case class WorldFeature(individualFeatures: Vector[IndividualFeature], originalBoundingBox: BoundingBox, boundingBox: BoundingBox)
+
 
   @Lenses case class IndividualFeature(
     ageCategory: Int,
@@ -227,8 +230,7 @@ object generation {
               val x = feature.getAttribute("x_laea").asInstanceOf[Double].toInt / 1000
               val y = feature.getAttribute("y_laea").asInstanceOf[Double].toInt / 1000
               index.insert(geom.getEnvelopeInternal, (geom,ind,x,y))
-              //geom -> (ind,x,y)
-            }//.toMap
+            }
           index
         }
       } finally reader.close
@@ -705,20 +707,15 @@ object generation {
     new Interval(new DateTime(2010, 1, 1, timeSlice.from, 0), new DateTime(2010, 1, 1, timeSlice.to, 0))
   }
 
-  def flowsFromEGT(i: Int, j: Int, aFile: File, slices: Vector[TimeSlice] = timeSlices) = {
+  def flowsFromEGT(boundingBox: BoundingBox, aFile: File, slices: Vector[TimeSlice] = timeSlices) = {
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(l2eCRS, outCRS, true)
-    val x_laea_min = 3697000
-    val x_laea_max = 3846000
-    val y_laea_min = 2805000
-    val y_laea_max = 2937000
-    //val row = (x_laea_max - x_laea_min) / 1000
     def location(coord: Coordinate): space.Location = {
       val laea_coord = JTS.transform(coord, null, transform)
       // replace by cell...
-      val dx = (laea_coord.x - x_laea_min)
-      val dy = (laea_coord.y - y_laea_min)
+      val dx = (laea_coord.x - boundingBox.minI)
+      val dy = (laea_coord.y - boundingBox.minJ)
       space.cell(dx, dy)
     }
 
@@ -729,7 +726,9 @@ object generation {
       }
     }
 
-    readFlowsFromEGT(aFile, location) map { _.foldLeft(noMove(slices, i, j))(addFlowToMatrix) } map(interpolate) map {
+    readFlowsFromEGT(aFile, location) map {
+      _.foldLeft(noMove(slices, boundingBox.sideI, boundingBox.sideJ))(addFlowToMatrix)
+    } map(interpolate) map {
       cells modify normalizeFlows
     }
   }
@@ -784,9 +783,9 @@ object generation {
           AggregatedSocialCategory(sex = sex(cs(header("Sex"))), age = age(cs(header("Age"))), education = education(cs(header("Edu")))) ->
             CSVLine(
               consomation1996 = cs(header("conso_5_1996")).toDouble,
-              habit = cs(header("contrainte_foyer")).toDouble,
-              budget = cs(header("contrainte_budget")).toDouble,
-              time = cs(header("contrainte_temps")).toDouble,
+              habit = cs(header("habit_constraint")).toDouble,
+              budget = cs(header("budget_constraint")).toDouble,
+              time = cs(header("time_constraint")).toDouble,
               opinionDistribution = cs.takeRight(5).map(_.toDouble).toVector)
       }.toMap
 

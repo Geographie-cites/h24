@@ -11,14 +11,14 @@ import scala.util.Random
 object CellCSV extends App {
   val rng = new Random(42)
 
-  def features = IndividualFeature.load(File("results/population.bin"))
+  def features = WorldFeature.load(File("results/population.bin"))
 
   val dataDirectory = File("../data/")
   val pathEGT = dataDirectory / "EGT 2010/presence semaine EGT"
   val distributionConstraints = dataDirectory / "initialisation_distribution_par_cat.csv"
 
   val healthCategory = generateHealthCategory(distributionConstraints)
-  val world = generateWorld(features, healthCategory, rng)
+  val world = generateWorld(features.individualFeatures, healthCategory, rng)
 
   val output = File("results") / "cells.csv"
 

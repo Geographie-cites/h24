@@ -10,18 +10,23 @@ import scala.util.Random
 
 object MapPopulation extends App {
   val rng = new Random(42)
-  def features = IndividualFeature.load(File("results/population.bin"))
+  def features = WorldFeature.load(File("results/population.bin"))
 
   val dataDirectory = File("../data")
-  val distributionConstraints = dataDirectory / "initialisation_distribution_par_cat.csv"
+  val distributionConstraints = dataDirectory / "initialisation_distribution_per_cat.csv"
 
   val healthCategory = generation.generateHealthCategory(distributionConstraints)
 
-  val world = generateWorld(features, healthCategory, rng)
+  val world = generateWorld(features.individualFeatures, healthCategory, rng)
+  val bb = features.originalBoundingBox
   val start = System.currentTimeMillis()
 //  worldMapper.mapRGB(world, File("results") / "map.tiff")
-  def getValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
-  worldMapper.mapGray(world, File("results") / "map.tiff", getValue, 1000, 10)
+  def getHealthyValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
+  //worldMapper.mapGray(world, File("results") / "map.tiff", getValue, 1000, 10)
+  worldMapper.mapColorRGB(world, bb, File("results") / "health.tiff", getHealthyValue)
+
+  def getOpinionValue(individual: Individual) = individual.healthCategory.opinion
+  worldMapper.mapColorRGB(world, bb, File("results") / "opinion.tiff", getOpinionValue)
   val end = System.currentTimeMillis()
   println((end - start) + " ms")
 }
@@ -33,3 +38,9 @@ object MapPopulation extends App {
 // par rapport à l'état initial : % de personnes qui ont changé
 // par rapport à l'état initial : % de personnes qui sont devenus sains
 // par rapport à l'état initial : % de personnes qui sont devenus malsains
+
+// par cellule
+// propo agent sain
+// moyenne opinions
+// propo agent devenus sains depuis ini
+// propo agents devenus pas sains
