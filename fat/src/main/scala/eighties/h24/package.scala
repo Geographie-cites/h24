@@ -61,4 +61,7 @@ package object h24 {
 
   def clamp(v: Double, min: Double = -1.0, max: Double = 1.0) = math.min(math.max(v, min), max)
 
+  def zipWithIndices[T](matrix: Vector[Vector[T]]): Vector[Vector[(T, (Int, Int))]] =
+    matrix.zipWithIndex.map { case(line, i) => line.zipWithIndex.map { case(c, j) => (c, (i, j)) } }
+
 }
