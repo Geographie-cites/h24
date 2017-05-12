@@ -3,6 +3,7 @@ package eighties.h24
 import java.awt.image.BufferedImage
 
 import better.files.File
+import eighties.h24.space.BoundingBox
 import org.geotools.coverage.grid.GridCoverageFactory
 import org.geotools.gce.geotiff.GeoTiffFormat
 import org.geotools.geometry.jts.ReferencedEnvelope
@@ -43,6 +44,7 @@ object worldMapper {
     val referencedEnvelope = new ReferencedEnvelope(minX * cellSize, maxX * cellSize, minY * cellSize, maxY * cellSize, crs)
     val factory = new GridCoverageFactory
     val coverage = factory.create("GridCoverage", bufferedImage, referencedEnvelope)
+    file.parent.createDirectories()
     format.getWriter(file.toJava).write(coverage, null)
   }
   def mapGray(world: space.World, file: File,
@@ -74,10 +76,6 @@ object worldMapper {
           Array.fill(pixelSize * pixelSize)(Array(v,v,v,255))
         }
       raster.setPixels(ii, jj, pixelSize, pixelSize, vec.flatten)
-//      if (size > 0) {
-//        val vec = Array.fill(pixelSize * pixelSize)((value.sum * maxValue / size).toInt)
-//        raster.setPixels(ii, jj, pixelSize, pixelSize, vec)
-//      }
     }
     val referencedEnvelope = new ReferencedEnvelope(minX * cellSize, maxX * cellSize, minY * cellSize, maxY * cellSize, crs)
     val factory = new GridCoverageFactory
@@ -86,16 +84,17 @@ object worldMapper {
     format.getWriter(file.toJava).write(coverage, null)
   }
   def mapColorRGB(world: space.World,
+                  boundingBox: BoundingBox,
                   file: File,
                   getValue: (Individual => Double),
                   minValue: Double = 0.0,
                   maxValue: Double = 1.0,
                   cellSize: Int = 1000,
                   crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
-    val minX = world.originI
-    val minY = world.originJ
-    val width = world.sideI
-    val height = world.sideJ
+    val minX = boundingBox.minI
+    val minY = boundingBox.minJ
+    val width = boundingBox.sideI
+    val height = boundingBox.sideJ
     val maxX = minX + width
     val maxY = minY + height
     val rangeValues = maxValue - minValue
@@ -132,24 +131,23 @@ object worldMapper {
       val values = c map getValue
       val size = values.size
       def meanValue = values.sum / size
-      if (size > 0) {
+      val color = if (size > 0) {
         val value = clamp((meanValue  - minValue)/ rangeValues) * (colors.size - 1)
         val ind = value.toInt
         val lambda = value - ind
         val c0 = colors(ind)
         val color0 = Array(c0._1,c0._2,c0._3,255)
-        val color = if (ind == colors.size - 1) color0 else interpolate(lambda, colors(ind), colors(ind+1))
-        val vec = Array.fill(pixelSize * pixelSize)(color).flatten
-        raster.setPixels(ii, jj, pixelSize, pixelSize, vec)
+        if (ind == colors.size - 1) color0 else interpolate(lambda, colors(ind), colors(ind+1))
       } else {
-        val color = Array(0,0,0,0)
-        val vec = Array.fill(pixelSize * pixelSize)(color).flatten
-        raster.setPixels(ii, jj, pixelSize, pixelSize, vec)
+        Array(0.0,0.0,0.0,0.0)
       }
+      val vec = Array.fill(pixelSize * pixelSize)(color).flatten
+      raster.setPixels(ii, jj, pixelSize, pixelSize, vec)
     }
     val referencedEnvelope = new ReferencedEnvelope(minX * cellSize, maxX * cellSize, minY * cellSize, maxY * cellSize, crs)
     val factory = new GridCoverageFactory
     val coverage = factory.create("GridCoverage", bufferedImage, referencedEnvelope)
+    file.parent.createDirectories()
     format.getWriter(file.toJava).write(coverage, null)
   }
 }

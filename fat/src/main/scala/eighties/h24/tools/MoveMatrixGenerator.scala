@@ -17,8 +17,8 @@ object MoveMatrixGenerator extends App {
   val outputPath = File("results")
   outputPath.createDirectories()
 
-  val bb = WorldFeature.load(File("results/population.bin")).boundingBox
+  val bb = WorldFeature.load(File("results/population.bin")).originalBoundingBox
   
-  val newMatrix = flowsFromEGT(bb.sideI, bb.sideJ, path / "presence_semaine_GLeRoux.csv.lzma").get
+  val newMatrix = flowsFromEGT(bb, path / "presence_semaine_GLeRoux.csv.lzma").get
   MoveMatrix.save(newMatrix, outputPath / "matrix.bin")
 }

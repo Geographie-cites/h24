@@ -3,7 +3,8 @@ package eighties.h24.tools
 import better.files.File
 import com.vividsolutions.jts.geom.{Coordinate, GeometryFactory}
 import eighties.h24.dynamic.MoveMatrix
-import eighties.h24.generation.Flow
+import eighties.h24.generation.{Flow, WorldFeature}
+import eighties.h24.space.BoundingBox
 import eighties.h24.{generation, space}
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataUtilities, Transaction}
@@ -13,20 +14,20 @@ import org.geotools.referencing.CRS
 /**
   */
 object EGTDestination extends App {
-  def flowsFromEGT(aFile: File, res: File) = {
+  def flowsFromEGT(bb: BoundingBox, aFile: File, res: File) = {
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(l2eCRS, outCRS, true)
-    val x_laea_min = 3697000
-    val x_laea_max = 3846000
-    val y_laea_min = 2805000
-    val y_laea_max = 2937000
+//    val x_laea_min = 3697000
+//    val x_laea_max = 3846000
+//    val y_laea_min = 2805000
+//    val y_laea_max = 2937000
     //val row = (x_laea_max - x_laea_min) / 1000
     def location(coord: Coordinate): space.Location = {
       val laea_coord = JTS.transform(coord, null, transform)
       // replace by cell...
-      val dx = (laea_coord.x - x_laea_min)
-      val dy = (laea_coord.y - y_laea_min)
+      val dx = (laea_coord.x - bb.minI)
+      val dy = (laea_coord.y - bb.minJ)
       //      dx+dy*row
       space.cell(dx, dy)
     }
@@ -48,13 +49,13 @@ object EGTDestination extends App {
     val writerRes = dataStoreRes.getFeatureWriterAppend(typeNameRes, Transaction.AUTO_COMMIT)
 
     val path = File("../data/EGT 2010/presence semaine EGT")
-    val newMatrix = generation.flowsFromEGT(149, 132, path / "presence_semaine_GLeRoux.csv.lzma").get
+    val newMatrix = generation.flowsFromEGT(bb, path / "presence_semaine_GLeRoux.csv.lzma").get
 
     MoveMatrix.allMoves.getAll(newMatrix).toSeq.map {
       v=>
       val loc = v._1
         val valuesRes = Array[AnyRef](
-          geomfactory.createPoint(new Coordinate(x_laea_min + loc._1 * 1000 + 500.0, y_laea_min + loc._2 * 1000 + 500.0))
+          geomfactory.createPoint(new Coordinate(bb.minI + loc._1 * 1000 + 500.0, bb.minJ + loc._2 * 1000 + 500.0))
         )
         val simpleFeatureRes = writerRes.next
         simpleFeatureRes.setAttributes(valuesRes)
@@ -67,5 +68,6 @@ object EGTDestination extends App {
   val outputPath = File("results")
   outputPath.createDirectories()
   val outFileRes = outputPath / "TEST_DEST_IDW.shp"
-  flowsFromEGT(path / "presence_semaine_GLeRoux.csv.lzma",outFileRes)
+  def features = WorldFeature.load(File("results/population.bin"))
+  flowsFromEGT(features.originalBoundingBox, path / "presence_semaine_GLeRoux.csv.lzma",outFileRes)
 }
