@@ -676,10 +676,6 @@ object generation {
       }
     }.toMap
   }
-//    c.map { case (category, moves) =>
-//      val m = movesInNeighborhood(cellMatrix, category, neighbor(location))
-//      category -> interpolate(location, moves, m)
-//    }
 
   val timeSlices = Vector(
     MoveMatrix.TimeSlice.fromHours(0, 8),
@@ -718,16 +714,26 @@ object generation {
       val dy = (laea_coord.y - boundingBox.minJ)
       space.cell(dx, dy)
     }
-
     def interpolate(matrix: TimeSlices): TimeSlices = matrix.map {
       case (time, cellMatrix) => {
         def nei(l1: Location)(l2: Location) = space.distance(l1, l2) < 10
         (time, modifyCellMatrix(interpolateFlows(cellMatrix, nei, idw(2.0)))(cellMatrix))
       }
     }
-
+    def getMovesFromOppositeSex(c: Cell): Cell =
+      AggregatedSocialCategory.all.flatMap { cat =>
+        val moves = c.get(cat)
+        def noSex = c.find { case(c, v) => c.age == cat.age && c.education == cat.education}.map(_._2)
+        (moves orElse noSex) map (m=>cat->m)
+      }.toMap
+//      c.map { case (category, moves) =>
+//        def noSex = c.find { case(c, v) => c.age == category.age && c.education == category.education}.map(_._2)
+//        category -> moves orElse noSex
+//      }
     readFlowsFromEGT(aFile, location) map {
       _.foldLeft(noMove(slices, boundingBox.sideI, boundingBox.sideJ))(addFlowToMatrix)
+    } map {
+      cells modify getMovesFromOppositeSex
     } map(interpolate) map {
       cells modify normalizeFlows
     }
