@@ -85,6 +85,13 @@ object population {
     }
 
     def all = Vector(Junior, Senior, Veteran)
+
+    def toCode(age: AggregatedAge) =
+      age match {
+        case Junior => "1"
+        case Senior => "2"
+        case Veteran => "3"
+      }
   }
 
   sealed trait Sex
@@ -103,6 +110,12 @@ object population {
       code match {
         case 0 => Male
         case 1 => Female
+      }
+
+    def toCode(sex: Sex) =
+      sex match {
+        case Male => "1"
+        case Female => "2"
       }
   }
 
@@ -157,6 +170,13 @@ object population {
         case Education.SUP => High
       }
 
+    def toCode(education: AggregatedEducation) =
+      education match {
+        case Low => "1"
+        case Middle => "2"
+        case High => "3"
+      }
+
   }
 
 
@@ -196,6 +216,12 @@ object population {
         age <- AggregatedAge.all
         education <- AggregatedEducation.all
       } yield AggregatedSocialCategory(age, sex, education)
+
+    def toCode(aggregatedSocialCategory: AggregatedSocialCategory) =
+      Vector(
+        Sex.toCode(aggregatedSocialCategory.sex),
+        AggregatedAge.toCode(aggregatedSocialCategory.age),
+        AggregatedEducation.toCode(aggregatedSocialCategory.education))
   }
 
   case class AggregatedSocialCategory(

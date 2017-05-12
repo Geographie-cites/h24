@@ -26,7 +26,7 @@ import eighties.h24.population._
 import eighties.h24.space._
 import eighties.h24.opinion._
 import eighties.h24.observable._
-
+import org.jfree.data.time.Day
 
 import scala.util.Random
 
@@ -63,18 +63,52 @@ object Simulation extends App {
     def getValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
     worldMapper.mapColorRGB(world, bb, file, getValue)
   }
+
   def mapOpinion(world: World, bb: BoundingBox, file: File) = {
     def getValue(individual: Individual) = individual.healthCategory.opinion
     worldMapper.mapColorRGB(world, bb, file, getValue)
   }
+
+//  def healthByCategory(day: Int, slice: Int, world: World) = {
+//    val line =
+//      AggregatedSocialCategory.all.map { acs =>
+//        val indexed = Index.indexIndividuals(world)
+//        Index.allCells.getAll(indexed).map { cell =>
+//          if (cell.size == 0) 0
+//          else cell.count(i => Individual.behaviour.get(i) == Healthy)
+//        }.sum
+//      }
+//    println(s"""$day,$slice,${line.mkString(",")}""")
+//  }
+
+  def byCell(day: Int, slice: Int, world: World, file: File) = {
+    def cellInfo(cell: Vector[Individual]) =
+      if(cell.isEmpty) List.fill(3)("0.0")
+      else {
+        def cellSize = cell.size
+        def nbHealthy = cell.count(i => Individual.behaviour.get(i) == Healthy)
+        def avgOpinion = cell.map(Individual.opinion.get).sum / cell.size
+        List(cellSize.toString, nbHealthy.toString, avgOpinion.toString)
+      }
+
+    file.parent.createDirectories()
+
+    def indexed = Index.indexIndividuals(world)
+    zipWithIndices[Vector[Individual]](indexed.cells).flatten.foreach { case(c, (i, j)) =>
+      file << s"""$day,$slice,$i,$j,${cellInfo(c).mkString(",")}"""
+    }
+  }
+
+
 
 
   def simulateOneDay(world: space.World, bb: BoundingBox, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0): World = {
     lapses match {
       case Nil => world
       case (time, moveMatrix) :: t =>
-        mapHealth(world, bb, outputPath / "health" / s"${day}_${slice}.tiff")
-        mapOpinion(world, bb, outputPath / "opinion" / s"${day}_${slice}.tiff")
+        mapHealth(world, bb, outputPath / "map" / "health" / s"${day}_${slice}.tiff")
+        mapOpinion(world, bb, outputPath / "map" / "opinion" / s"${day}_${slice}.tiff")
+        byCell(day, slice, world, outputPath / "csv" / s"cells.csv")
         //println(s"$day $slice " + moran[Vector[Individual]](Index.indexIndividuals(world).cells, _.count(_.healthCategory.behaviour == Healthy).toDouble))
 
         def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)

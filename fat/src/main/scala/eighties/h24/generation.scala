@@ -73,6 +73,7 @@ object generation {
     import boopickle.Default._
 
     def save(features: WorldFeature, file: File)  = {
+      file.parent.createDirectories()
       val os = new FileOutputStream(file.toJava)
       try os.getChannel.write(Pickle.intoBytes(features))
       finally os.close()
@@ -278,11 +279,7 @@ object generation {
         }
       }.toVector.filter{case (d,v) => v>0}
 
-      if (relevantCellsArea.isEmpty) {
-        println("ID = " + id + " => " + relevantCells.size)
-        println(transformedIris.toString)
-        println(transformedIris.getEnvelopeInternal.toString)
-      }
+      if (relevantCellsArea.isEmpty) throw new RuntimeException("NoOOOOOOooooOOO cell intersecting the iris")
       val res = (0 until total.toInt).map{ _ =>
         val sample = ageSexVariate.compute(rnd)
         val ageIndex = (sample(0)*ageSexSizes(0)).toInt
