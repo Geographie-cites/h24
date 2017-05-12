@@ -1,0 +1,58 @@
+? Les observables de sortie
+
+
+Total
+% de consommation de fruits et légumes totale 
+% d’agents qui se sont mis à consommer de fruits et de légumes 
+% d’agents qui se sont mis à ne plus consommer de fruits et de légumes
+
+Moyenne de l’opinion
+Médiane de l’opinion
+Ecart type de l’opinion
+
+
+
+
+Par catégorie (18)
+% de consommation de fruits et légumes totale 
+% d’agents qui se sont mis à consommer de fruits et de légumes 
+% d’agents qui se sont mis à ne plus consommer de fruits et de légumes
+
+Moyenne de l’opinion
+Médiane de l’opinion
+Ecart type de l’opinion
+
+Variance des % de consommation de fruits et légumes entre les 18 categories
+Variance de la moyenne de l’opinion entre les 18 catégories
+
+
+
+
+Pour chacune des 6 catégories âge/sexe
+Rapport d’ordre :
+Rapport d’ordre (Oui – 1 /Non - 0) entre les % de consommation de fruits et légumes du groupe d’éducation 3 > groupe éducation 2 > groupe éducation 1
+Somme des rapports pour les 6 catégories âge/sexe (entre 0 et 6)
+
+Rapport d’ordre (Oui/Non) entre la moyenne d’opinion du groupe d’éducation 3 > groupe éducation 2 > 
+groupe éducation 1
+Somme des rapports pour les 6 catégories âge/sexe (entre 0 et 6)
+
+Rapport entre les extrêmes 
+Rapport entre la % de consommation de fruits et légumes du groupe d’éducation 3 et de la % de consommation de fruits et légumes du groupe éducation 1
+Moyenne des rapports entre les extrêmes pour les 6 catégories âge/sexe
+
+Rapport entre la moyenne d’opinion du groupe d’éducation 3 et de la moyenne d’opinion du groupe éducation 1
+Moyenne des rapports entre les extrêmes pour les 6 catégories âge/sexe
+
+
+
+
+Par cellule (carte)
+-% d’agents avec un comportement sain par cellule de résidence
+-Moyenne de l’opinion des agents par cellule de résidence
+-% d’agents qui sont devenus sains depuis l’initialisation par cellule de résidence
+-% d’agents qui sont devenus pas sains par cellule de résidence
+
+Cartes à utiliser pour mesurer la concentration spatiale (indice de Moran, entropie, xxx)
+-des % comportements alimentaires par cellule
+-des moyennes des opinions par cellule 
