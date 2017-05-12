@@ -2,6 +2,7 @@ package eighties.h24.tools
 
 import better.files.File
 import eighties.h24.generation
+import eighties.h24.generation.WorldFeature
 import eighties.h24.space._
 import eighties.h24.population._
 
@@ -17,8 +18,9 @@ object EGTStat extends App {
   outputPath.createDirectories()
 
   //val outFileRes = outputPath / "matrix.bin"
+  def features = WorldFeature.load(File("results/population.bin"))
 
-  val newMatrix = generation.flowsFromEGT(149, 132, path / "presence_semaine_GLeRoux.csv.lzma").get
+  val newMatrix = generation.flowsFromEGT(features.originalBoundingBox, path / "presence_semaine_GLeRoux.csv.lzma").get
 
   val allMovesValue = MoveMatrix.allMoves.getAll(newMatrix).toVector
   val allLocations = allMovesValue.unzip._1

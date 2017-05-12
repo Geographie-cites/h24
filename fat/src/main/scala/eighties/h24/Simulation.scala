@@ -54,21 +54,22 @@ object Simulation extends App {
   val interactionMap = generateInteractionMap(distributionConstraints)
 
   val world = generateWorld(worldFeature.individualFeatures, healthCategory, rng)
+  val bbox = worldFeature.originalBoundingBox
   val indexedWorld = Index.indexIndividuals(world, Individual.home.get)
 
   val timeSlices = MoveMatrix.load(outputPath / "matrix.bin")
 
-  def mapWorld(world: World, file: File) = {
+  def mapWorld(world: World, bb: BoundingBox, file: File) = {
     def getValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
     //worldMapper.mapGray(world, file, getValue, 1000, 10)
-    worldMapper.mapColorRGB(world, file, getValue)
+    worldMapper.mapColorRGB(world, bb, file, getValue)
   }
 
-  def simulateOneDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0): World = {
+  def simulateOneDay(world: space.World, bb: BoundingBox, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0): World = {
     lapses match {
       case Nil => world
       case (time, moveMatrix) :: t =>
-        mapWorld(world, outputPath / "map" / s"${day}_${slice}.tiff")
+        mapWorld(world, bb, outputPath / "map" / s"${day}_${slice}.tiff")
 
         def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)
 
@@ -84,12 +85,12 @@ object Simulation extends App {
           rng
         )
 
-        simulateOneDay(convicted, t, day, slice + 1)
+        simulateOneDay(convicted, bb, t, day, slice + 1)
     }
   }
 
   (1 to days).foldLeft(fixWorkPlace(world, timeSlices, rng)) {
-    (w, s) => simulateOneDay(w, timeSlices.toList, s)
+    (w, s) => simulateOneDay(w, bbox, timeSlices.toList, s)
   }
 
 }

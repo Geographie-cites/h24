@@ -3,6 +3,7 @@ package eighties.h24
 import java.awt.image.BufferedImage
 
 import better.files.File
+import eighties.h24.space.BoundingBox
 import org.geotools.coverage.grid.GridCoverageFactory
 import org.geotools.gce.geotiff.GeoTiffFormat
 import org.geotools.geometry.jts.ReferencedEnvelope
@@ -87,16 +88,17 @@ object worldMapper {
     format.getWriter(file.toJava).write(coverage, null)
   }
   def mapColorRGB(world: space.World,
+                  boundingBox: BoundingBox,
                   file: File,
                   getValue: (Individual => Double),
                   minValue: Double = 0.0,
                   maxValue: Double = 1.0,
                   cellSize: Int = 1000,
                   crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
-    val minX = world.originI
-    val minY = world.originJ
-    val width = world.sideI
-    val height = world.sideJ
+    val minX = boundingBox.minI
+    val minY = boundingBox.minJ
+    val width = boundingBox.sideI
+    val height = boundingBox.sideJ
     val maxX = minX + width
     val maxY = minY + height
     val rangeValues = maxValue - minValue

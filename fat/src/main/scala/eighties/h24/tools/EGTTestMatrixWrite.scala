@@ -5,7 +5,7 @@ import java.text.SimpleDateFormat
 import better.files.File
 import com.vividsolutions.jts.geom.{Coordinate, GeometryFactory}
 import eighties.h24.dynamic.MoveMatrix
-import eighties.h24.generation.Flow
+import eighties.h24.generation.{Flow, WorldFeature}
 import eighties.h24.{generation, space}
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataUtilities, Transaction}
@@ -23,7 +23,9 @@ object EGTTestMatrixWrite extends App {
 
   val outFileRes = outputPath / "matrix.bin"
 
-  generation.flowsFromEGT(149, 132, path / "presence_semaine_GLeRoux.csv.lzma").foreach {
+  def bb = WorldFeature.load(File("results/population.bin")).originalBoundingBox
+
+  generation.flowsFromEGT(bb, path / "presence_semaine_GLeRoux.csv.lzma").foreach {
     newMatrix => MoveMatrix.save(newMatrix, outFileRes)
   }
 }
