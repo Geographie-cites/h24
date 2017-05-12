@@ -52,6 +52,10 @@ object observable {
         oi ← -size to size
         oj ← -size to size
         if i != oi || j != oj
+        if i + oi >= 0
+        if j + oj >= 0
+        if i + oi < matrix.size
+        if j + oj < matrix(i + oi).size
       } yield matrix(i + oi)(j + oj)
 
     def localNeighbourhoodPairs =

@@ -68,6 +68,7 @@ object Simulation extends App {
       case Nil => world
       case (time, moveMatrix) :: t =>
         mapWorld(world, outputPath / "map" / s"${day}_${slice}.tiff")
+        //println(s"$day $slice " + moran[Vector[Individual]](Index.indexIndividuals(world).cells, _.count(_.healthCategory.behaviour == Healthy).toDouble))
 
         def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)
 
