@@ -713,7 +713,6 @@ object generation {
     val x_laea_max = 3846000
     val y_laea_min = 2805000
     val y_laea_max = 2937000
-    //val row = (x_laea_max - x_laea_min) / 1000
     def location(coord: Coordinate): space.Location = {
       val laea_coord = JTS.transform(coord, null, transform)
       // replace by cell...

@@ -60,7 +60,8 @@ object Simulation extends App {
 
   def mapWorld(world: World, file: File) = {
     def getValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
-    worldMapper.mapGray(world, file, getValue, 1000, 10)
+    //worldMapper.mapGray(world, file, getValue, 1000, 10)
+    worldMapper.mapColorRGB(world, file, getValue)
   }
 
   def simulateOneDay(world: space.World, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0): World = {

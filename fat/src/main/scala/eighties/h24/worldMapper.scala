@@ -43,6 +43,7 @@ object worldMapper {
     val referencedEnvelope = new ReferencedEnvelope(minX * cellSize, maxX * cellSize, minY * cellSize, maxY * cellSize, crs)
     val factory = new GridCoverageFactory
     val coverage = factory.create("GridCoverage", bufferedImage, referencedEnvelope)
+    file.parent.createDirectories()
     format.getWriter(file.toJava).write(coverage, null)
   }
   def mapGray(world: space.World, file: File,
@@ -150,6 +151,7 @@ object worldMapper {
     val referencedEnvelope = new ReferencedEnvelope(minX * cellSize, maxX * cellSize, minY * cellSize, maxY * cellSize, crs)
     val factory = new GridCoverageFactory
     val coverage = factory.create("GridCoverage", bufferedImage, referencedEnvelope)
+    file.parent.createDirectories()
     format.getWriter(file.toJava).write(coverage, null)
   }
 }
