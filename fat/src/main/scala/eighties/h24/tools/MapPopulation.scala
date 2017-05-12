@@ -10,14 +10,14 @@ import scala.util.Random
 
 object MapPopulation extends App {
   val rng = new Random(42)
-  def features = IndividualFeature.load(File("results/population.bin"))
+  def features = WorldFeature.load(File("results/population.bin"))
 
   val dataDirectory = File("../data")
   val distributionConstraints = dataDirectory / "initialisation_distribution_par_cat.csv"
 
   val healthCategory = generation.generateHealthCategory(distributionConstraints)
 
-  val world = generateWorld(features, healthCategory, rng)
+  val world = generateWorld(features.individualFeatures, healthCategory, rng)
   val start = System.currentTimeMillis()
 //  worldMapper.mapRGB(world, File("results") / "map.tiff")
   def getValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
