@@ -84,11 +84,13 @@ object worldMapper {
     val coverage = factory.create("GridCoverage", bufferedImage, referencedEnvelope)
     format.getWriter(file.toJava).write(coverage, null)
   }
-  def mapColorRGB(world: space.World, file: java.io.File,
+  def mapColorRGB(world: space.World,
+                  file: File,
                   getValue: (Individual => Double),
-                  minValue: Double = -0.5,
-                  maxValue: Double = 0.5,
-                  cellSize: Int = 1000, crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
+                  minValue: Double = 0.0,
+                  maxValue: Double = 1.0,
+                  cellSize: Int = 1000,
+                  crs: CoordinateReferenceSystem = CRS.decode("EPSG:3035")) = {
     val minX = world.originI
     val minY = world.originJ
     val width = world.sideI
@@ -109,14 +111,15 @@ object worldMapper {
       (0.0,127.0,255.0),//cyan-blue
       (0.0,0.0,255.0)//blue
     )
-    val bufferedImage = new BufferedImage(width*pixelSize, height*pixelSize, BufferedImage.TYPE_INT_RGB)
+    val bufferedImage = new BufferedImage(width*pixelSize, height*pixelSize, BufferedImage.TYPE_INT_ARGB)
     val raster = bufferedImage.getRaster
     val index = space.Index.indexIndividuals(world)
     def interpolate(lambda: Double, c1: (Double, Double, Double), c2: (Double, Double, Double)) = {
       Array(
         (1.0 - lambda) * c1._1 + lambda * c2._1,
         (1.0 - lambda) * c1._2 + lambda * c2._2,
-        (1.0 - lambda) * c1._3 + lambda * c2._3)
+        (1.0 - lambda) * c1._3 + lambda * c2._3,
+        255)
     }
     def clamp(v: Double) = math.min(math.max(v, 0.0),1.0)
     for {
@@ -133,8 +136,12 @@ object worldMapper {
         val ind = value.toInt
         val lambda = value - ind
         val c0 = colors(ind)
-        val color0 = Array(c0._1,c0._2,c0._3)
+        val color0 = Array(c0._1,c0._2,c0._3,255)
         val color = if (ind == colors.size - 1) color0 else interpolate(lambda, colors(ind), colors(ind+1))
+        val vec = Array.fill(pixelSize * pixelSize)(color).flatten
+        raster.setPixels(ii, jj, pixelSize, pixelSize, vec)
+      } else {
+        val color = Array(0,0,0,0)
         val vec = Array.fill(pixelSize * pixelSize)(color).flatten
         raster.setPixels(ii, jj, pixelSize, pixelSize, vec)
       }
@@ -142,6 +149,6 @@ object worldMapper {
     val referencedEnvelope = new ReferencedEnvelope(minX * cellSize, maxX * cellSize, minY * cellSize, maxY * cellSize, crs)
     val factory = new GridCoverageFactory
     val coverage = factory.create("GridCoverage", bufferedImage, referencedEnvelope)
-    format.getWriter(file).write(coverage, null)
+    format.getWriter(file.toJava).write(coverage, null)
   }
 }
