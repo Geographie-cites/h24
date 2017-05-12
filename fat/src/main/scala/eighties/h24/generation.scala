@@ -26,6 +26,7 @@ import better.files.{File, _}
 import boopickle.Default.{Pickle, Unpickle}
 import com.github.tototoshi.csv.{CSVFormat, CSVParser, CSVReader, DefaultCSVFormat, defaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
+import com.vividsolutions.jts.index.SpatialIndex
 import com.vividsolutions.jts.index.quadtree.Quadtree
 import com.vividsolutions.jts.index.strtree.STRtree
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
@@ -50,6 +51,8 @@ import org.opengis.referencing.operation.MathTransform
 import scalaz.Memo
 
 object generation {
+  type LCell = ((Int, Int), Cell)
+  type SpatialCellIndex = STRtree
 
   sealed class SchoolAge(val from: Int, val to: Option[Int])
 
@@ -662,14 +665,16 @@ object generation {
     } else moves
   }
 
-  def interpolateFlows(cellMatrix:CellMatrix, neighbor: Location => Location => Boolean,
+  def interpolateFlows(//cellMatrix:CellMatrix, neighbor: Location => Location => Boolean,
+                       index: SpatialCellIndex,
                        interpolate: (Location, Vector[(Location, Double)], Vector[(Location, Vector[(Location, Double)])]) => Vector[(Location, Double)])
                       (c: Cell, location: Location): Cell = {
     AggregatedSocialCategory.all.map {
       category => {
         val moves = c.get(category).getOrElse(Vector())
-        val m = movesInNeighborhood(cellMatrix, category, neighbor(location))
-        category -> interpolate(location, moves, m)
+//        val m = movesInNeighborhood(cellMatrix, category, neighbor(location))
+        val m = movesInNeighborhood(location, category, index)
+        category -> interpolate(location, moves, m.toVector)
       }
     }.toMap
   }
@@ -704,30 +709,44 @@ object generation {
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(l2eCRS, outCRS, true)
+    val geomFactory = new GeometryFactory
     def location(coord: Coordinate): space.Location = {
       val laea_coord = JTS.transform(coord, null, transform)
       // replace by cell...
-      val dx = (laea_coord.x - boundingBox.minI)
-      val dy = (laea_coord.y - boundingBox.minJ)
+      val dx = (laea_coord.x - boundingBox.minI * 1000)
+      val dy = (laea_coord.y - boundingBox.minJ * 1000)
       space.cell(dx, dy)
     }
-    def interpolate(matrix: TimeSlices): TimeSlices = matrix.map {
-      case (time, cellMatrix) => {
-        def nei(l1: Location)(l2: Location) = space.distance(l1, l2) < 10
-        (time, modifyCellMatrix(interpolateFlows(cellMatrix, nei, idw(2.0)))(cellMatrix))
+    def index(matrix: TimeSlices) = {
+      matrix.map{
+        case (t,cm) => {
+          var index = new STRtree()
+          getLocatedCellsFromCellMatrix(cm).foreach{lc=>
+            val p = geomFactory.createPoint(new Coordinate(lc._1._1, lc._1._2))
+            index.insert(p.getEnvelopeInternal, lc)
+          }
+          (t, cm, index)
+        }
+      }
+    }
+    def interpolate(index: Vector[(TimeSlice, CellMatrix, SpatialCellIndex)]): TimeSlices = index.map {
+      case (time, cellMatrix, ind) => {
+        //def nei(l1: Location)(l2: Location) = space.distance(l1, l2) < 10
+//        (time, modifyCellMatrix(interpolateFlows(cellMatrix, nei, idw(2.0)))(cellMatrix))
+        (time, modifyCellMatrix(interpolateFlows(ind, idw(2.0)))(cellMatrix))
       }
     }
     def getMovesFromOppositeSex(c: Cell): Cell =
       AggregatedSocialCategory.all.flatMap { cat =>
         val moves = c.get(cat)
-        def noSex = c.find { case(c, _) => c.age == cat.age && c.education == cat.education}.map(_._2)
-        (moves orElse noSex) map (m=> cat -> m)
+        def noSex = c.find { case (c, _) => c.age == cat.age && c.education == cat.education }.map(_._2)
+        (moves orElse noSex) map (m => cat -> m)
       }.toMap
     readFlowsFromEGT(aFile, location) map {
       _.foldLeft(noMove(slices, boundingBox.sideI, boundingBox.sideJ))(addFlowToMatrix)
     } map {
       cells modify getMovesFromOppositeSex
-    } map(interpolate) map {
+    } map(index) map(interpolate) map {
       cells modify normalizeFlows
     }
   }

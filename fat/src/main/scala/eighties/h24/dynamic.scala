@@ -20,6 +20,8 @@ package eighties.h24
 import java.io.{FileInputStream, FileOutputStream}
 
 import better.files._
+import com.vividsolutions.jts.geom.Envelope
+import com.vividsolutions.jts.index.strtree.STRtree
 import eighties.h24.dynamic.MoveMatrix.{CellMatrix, TimeSlice, TimeSlices}
 import eighties.h24.generation.{Interactions, workTimeSlice}
 import eighties.h24.population._
@@ -81,6 +83,12 @@ object dynamic {
         (c, j) <- line.zipWithIndex
       } yield (ts, (i, j), c)
 
+    def getLocatedCellsFromCellMatrix(matrix: CellMatrix) =
+      for {
+        (line, i) <- matrix.zipWithIndex
+        (c, j) <- line.zipWithIndex
+      } yield ((i, j), c)
+
     def modifyCellMatrix(f: (Cell, Location) => Cell)(matrix: CellMatrix): CellMatrix =
       matrix.zipWithIndex.map { case(line, i) => line.zipWithIndex.map { case(c, j) => f(c, (i, j)) } }
 
@@ -102,14 +110,21 @@ object dynamic {
         filterIndex[Cell, AggregatedSocialCategory, Vector[Move]](category) composeTraversal
         each[Vector[Move], Move]
 
-    def movesInNeighborhood(cellMatrix: CellMatrix, category: AggregatedSocialCategory, neighbor: Location => Boolean) =
+//    def movesInNeighborhood(cellMatrix: CellMatrix, category: AggregatedSocialCategory, neighbor: Location => Boolean) =
+//      for {
+//        (line, i) <- cellMatrix.zipWithIndex
+//        (cell, j) <- line.zipWithIndex
+//        loc = Location(i,j)
+//        if (neighbor(loc))
+//        moves <- cell.get(category).toSeq
+//      } yield (loc -> moves)
+
+    type LCell = ((Int, Int), Cell)
+    def movesInNeighborhood(location: Location, category: AggregatedSocialCategory, index: STRtree) =
       for {
-        (line, i) <- cellMatrix.zipWithIndex
-        (cell, j) <- line.zipWithIndex
-        loc = Location(i,j)
-        if (neighbor(loc))
-        moves <- cell.get(category).toSeq
-      } yield (loc -> moves)
+        (l,c) <- index.query(new Envelope(location._1 - 10, location._1 + 10, location._2 - 10, location._2 + 10)).toArray.toSeq.map(_.asInstanceOf[LCell])
+        moves <- c.get(category)
+      } yield (l -> moves)
 
     def location = first[Move, Location]
     def moveRatio = second[Move, Double]
