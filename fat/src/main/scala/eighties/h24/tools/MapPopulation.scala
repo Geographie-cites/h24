@@ -21,7 +21,8 @@ object MapPopulation extends App {
   val start = System.currentTimeMillis()
 //  worldMapper.mapRGB(world, File("results") / "map.tiff")
   def getValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
-  worldMapper.mapGray(world, File("results") / "map.tiff", getValue, 1000, 10)
+  //worldMapper.mapGray(world, File("results") / "map.tiff", getValue, 1000, 10)
+  worldMapper.mapColorRGB(world, File("results") / "color.tiff", getValue)
   val end = System.currentTimeMillis()
   println((end - start) + " ms")
 }
@@ -33,3 +34,9 @@ object MapPopulation extends App {
 // par rapport à l'état initial : % de personnes qui ont changé
 // par rapport à l'état initial : % de personnes qui sont devenus sains
 // par rapport à l'état initial : % de personnes qui sont devenus malsains
+
+// par cellule
+// propo agent sain
+// moyenne opinions
+// propo agent devenus sains depuis ini
+// propo agents devenus pas sains
