@@ -146,7 +146,7 @@ object dynamic {
   }
 
   def sampleDestinationInMoveMatrix(moves: MoveMatrix.CellMatrix, individual: Individual, random: Random) =
-    moveFlowDefaultOnOtherSex(moves, individual).map(m => multinomial(m)(random))
+    moveFlowDefaultOnOtherSex(moves, individual).flatMap { m => if(m.isEmpty) None else Some(multinomial(m)(random)) }
 
   def moveInMoveMatrix(world: World, moves: MoveMatrix.CellMatrix, timeSlice: TimeSlice, random: Random) = {
     def sampleMoveInMatrix(individual: Individual) =
@@ -283,7 +283,7 @@ object dynamic {
   def fixWorkPlace(world: World, timeSlices: TimeSlices, rng: Random) =
     World.allIndividuals.modify { individual =>
       val workTimeMoves = timeSlices.toMap.apply(workTimeSlice)
-      dynamic.sampleDestinationInMoveMatrix(individual, workTimeMoves, rng) match {
+      dynamic.sampleDestinationInMoveMatrix(workTimeMoves, individual, rng) match {
         case Some(d) => Individual.stableDestinations.modify(_ + (workTimeSlice -> d))(individual)
         case None => Individual.stableDestinations.modify(_ + (workTimeSlice -> individual.home))(individual)
       }
