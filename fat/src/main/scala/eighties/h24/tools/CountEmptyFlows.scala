@@ -13,11 +13,9 @@ object CountEmptyFlows extends App {
   val rng = new Random(42)
   val outputPath = File("results")
 
-  val features = IndividualFeature.load(outputPath / "population.bin")
+  val features = WorldFeature.load(outputPath / "population.bin")
 
-  val boundingBox = BoundingBox[IndividualFeature](features, _.location)
-
-  val indexedWorld = Index[IndividualFeature](features.iterator, IndividualFeature.location.get(_), boundingBox.sideI, boundingBox.sideJ)
+  val indexedWorld = Index[IndividualFeature](features.individualFeatures.iterator, IndividualFeature.location.get(_), features.boundingBox.sideI, features.boundingBox.sideJ)
 
   val moveTimeLapse = MoveMatrix.load(outputPath / "matrix.bin")
 

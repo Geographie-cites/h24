@@ -20,7 +20,7 @@ package eighties.h24.tools
 import better.files._
 import com.vividsolutions.jts.geom.{Coordinate, GeometryFactory}
 import eighties.h24.generation
-import eighties.h24.generation.IndividualFeature
+import eighties.h24.generation.{IndividualFeature, WorldFeature}
 import org.apache.commons.math3.random.JDKRandomGenerator
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataUtilities, Transaction}
@@ -51,9 +51,9 @@ object QGISPopulationGenerator extends App {
   def filterParis13 (v:String) = v.startsWith("75113")
   def filterAll (v:String) = true
   def filter (v:String) = filterParis13(v)
-  val res = IndividualFeature.load(File("results/population.bin"))
+  val res = WorldFeature.load(File("results/population.bin"))
   for {
-    (feature, i) <- res.zipWithIndex
+    (feature, i) <- res.individualFeatures.zipWithIndex
   } {
     import feature._
     val values = Array[AnyRef](

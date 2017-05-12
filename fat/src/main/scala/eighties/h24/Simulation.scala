@@ -44,7 +44,7 @@ object Simulation extends App {
 
   val outputPath = File("results")
 
-  def features = IndividualFeature.load(outputPath / "population.bin")
+  val worldFeature = WorldFeature.load(outputPath / "population.bin")
 
   val dataDirectory = File("../data/")
   val pathEGT = dataDirectory / "EGT 2010/presence semaine EGT"
@@ -53,7 +53,7 @@ object Simulation extends App {
   val healthCategory = generateHealthCategory(distributionConstraints)
   val interactionMap = generateInteractionMap(distributionConstraints)
 
-  val world = generateWorld(features, healthCategory, rng)
+  val world = generateWorld(worldFeature.individualFeatures, healthCategory, rng)
   val indexedWorld = Index.indexIndividuals(world, Individual.home.get)
 
   val timeSlices = MoveMatrix.load(outputPath / "matrix.bin")
