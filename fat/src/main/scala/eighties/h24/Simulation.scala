@@ -34,8 +34,7 @@ object Simulation extends App {
 
   val rng = new Random(42)
 
-  val days = 300
-  val gamaOpinion = 2
+  val days = 5
 
   val maxProbaToSwitch = 0.8
   val constraintsStrength = 0.05
@@ -99,8 +98,29 @@ object Simulation extends App {
     }
   }
 
+  def byCategory(day: Int, slice: Int, world: World, file: File) = {
+    def categoryInfo(category: Vector[Individual]) =
+      if(category.isEmpty) List.fill(3)("0.0")
+      else {
+        def categorySize = category.size
+        def nbHealthy = category.count(i => Individual.behaviour.get(i) == Healthy)
+        def avgOpinion = category.map(Individual.opinion.get).sum / categorySize
+        List(categorySize.toString, nbHealthy.toString, avgOpinion.toString)
+      }
 
+    AggregatedSocialCategory.all.foreach { cat =>
+      def individualOfCategory = world.individuals.filter(i => AggregatedSocialCategory(i.socialCategory) == cat)
+      file <<
+        s"""$day,$slice,${Sex.toCode(cat.sex)},${AggregatedAge.toCode(cat.age)},${AggregatedEducation.toCode(cat.education)},${categoryInfo(individualOfCategory).mkString(",")}"""
+    }
 
+  }
+
+  val cells = outputPath / "csv" / s"cells.csv"
+  cells < "day,slice,x,y,effective,healthy,avgOpinion\n"
+
+  val categories = outputPath / "csv" / s"categories.csv"
+  categories < "day,slice,sex,age,educ,effective,healthy,avgOpinion\n"
 
   def simulateOneDay(world: space.World, bb: BoundingBox, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0): World = {
     lapses match {
@@ -108,8 +128,8 @@ object Simulation extends App {
       case (time, moveMatrix) :: t =>
         mapHealth(world, bb, outputPath / "map" / "health" / s"${day}_${slice}.tiff")
         mapOpinion(world, bb, outputPath / "map" / "opinion" / s"${day}_${slice}.tiff")
-        byCell(day, slice, world, outputPath / "csv" / s"cells.csv")
-        //println(s"$day $slice " + moran[Vector[Individual]](Index.indexIndividuals(world).cells, _.count(_.healthCategory.behaviour == Healthy).toDouble))
+        byCell(day, slice, world, cells)
+        byCategory(day, slice, world, categories)
 
         def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)
 
