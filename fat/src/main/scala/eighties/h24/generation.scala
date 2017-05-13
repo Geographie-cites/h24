@@ -782,7 +782,7 @@ object generation {
 
   }
 
-  def generateHealthCategory(file: File): (SocialCategory, Random) => HealthCategory = {
+  def generateHealthCategory(file: File): (AggregatedSocialCategory, Random) => HealthCategory = {
     import HealthMatrix._
     val parser = new CSVParser(defaultCSVFormat)
 
@@ -808,15 +808,15 @@ object generation {
               opinionDistribution = cs.takeRight(5).map(_.toDouble).toVector)
       }.toMap
 
-    (category: SocialCategory, random: Random) => {
-      val line = stats(AggregatedSocialCategory(category))
+    (category: AggregatedSocialCategory, random: Random) => {
+      val line = stats(category)
       val constraints = ChangeConstraints(budget = random.nextDouble() < line.budget, habit = random.nextDouble() < line.habit, time = random.nextDouble() < line.time)
 
-      val distribution = stats(AggregatedSocialCategory(category)).opinionDistribution
+      val distribution = stats(category).opinionDistribution
       val opinion = new RasterVariate(distribution.toArray, Seq(distribution.size)).compute(random).head
 
       val behaviour =
-        random.nextDouble() < stats(AggregatedSocialCategory(category)).consomation1996 match {
+        random.nextDouble() < stats(category).consomation1996 match {
           case false => Unhealthy
           case true => Healthy
         }

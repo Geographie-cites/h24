@@ -26,7 +26,7 @@ object observable {
   def byEducation[T](b: scala.Vector[Double] => T)(world: World) =
       for {
         ed <- AggregatedEducation.all
-        level = world.individuals.filter(i => AggregatedEducation(Individual.education.get(i))  == ed)
+        level = world.individuals.filter(i => Individual.education.get(i)  == ed)
       } yield ed -> b(level.map(Individual.opinion.get))
 
   def resume(world: World) = {
@@ -41,7 +41,7 @@ object observable {
 
     Index.getLocatedCells(Index.indexIndividuals(world)).foreach {
       case (c, l) =>
-        def numbers = AggregatedSocialCategory.all.map { cat => c.count(i => AggregatedSocialCategory(i.socialCategory) == cat)}
+        def numbers = AggregatedSocialCategory.all.map { cat => c.count(i => i.socialCategory == cat)}
         output << s"""${l._1},${l._2},${numbers.mkString(",")}"""
     }
   }
