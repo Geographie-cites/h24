@@ -276,7 +276,7 @@ object dynamic {
       }(individual)
     }
 
-    def cells = Index.allCells[Individual].getAll(Index.indexIndividuals(world)).map {cell =>
+    def cells = Index.indexIndividuals(world).cells.view.flatten.map {cell =>
       val healthyRatio = if(!cell.isEmpty) Some(cell.count(_.healthCategory.behaviour == Healthy).toDouble / cell.size) else None
       val rewarded = cell.map(dietReward)
       val (interactingPeople, passivePeople) = peering(rewarded)
