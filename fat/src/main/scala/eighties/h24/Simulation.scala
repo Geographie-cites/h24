@@ -32,7 +32,8 @@ import scala.util.Random
 
 object Simulation extends App {
 
-  val rng = new Random(42)
+  val seed = 42
+  val rng = new Random(seed)
 
   val days = 5
 
@@ -41,9 +42,10 @@ object Simulation extends App {
   val inertiaCoefficient = 0.5
   val healthyDietReward = 0.4
 
-  val outputPath = File("results")
+  val result = File("results")
+  val outputPath = result / "random"
 
-  val worldFeature = WorldFeature.load(outputPath / "population.bin")
+  val worldFeature = WorldFeature.load(result / "population.bin")
 
   val dataDirectory = File("../data/")
   val pathEGT = dataDirectory / "EGT 2010/presence semaine EGT"
@@ -56,7 +58,7 @@ object Simulation extends App {
   val bbox = worldFeature.originalBoundingBox
   val indexedWorld = Index.indexIndividuals(world, Individual.home.get)
 
-  val timeSlices = MoveMatrix.load(outputPath / "matrix.bin")
+  val timeSlices = MoveMatrix.load(result / "matrix.bin")
 
   def mapHealth(world: World, bb: BoundingBox, file: File) = {
     def getValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
@@ -67,18 +69,6 @@ object Simulation extends App {
     def getValue(individual: Individual) = individual.healthCategory.opinion
     worldMapper.mapColorRGB(world, bb, file, getValue)
   }
-
-//  def healthByCategory(day: Int, slice: Int, world: World) = {
-//    val line =
-//      AggregatedSocialCategory.all.map { acs =>
-//        val indexed = Index.indexIndividuals(world)
-//        Index.allCells.getAll(indexed).map { cell =>
-//          if (cell.size == 0) 0
-//          else cell.count(i => Individual.behaviour.get(i) == Healthy)
-//        }.sum
-//      }
-//    println(s"""$day,$slice,${line.mkString(",")}""")
-//  }
 
   def byCell(day: Int, slice: Int, world: World, file: File) = {
     def cellInfo(cell: Vector[Individual]) =
@@ -113,26 +103,32 @@ object Simulation extends App {
       file <<
         s"""$day,$slice,${Sex.toCode(cat.sex)},${AggregatedAge.toCode(cat.age)},${AggregatedEducation.toCode(cat.education)},${categoryInfo(individualOfCategory).mkString(",")}"""
     }
-
   }
-  val csvPath = outputPath / "csv"
-  csvPath.createDirectories
-  val cells = csvPath / s"cells.csv"
+
+  val csvOutput = outputPath / "csv"
+  csvOutput.createDirectories()
+
+  val parameters = csvOutput / "parameters.csv"
+  parameters < "maxProbaToSwitch,constraintsStrength,inertiaCoefficient,healthyDietReward,seed\n"
+  parameters << s"$maxProbaToSwitch,$constraintsStrength,$inertiaCoefficient,$healthyDietReward,$seed"
+
+  val cells = csvOutput / s"cells.csv"
   cells < "day,slice,x,y,effective,healthy,avgOpinion\n"
 
-  val categories = csvPath / s"categories.csv"
+  val categories = csvOutput / s"categories.csv"
   categories < "day,slice,sex,age,educ,effective,healthy,avgOpinion\n"
 
   def simulateOneDay(world: space.World, bb: BoundingBox, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0): World = {
     lapses match {
       case Nil => world
       case (time, moveMatrix) :: t =>
-        mapHealth(world, bb, outputPath / "map" / "health" / s"${day}_${slice}.tiff")
-        mapOpinion(world, bb, outputPath / "map" / "opinion" / s"${day}_${slice}.tiff")
+        //mapHealth(world, bb, outputPath / "map" / "health" / s"${day}_${slice}.tiff")
+        //mapOpinion(world, bb, outputPath / "map" / "opinion" / s"${day}_${slice}.tiff")
         byCell(day, slice, world, cells)
         byCategory(day, slice, world, categories)
 
-        def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)
+        //def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)
+        def moved = dynamic.randomMove(world, 1.0, rng)
 
         //def convicted = dynamic.localConviction(gamaOpinion, moved, rng)
         def convicted = dynamic.interchangeConviction(
