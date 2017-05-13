@@ -665,17 +665,18 @@ object generation {
     } else moves
   }
 
-  def interpolateFlows(//cellMatrix:CellMatrix, neighbor: Location => Location => Boolean,
-                       index: SpatialCellIndex,
+  def interpolateFlows(index: SpatialCellIndex,
                        interpolate: (Location, Vector[(Location, Double)], Vector[(Location, Vector[(Location, Double)])]) => Vector[(Location, Double)])
                       (c: Cell, location: Location): Cell = {
+    val movesByCat = movesInNeighborhoodByCategory(location, index)
     AggregatedSocialCategory.all.map {
-      category => {
-        val moves = c.get(category).getOrElse(Vector())
-//        val m = movesInNeighborhood(cellMatrix, category, neighbor(location))
-        val m = movesInNeighborhood(location, category, index)
+      category =>
+        def moves = c.get(category).getOrElse(Vector())
+        def m = for {
+          (l, c) <- movesByCat
+          mm <- c.get(category)
+        } yield l -> mm
         category -> interpolate(location, moves, m.toVector)
-      }
     }.toMap
   }
 

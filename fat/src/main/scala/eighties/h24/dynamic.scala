@@ -23,7 +23,7 @@ import better.files._
 import com.vividsolutions.jts.geom.Envelope
 import com.vividsolutions.jts.index.strtree.STRtree
 import eighties.h24.dynamic.MoveMatrix.{CellMatrix, TimeSlice, TimeSlices}
-import eighties.h24.generation.{Interactions, workTimeSlice}
+import eighties.h24.generation.{Interactions, LCell, workTimeSlice}
 import eighties.h24.population._
 import eighties.h24.space._
 import monocle.Monocle._
@@ -119,12 +119,17 @@ object dynamic {
 //        moves <- cell.get(category).toSeq
 //      } yield (loc -> moves)
 
-    type LCell = ((Int, Int), Cell)
     def movesInNeighborhood(location: Location, category: AggregatedSocialCategory, index: STRtree) =
       for {
         (l,c) <- index.query(new Envelope(location._1 - 10, location._1 + 10, location._2 - 10, location._2 + 10)).toArray.toSeq.map(_.asInstanceOf[LCell])
         moves <- c.get(category)
       } yield (l -> moves)
+
+    def movesInNeighborhoodByCategory(location: Location, index: STRtree) =
+      for {
+        (l,c) <- index.query(new Envelope(location._1 - 10, location._1 + 10, location._2 - 10, location._2 + 10)).toArray.toSeq.map(_.asInstanceOf[LCell])
+      } yield (l -> c)
+    //category: AggregatedSocialCategory
 
     def location = first[Move, Location]
     def moveRatio = second[Move, Double]
