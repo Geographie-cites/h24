@@ -154,7 +154,7 @@ object dynamic {
   def moveFlowDefaultOnOtherSex(moves: MoveMatrix.CellMatrix, individual: Individual) = {
     val location = Individual.location.get(individual)
     val cellMoves = moves(location._1)(location._2)
-    val aggregatedCategory = AggregatedSocialCategory(Individual.socialCategory.get(individual))
+    val aggregatedCategory = Individual.socialCategory.get(individual)
     def myCategory = cellMoves.get(aggregatedCategory)
     def noSex = cellMoves.find { case(c, v) => c.age == aggregatedCategory.age && c.education == aggregatedCategory.education}.map(_._2)
     myCategory orElse noSex
@@ -209,9 +209,9 @@ object dynamic {
     def booleanToDouble(b: Boolean) = if(b) 1.0 else 0.0
 
     def interactionProbability(individual: Individual) = timeOfDay match {
-      case 0 => interactions(AggregatedSocialCategory(individual.socialCategory)).breakfastInteraction
-      case 1 => interactions(AggregatedSocialCategory(individual.socialCategory)).lunchInteraction
-      case 2 => interactions(AggregatedSocialCategory(individual.socialCategory)).dinnerInteraction
+      case 0 => interactions(individual.socialCategory).breakfastInteraction
+      case 1 => interactions(individual.socialCategory).lunchInteraction
+      case 2 => interactions(individual.socialCategory).dinnerInteraction
     }
 
     def peering(cell: Vector[Individual]): (Vector[(Individual, Individual)], Vector[Individual]) = {

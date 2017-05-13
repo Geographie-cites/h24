@@ -138,12 +138,12 @@ object space {
 
   def generateWorld(
     features: Vector[IndividualFeature],
-    healthCategory: (SocialCategory, Random) => HealthCategory,
+    healthCategory: (AggregatedSocialCategory, Random) => HealthCategory,
     rng: Random) = {
 
-    def included(individual: Individual) = Individual.education.get(individual) != Education.Schol && Individual.age.get(individual) != Age.From0To14
+    def included(feature: IndividualFeature) = Education(feature.education) != Education.Schol && Age(feature.ageCategory) != Age.From0To14
 
-    def individuals = features.map(f => Individual(f, healthCategory, rng)).filter(included)
+    def individuals = features.filter(included).map(f => Individual(f, healthCategory, rng))
 
     /*def equipements =
       for {

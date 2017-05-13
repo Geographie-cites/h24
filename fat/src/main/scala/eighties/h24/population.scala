@@ -224,7 +224,7 @@ object population {
         AggregatedEducation.toCode(aggregatedSocialCategory.education))
   }
 
-  case class AggregatedSocialCategory(
+  @Lenses case class AggregatedSocialCategory(
     age: AggregatedAge,
     sex: Sex,
     education: AggregatedEducation)
@@ -250,10 +250,10 @@ object population {
   object Individual {
     def apply(
       feature: IndividualFeature,
-      healthCategory: (SocialCategory, Random) => HealthCategory,
+      healthCategory: (AggregatedSocialCategory, Random) => HealthCategory,
       random: Random,
       stableDestinations: Map[TimeSlice, Location] = Map.empty): Individual = {
-      val socialCategory = SocialCategory(feature)
+      val socialCategory = AggregatedSocialCategory(feature)
 
       Individual(
         socialCategory = socialCategory,
@@ -266,15 +266,15 @@ object population {
 
     def behaviour = Individual.healthCategory composeLens HealthCategory.behaviour
     def opinion = Individual.healthCategory composeLens HealthCategory.opinion
-    def education = Individual.socialCategory composeLens SocialCategory.education
-    def age = Individual.socialCategory composeLens SocialCategory.age
-    def sex = Individual.socialCategory composeLens SocialCategory.sex
+    def education = Individual.socialCategory composeLens AggregatedSocialCategory.education
+    def age = Individual.socialCategory composeLens AggregatedSocialCategory.age
+    def sex = Individual.socialCategory composeLens AggregatedSocialCategory.sex
     def i = Individual.location composeLens first
     def j = Individual.location composeLens second
   }
 
   @Lenses case class Individual(
-    socialCategory: SocialCategory,
+    socialCategory: AggregatedSocialCategory,
     healthCategory: HealthCategory,
     home: Location,
     location: Location,
