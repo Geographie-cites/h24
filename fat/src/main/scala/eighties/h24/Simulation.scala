@@ -115,11 +115,12 @@ object Simulation extends App {
     }
 
   }
-
-  val cells = outputPath / "csv" / s"cells.csv"
+  val csvPath = outputPath / "csv"
+  csvPath.createDirectories
+  val cells = csvPath / s"cells.csv"
   cells < "day,slice,x,y,effective,healthy,avgOpinion\n"
 
-  val categories = outputPath / "csv" / s"categories.csv"
+  val categories = csvPath / s"categories.csv"
   categories < "day,slice,sex,age,educ,effective,healthy,avgOpinion\n"
 
   def simulateOneDay(world: space.World, bb: BoundingBox, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0): World = {
