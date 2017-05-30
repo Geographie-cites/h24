@@ -24,9 +24,9 @@ end
 
 to init-csv
 
-  let file_v "voisins.csv"
-  let file_a "apparie.csv"
-  let file_o "opinion.csv"
+  let file_v "./outputs/voisins.csv"
+  let file_a "./outputs/apparie.csv"
+  let file_o "./outputs/opinion.csv"
 
   if is-string? file_o
   [
@@ -67,7 +67,7 @@ end
 
 
 to insert-csv
-  let file_o "opinion.csv"
+  let file_o "./outputs/opinion.csv"
   file-open file_o
 
   ask parisians[
@@ -76,7 +76,7 @@ to insert-csv
 
   file-close
 
-  let file_a "apparie.csv"
+  let file_a "./outputs/apparie.csv"
   file-open file_a
 
   ask parisians[
@@ -85,7 +85,7 @@ to insert-csv
 
   file-close
 
-  let file_v "voisins.csv"
+  let file_v "./outputs/voisins.csv"
   file-open file_v
 
   ask parisians[

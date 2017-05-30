@@ -1,0 +1,167 @@
+---
+title: "Exploring Meat toy model"
+output: html_notebook
+---
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+library(readr)
+library(reshape2)
+library(tidyr)
+library(magrittr)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(magrittr)
+```
+
+ 
+# NETLOGO TOY MODEL
+
+__TODO__
+
+- changer le script scala pour passer des parametres directement depuis le notebook !
+- prendre en sorte le fait qu'on a 3 données par pas de temps dans le graphique 
+
+## Producing csv outputs
+
+You could produce csv outputs of Netlogo MeatModel using Netlogo interface by opening the `./toy/PicSaintLoup/MeatModel-V5` model, running some experiments, and when you're donne, clic on the button save-csv. 
+
+If you have `sbt` build engine installed on your computer you could also run this headless script by running this chunk directly from R/RStudio. 
+
+`./toy/PicSaintLoup/MeatModel-V5` folder. 
+```{bash}
+cd ../toy/PicSaintLoup/
+sbt run
+```
+
+## Producing explorations
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+apparie <- read_csv("../toy/PicSaintLoup/models/outputs/apparie.csv",col_names = FALSE) 
+voisins <- read_csv("../toy/PicSaintLoup/models/outputs/voisins.csv",col_names = FALSE) 
+opinion <- read_csv("../toy/PicSaintLoup/models/outputs/opinion.csv",col_names = FALSE) 
+
+apparie$X5 <-  gsub("\\[|\\]", "", apparie$X5)
+voisins$X5 <- gsub("\\[|\\]", "", voisins$X5)
+opinion$X5 <- gsub("\\[|\\]", "", opinion$X5)
+
+l <- strsplit(first(apparie$X5)," " )
+sizeSeq <- seq(lengths(l))
+
+dfApparie <- with(apparie, cbind(X1,X2,X3,X4, colsplit(apparie$X5, " ", names = sizeSeq) ))
+
+dfVoisins <- with(voisins, cbind(X1,X2,X3,X4, colsplit(voisins$X5, " ", names = sizeSeq) ))
+
+dfOpinion <- with(opinion, cbind(X1,X2,X3,X4, colsplit(opinion$X5, " ", names = sizeSeq) ))
+
+names(dfApparie)[1] <- paste("who")
+names(dfApparie)[2] <- paste("age")
+names(dfApparie)[3] <- paste("sex")
+names(dfApparie)[4] <- paste("edu")
+
+names(dfVoisins)[1] <- paste("who")
+names(dfVoisins)[2] <- paste("age")
+names(dfVoisins)[3] <- paste("sex")
+names(dfVoisins)[4] <- paste("edu")
+
+names(dfOpinion)[1] <- paste("who")
+names(dfOpinion)[2] <- paste("age")
+names(dfOpinion)[3] <- paste("sex")
+names(dfOpinion)[4] <- paste("edu")
+
+gDfApparie <- gather(dfApparie, time, nb, c(5:ncol(dfApparie)))
+gDfOpinion <- gather(dfOpinion, time, ValueOpinion, c(5:ncol(dfOpinion)))
+gDfVoisins <- gather(dfVoisins, time, nbVoisins, c(5:ncol(dfVoisins))) 
+
+gdfFinal <- join(gDfApparie, gDfOpinion, by=c("who","age","sex","edu","time"), type="inner")
+gdfFinal <- join(gdfFinal, gDfVoisins, by=c("who","age","sex","edu","time"), type="inner")
+gdfFinal$time <- as.numeric(gdfFinal$time)
+  
+#gdFinalSubset <- gdfFinal[gdfFinal$time < 20.0,]
+
+gdFinalByAge_valueOpinion <- gdfFinal %>% group_by(age,time) %>%
+  summarise_each(funs(mean), ValueOpinion)
+
+gdFinalBySex_valueOpinion <- gdfFinal %>% group_by(sex,time) %>%
+  summarise_each(funs(mean), ValueOpinion)
+
+gdFinalByEdu_valueOpinion <- gdfFinal %>% group_by(edu,time) %>%
+  summarise_each(funs(mean), ValueOpinion)
+
+
+gdFinalByAge_nbVoisin <- gdfFinal %>% group_by(age,time) %>%
+  summarise_each(funs(mean), nbVoisins)
+
+gdFinalBySex_nbVoisin <- gdfFinal %>% group_by(sex,time) %>%
+  summarise_each(funs(mean), nbVoisins)
+
+gdFinalByEdu_nbVoisin <- gdfFinal %>% group_by(edu,time) %>%
+  summarise_each(funs(mean), nbVoisins)
+
+
+gdFinalByAge_apparie <- gdfFinal %>% group_by(age,time) %>%
+  summarise_each(funs(mean), nb)
+
+gdFinalBySex_apparie <- gdfFinal %>% group_by(sex,time) %>%
+  summarise_each(funs(mean), nb)
+
+gdFinalByEdu_apparie <- gdfFinal %>% group_by(edu,time) %>%
+  summarise_each(funs(mean), nb)
+```
+
+### TO LONG DATA AGE
+
+```{r, warning=FALSE}
+gdfFinalAge <- merge(gdFinalByAge_valueOpinion, gdFinalByAge_nbVoisin, by=c("age","time"), type="inner")
+gdfFinalAge <- merge(gdfFinalAge, gdFinalByAge_apparie, by=c("age","time"), type="inner")
+
+gDfToLongAge <- gather(gdfFinalAge, facteur, value , by=c(ValueOpinion,nb,nbVoisins))
+
+p <- ggplot(data=gDfToLongAge, aes(x=time, y=value, group=age, fill=age, colour=as.character(age)))
+p <- p + geom_line(size=1) + facet_grid(facteur ~ .) #show.legend = FALSE
+p
+```
+
+### TO LONG DATA EDU
+
+```{r, warning=FALSE}
+gdfFinalEdu <- merge(gdFinalByEdu_valueOpinion, gdFinalByEdu_nbVoisin, by=c("edu", "time"), type="inner")
+gdfFinalEdu <- merge(gdfFinalEdu, gdFinalByEdu_apparie, by=c("edu","time"), type="inner")
+
+gDfToLongEdu <- gather(gdfFinalEdu, facteur, value , by=c(ValueOpinion,nb,nbVoisins))
+
+p <- ggplot(data=gDfToLongEdu, aes(x=time, y=value, group=edu, fill=edu, colour=as.character(edu)))
+p <- p + geom_line(size=1) + facet_grid(facteur ~ .) #show.legend = FALSE
+p
+```
+
+### TO LONG DATA SEX
+
+```{r, warning=FALSE}
+gdfFinalSex <- merge(gdFinalBySex_valueOpinion, gdFinalBySex_nbVoisin, by=c("sex", "time"), type="inner")
+gdfFinalSex <- merge(gdfFinalSex, gdFinalBySex_apparie, by=c("sex","time"), type="inner")
+
+gDfToLongSex <- gather(gdfFinalSex, facteur, value , by=c(ValueOpinion,nb,nbVoisins))
+
+p <- ggplot(data=gDfToLongSex, aes(x=time, y=value, group=sex, fill=sex, colour=as.character(sex)))
+p <- p + geom_line(size=1) + facet_grid(facteur ~ .) #show.legend = FALSE
+p
+```
+
+# FAT MODEL 
+
+## Producing outputs
+
+# Producing explorations
+
+```{r, fig.width=10}
+sortie <- read_csv("categories.csv",col_names = TRUE, col_types= "nnnnnnnn")
+sortie$propHealthy <- sortie$healthy / sortie$effective 
+  
+sortieLong <- gather(sortie, facteur, valeur, by=c(propHealthy,avgOpinion) ) 
+
+sortieLong <- mutate(sortieLong, "ds" = paste(sortieLong$day, sortieLong$slice))
+
+p <- ggplot(data=sortieLong, aes(x=ds, y=valeur, group=educ, fill=educ, colour=as.character(educ)))
+p <- p + geom_line(size=0.5) + facet_grid(facteur ~ sex ~ age) #show.legend = FALSE
+p
+```
