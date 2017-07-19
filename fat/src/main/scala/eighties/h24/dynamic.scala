@@ -236,11 +236,11 @@ object dynamic {
       previousOpinion * inertiaCoefficient + (1 - inertiaCoefficient) * opinion
 
 
-    def updateInteractingOpinion(ego: Individual, partner: Individual, healthRatio: Option[Double]): Individual = {
+     def updateInteractingOpinion(ego: Individual, partner: Individual, healthRatio: Option[Double]): Individual = {
       val influencePartner = (booleanToDouble(partner.healthCategory.behaviour == Healthy) + partner.healthCategory.opinion) / 2
       Individual.opinion.modify { o =>
         healthRatio match {
-          case Some(hr) => opinionInertia(o, 0.5 * o + 0.25 * influencePartner + 0.25 * hr)
+          case Some(hr) => opinionInertia(o, 0.5 * influencePartner + 0.5 * hr)
           case None => o // This wont happend
         }
       }(ego)
@@ -248,7 +248,7 @@ object dynamic {
 
     def updatePassiveOpinion(individual: Individual, healthRatio: Option[Double]): Individual = Individual.opinion.modify { o =>
       healthRatio match {
-        case Some(hr) => opinionInertia(o, 0.75 * o + 0.25 * hr)
+        case Some(hr) => opinionInertia(o, 0.5 * o + 0.5 * hr)
         case None => o
       }
     }(individual)
