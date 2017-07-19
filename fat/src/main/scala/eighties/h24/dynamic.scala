@@ -227,7 +227,7 @@ object dynamic {
     }
 
     def dietReward(individual: Individual) = {
-      def getReward(o: Opinion): Opinion =  math.min(1.0, (1 + healthyDietReward) * o)
+      def getReward(o: Opinion): Opinion =  math.max(1.0, (1 + healthyDietReward) * o)
       if(individual.healthCategory.behaviour == Healthy) (Individual.healthCategory composeLens HealthCategory.opinion modify getReward) (individual)
       else individual
     }
