@@ -18,17 +18,17 @@
 package eighties.h24
 
 import java.io.{FileInputStream, FileOutputStream}
+import java.util.Calendar
 
 import better.files._
 import com.vividsolutions.jts.geom.Envelope
 import com.vividsolutions.jts.index.strtree.STRtree
-import eighties.h24.dynamic.MoveMatrix.{CellMatrix, TimeSlice, TimeSlices}
+import eighties.h24.dynamic.MoveMatrix.{TimeSlice, TimeSlices}
 import eighties.h24.generation.{Interactions, LCell, workTimeSlice}
 import eighties.h24.population._
 import eighties.h24.space._
 import monocle.Monocle._
-import org.joda.time.{DateTime, Instant, Interval}
-import squants._
+import org.joda.time.{Instant, Interval}
 
 import scala.util.Random
 
@@ -180,6 +180,9 @@ object dynamic {
     }
     (World.allIndividuals modify sampleMoveInMatrix)(world)
   }
+  def noMoveInMoveMatrix(world: World, moves: MoveMatrix.CellMatrix, timeSlice: TimeSlice, random: Random) = {
+    world
+  }
 
   def localConviction(gama: Double, world: World, random: Random) = {
     def cs = Index.allCells[Individual].getAll(Index.indexIndividuals(world))
@@ -299,9 +302,11 @@ object dynamic {
     World.individuals.set(cells.flatten.toVector)(world)
   }
 
-
+  var i = 0
   def fixWorkPlace(world: World, timeSlices: TimeSlices, rng: Random) =
     World.allIndividuals.modify { individual =>
+      if (i % 1000000 == 0) println(Calendar.getInstance.getTime + " ind " + i)
+      i = i + 1
       val workTimeMoves = timeSlices.toMap.apply(workTimeSlice)
       dynamic.sampleDestinationInMoveMatrix(workTimeMoves, individual, rng) match {
         case Some(d) => Individual.stableDestinations.modify(_ + (workTimeSlice -> d))(individual)

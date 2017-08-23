@@ -26,6 +26,22 @@ import scalaz.Applicative
   */
 
 package object h24 {
+  class Multinomial[T](values: List[(T, Double)]) {
+    @tailrec private def multinomial0[T](values: List[(T, Double)])(draw: Double): T = {
+      values match {
+        case Nil ⇒ throw new RuntimeException("List should never be empty.")
+        case (bs, _) :: Nil ⇒ bs
+        case (bs, weight) :: tail ⇒
+          if (draw <= weight) bs
+          else multinomial0(tail)(draw - weight)
+      }
+    }
+    val max =  values.map(_._2).sum
+    def draw(implicit random: Random): T = {
+      val drawn = random.nextDouble() * max
+      multinomial0(values)(drawn)
+    }
+  }
 
   def multinomial[T](values: Seq[(T, Double)])(implicit random: Random): T = {
     @tailrec def multinomial0[T](values: List[(T, Double)])(draw: Double): T = {
@@ -63,5 +79,7 @@ package object h24 {
 
   def zipWithIndices[T](matrix: Vector[Vector[T]]): Vector[Vector[(T, (Int, Int))]] =
     matrix.zipWithIndex.map { case(line, i) => line.zipWithIndex.map { case(c, j) => (c, (i, j)) } }
+
+  def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
 
 }

@@ -18,21 +18,18 @@
 package eighties.h24
 
 
-import java.util.zip.{GZIPInputStream, GZIPOutputStream}
-import java.io.{BufferedInputStream, FileInputStream, FileOutputStream, OutputStreamWriter}
+import java.io.{BufferedInputStream, FileInputStream, FileOutputStream}
 import java.text.SimpleDateFormat
+import java.util.Calendar
 
 import better.files.{File, _}
-import boopickle.Default.{Pickle, Unpickle}
 import com.github.tototoshi.csv.{CSVFormat, CSVParser, CSVReader, DefaultCSVFormat, defaultCSVFormat}
 import com.vividsolutions.jts.geom.{Coordinate, _}
-import com.vividsolutions.jts.index.SpatialIndex
-import com.vividsolutions.jts.index.quadtree.Quadtree
 import com.vividsolutions.jts.index.strtree.STRtree
 import com.vividsolutions.jts.triangulate.ConformingDelaunayTriangulationBuilder
 import eighties.h24.dynamic.MoveMatrix
-import eighties.h24.dynamic.MoveMatrix.{Cell, CellMatrix, Move, TimeSlice, TimeSlices}
-import eighties.h24.space.{BoundingBox, Index, Location}
+import eighties.h24.dynamic.MoveMatrix.{Cell, TimeSlice}
+import eighties.h24.space.{BoundingBox, Location}
 import eighties.h24.population.Sex.{Female, Male}
 import eighties.h24.population.{SocialCategory, _}
 import monocle.macros.Lenses
@@ -242,14 +239,22 @@ object generation {
   }
 
   def generatePopulation(
-    rnd: Random,
-    irises: Seq[AreaID],
-    geometry: AreaID => Option[MultiPolygon],
-    ageSex: Map[AreaID, Vector[Double]],
-    schoolAge: Map[AreaID, Vector[Double]],
-    educationSex: Map[AreaID, Vector[Vector[Double]]],
-    cells: STRtree) = {
-
+                          rnd: Random,
+                          irises: Seq[AreaID],
+                          geometry: AreaID => Option[MultiPolygon],
+                          ageSex: Map[AreaID, Vector[Double]],
+                          schoolAge: Map[AreaID, Vector[Double]],
+                          educationSex: Map[AreaID, Vector[Vector[Double]]],
+                          cells: STRtree) = {
+    /*
+    //test
+    val env = cells.getRoot.getBounds
+    val allCells = cells.query(env.asInstanceOf[Envelope]).toArray.toSeq.map(_.asInstanceOf[KMCell])
+    val totalPopulation = allCells.map(_._2).sum
+    println("pop from cells  " + totalPopulation)
+    val totalPopIris = irises.map { id => ageSex.get(id).get.sum }.sum
+    println("pop from irises " + totalPopIris)
+    */
     val inCRS = CRS.decode("EPSG:2154")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(inCRS, outCRS, true)
@@ -271,7 +276,6 @@ object generation {
         new RasterVariate(educationSexV(0).toArray, educationSexSizes),
         new RasterVariate(educationSexV(1).toArray, educationSexSizes))
 
-      def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
       val transformedIris = JTS.transform(geometry(id).get, transform)
 
       val relevantCells = cells.query(transformedIris.getEnvelopeInternal).toArray.toSeq.map(_.asInstanceOf[KMCell]).filter(_._1.intersects(transformedIris))
@@ -280,7 +284,7 @@ object generation {
           val g = cell._1.intersection(transformedIris)
           ((cell._3, cell._4), cell._2 * g.getArea / cell._1.getArea)
         }
-      }.toVector.filter{case (d,v) => v>0}
+      }.toVector.filter{case (_,v) => v>0}
 
       if (relevantCellsArea.isEmpty) throw new RuntimeException("NoOOOOOOooooOOO cell intersecting the iris")
       val res = (0 until total.toInt).map{ _ =>
@@ -317,29 +321,96 @@ object generation {
           education = education,
           location = cell
         )
-      }.filter(f=>f.ageCategory>0)//remove people with age in 0-14
+      }.filter(_.ageCategory>0)//remove people with age in 0-14
       res
     }
   }
 
-  def generateFeatures(inputDirectory: java.io.File, filter: String => Boolean, rng: Random) = {
+  def generateFeatures(
+                        inputDirectory: java.io.File,
+                        filter: String => Boolean,
+                        rng: Random,
+                        pop: (Random, Seq[AreaID], AreaID => Option[MultiPolygon],Map[AreaID, Vector[Double]],Map[AreaID, Vector[Double]], Map[AreaID, Vector[Vector[Double]]], STRtree) => Seq[IndexedSeq[generation.IndividualFeature]]
+                      ) = {
     val contourIRISFile = inputDirectory.toScala / "CONTOURS-IRIS_FE_IDF.shp"
     val baseICEvolStructPopFileName = inputDirectory.toScala / "base-ic-evol-struct-pop-2012-IDF.csv.lzma"
     val baseICDiplomesFormationPopFileName = inputDirectory.toScala / "base-ic-diplomes-formation-2012-IDF.csv.lzma"
-    val workFlowsFile = inputDirectory.toScala /"base-texte-flux-mobilite-domicile-lieu-travail-2012.txt.lzma"
-    val studyFlowsFile = inputDirectory.toScala /"base-texte-flux-mobilite-domicile-lieu-etude-2012.txt.lzma"
+    //val workFlowsFile = inputDirectory.toScala /"base-texte-flux-mobilite-domicile-lieu-travail-2012.txt.lzma"
+    //val studyFlowsFile = inputDirectory.toScala /"base-texte-flux-mobilite-domicile-lieu-etude-2012.txt.lzma"
     val cellFile = inputDirectory.toScala /"R_rfl09_LAEA1000_IDF.shp"
-
     for {
       (irises, geom) <- readGeometry(contourIRISFile, filter)
       ageSex <- readAgeSex(baseICEvolStructPopFileName)
       schoolAge <- readAgeSchool(baseICDiplomesFormationPopFileName)
       educationSex <- readEducationSex(baseICDiplomesFormationPopFileName)
       cells <- readCells(cellFile)
-    } yield generatePopulation(rng, irises, geom, ageSex, schoolAge, educationSex, cells).toIterator.flatten
+    } yield pop(rng, irises, geom, ageSex, schoolAge, educationSex, cells).toIterator.flatten
   }
 
+  def generatePopulation2(
+                          rnd: Random,
+                          irises: Seq[AreaID],
+                          geometry: AreaID => Option[MultiPolygon],
+                          ageSex: Map[AreaID, Vector[Double]],
+                          schoolAge: Map[AreaID, Vector[Double]],
+                          educationSex: Map[AreaID, Vector[Vector[Double]]],
+                          cells: STRtree) = {
+    val env = cells.getRoot.getBounds
+    val allCells = cells.query(env.asInstanceOf[Envelope]).toArray.toSeq.map(_.asInstanceOf[KMCell])
+    val allCellsArea = allCells.map{cell => {((cell._3, cell._4), cell._2)}}.toVector.filter{case (_,v) => v>0}.map{case (l,v) => (l,1.0)}.toList
+    val mn = new Multinomial(allCellsArea)
+    var i = 0
+    irises.map { id =>
+      val ageSexV = ageSex.get(id).get
+      val schoolAgeV = schoolAge.get(id).get
+      val educationSexV = educationSex.get(id).get
+      val total = ageSexV.sum
+      val ageSexSizes = Seq(6,2)
+      val ageSexVariate = new RasterVariate(ageSexV.toArray, ageSexSizes)
+      val educationSexSizes = Seq(7)
+      val educationSexVariates = ArrayBuffer(
+        new RasterVariate(educationSexV(0).toArray, educationSexSizes),
+        new RasterVariate(educationSexV(1).toArray, educationSexSizes))
 
+      val res = (0 until total.toInt).map{ _ =>
+        if (i % 1000000 == 0) println(Calendar.getInstance.getTime + " ind " + i)
+        i = i + 1
+
+        val sample = ageSexVariate.compute(rnd)
+        val ageIndex = (sample(0)*ageSexSizes(0)).toInt
+        val ageInterval = Age.all(ageIndex)
+        val residual = sample(0)*ageSexSizes(0) - ageIndex
+        val age = ageInterval.to.map(max => rescale(ageInterval.from, max, residual))
+        val sex = (sample(1)*ageSexSizes(1)).toInt
+
+        var tempIndex = -1
+        var tempP = -1.0
+        val schooled = age match {
+          case Some(a) =>
+            val schoolAgeIndex = SchoolAge.index(a)
+            tempIndex = schoolAgeIndex
+            if (schoolAgeIndex == 0) false else {
+              tempP = schoolAgeV(schoolAgeIndex - 1)
+              rnd.nextDouble() < schoolAgeV(schoolAgeIndex - 1)
+            }
+          case None => false
+        }
+        val education = if (schooled) 0 else {
+          if (ageIndex > 0) (educationSexVariates(sex).compute(rnd)(0) * educationSexSizes(0)).toInt + 1
+          else 1
+        }
+        //val cell = multinomial(allCellsArea)(rnd)
+        val cell = mn.draw(rnd)
+        IndividualFeature(
+          ageCategory = ageIndex,
+          sex = sex,
+          education = education,
+          location = cell
+        )
+      }.filter(_.ageCategory>0)//remove people with age in 0-14
+      res
+    }
+  }
 
   def generatePoint(geom: MultiPolygon, inOutTransform: MathTransform, outCRS: CoordinateReferenceSystem)(rnd:Random) = {
       val sampler = new PolygonSampler(geom)
@@ -842,6 +913,5 @@ object generation {
             lunchInteraction = cs(header("social_context_lunch")).toDouble,
             dinnerInteraction = cs(header("social_context_dinner")).toDouble)
     }.toMap
-
   }
 }

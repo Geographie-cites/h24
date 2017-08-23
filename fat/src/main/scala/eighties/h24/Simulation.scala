@@ -17,6 +17,8 @@
   */
 package eighties.h24
 
+import java.util.Calendar
+
 import better.files._
 import eighties.h24.dynamic._
 import eighties.h24.dynamic.MoveMatrix
@@ -24,9 +26,6 @@ import eighties.h24.dynamic.MoveMatrix._
 import eighties.h24.generation._
 import eighties.h24.population._
 import eighties.h24.space._
-import eighties.h24.opinion._
-import eighties.h24.observable._
-import org.jfree.data.time.Day
 
 import scala.util.Random
 
@@ -35,6 +34,7 @@ object Simulation extends App {
   val seed = 42
   val rng = new Random(seed)
 
+  val doMove = true
   val days = 5
 
   val maxProbaToSwitch = 0.8
@@ -44,20 +44,21 @@ object Simulation extends App {
 
   val result = File("results")
   val outputPath = result / "random"
-
+  outputPath.createDirectories
+  println(Calendar.getInstance.getTime + " loading population")
   val worldFeature = WorldFeature.load(result / "population.bin")
-
   val dataDirectory = File("../data/")
-  val pathEGT = dataDirectory / "EGT 2010/presence semaine EGT"
+//  val pathEGT = dataDirectory / "EGT 2010/presence semaine EGT"
   val distributionConstraints = dataDirectory / "initialisation_distribution_per_cat.csv"
-
+  println(Calendar.getInstance.getTime + " generating health categories")
   val healthCategory = generateHealthCategory(distributionConstraints)
+  println(Calendar.getInstance.getTime + " generating interaction map")
   val interactionMap = generateInteractionMap(distributionConstraints)
-
+  println(Calendar.getInstance.getTime + " generating world")
   val world = generateWorld(worldFeature.individualFeatures, healthCategory, rng)
   val bbox = worldFeature.originalBoundingBox
   val indexedWorld = Index.indexIndividuals(world, Individual.home.get)
-
+  println(Calendar.getInstance.getTime + " loading move matrix")
   val timeSlices = MoveMatrix.load(result / "matrix.bin")
 
   def mapHealth(world: World, bb: BoundingBox, file: File) = {
@@ -80,7 +81,7 @@ object Simulation extends App {
         List(cellSize.toString, nbHealthy.toString, avgOpinion.toString)
       }
 
-    file.parent.createDirectories()
+    file.parent.createDirectories
 
     def indexed = Index.indexIndividuals(world)
     zipWithIndices[Vector[Individual]](indexed.cells).flatten.foreach { case(c, (i, j)) =>
@@ -118,7 +119,7 @@ object Simulation extends App {
   val categories = csvOutput / s"categories.csv"
   categories < "day,slice,sex,age,educ,effective,healthy,avgOpinion\n"
 
-  def simulateOneDay(world: space.World, bb: BoundingBox, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0): World = {
+  def simulateOneDay(world: space.World, bb: BoundingBox, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0, doMove: Boolean): World = {
     lapses match {
       case Nil => world
       case (time, moveMatrix) :: t =>
@@ -127,12 +128,12 @@ object Simulation extends App {
         byCell(day, slice, world, cells)
         byCategory(day, slice, world, categories)
 
-        //def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)
-        def moved = dynamic.randomMove(world, 1.0, rng)
+        def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)
+        //def moved = dynamic.randomMove(world, 1.0, rng)
 
         //def convicted = dynamic.localConviction(gamaOpinion, moved, rng)
         def convicted = dynamic.interchangeConviction(
-          world,
+          if (doMove) moved else world,
           slice,
           interactionMap,
           maxProbaToSwitch = maxProbaToSwitch,
@@ -142,12 +143,14 @@ object Simulation extends App {
           rng
         )
 
-        simulateOneDay(convicted, bb, t, day, slice + 1)
+        simulateOneDay(convicted, bb, t, day, slice + 1, doMove)
     }
   }
-
+  println(Calendar.getInstance.getTime + " starting simulation")
   (1 to days).foldLeft(fixWorkPlace(world, timeSlices, rng)) {
-    (w, s) => simulateOneDay(w, bbox, timeSlices.toList, s)
+    (w, s) => {
+      println(Calendar.getInstance.getTime + ": simulating one day")
+      simulateOneDay(w, bbox, timeSlices.toList, s, 0, doMove)
+    }
   }
-
 }

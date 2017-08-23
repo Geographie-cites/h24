@@ -17,18 +17,21 @@
   */
 package eighties.h24.tools
 
+import java.util.Calendar
+
 import better.files._
 import com.vividsolutions.jts.geom.{Coordinate, GeometryFactory}
-import eighties.h24.generation
-import eighties.h24.generation.{IndividualFeature, WorldFeature}
-import org.apache.commons.math3.random.JDKRandomGenerator
+import eighties.h24.generation.WorldFeature
 import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataUtilities, Transaction}
+import org.geotools.feature.DefaultFeatureCollection
+import org.geotools.feature.simple.SimpleFeatureBuilder
+import org.geotools.geojson.feature.FeatureJSON
 import org.geotools.referencing.CRS
 
-object QGISPopulationGenerator extends App {
-  val inputFileName = "population2.bin"
-  val outputFileName = "generated-population2.shp"
+object GeoJSONPopulationGenerator extends App {
+  val inputFileName = "population.bin"
+  val outputFileName = "generated-population.json"
   val path = File("data")
   val outputPath = File("results")
   outputPath.createDirectories
@@ -39,20 +42,20 @@ object QGISPopulationGenerator extends App {
               "ageCat:Integer," +
               "sex:Integer," +
               "education:Integer"
-  val geometryFactory = new GeometryFactory
-  val factory = new ShapefileDataStoreFactory
-  val dataStore = factory.createDataStore(outFile.toJava.toURI.toURL)
-  val featureTypeName = "Object"
+  val crs = CRS.decode( "EPSG:3035" )
+  val featureTypeName = "Individual"
   val featureType = DataUtilities.createType(featureTypeName, specs)
-  dataStore.createSchema(featureType)
-  val typeName = dataStore.getTypeNames()(0)
-  val writer = dataStore.getFeatureWriterAppend(typeName, Transaction.AUTO_COMMIT)
+  val featureCollection = new DefaultFeatureCollection(featureTypeName, featureType)
+  println(Calendar.getInstance.getTime + " Loading population")
   val res = WorldFeature.load(outputPath / inputFileName)
+  println(Calendar.getInstance.getTime + " Converting population")
+  val geometryFactory = new GeometryFactory
   for {
     (feature, i) <- res.individualFeatures.zipWithIndex
   } {
     import feature._
     val point = geometryFactory.createPoint(new Coordinate(location._1.toDouble + 500.0, location._2.toDouble + 500.0))
+    point.setUserData(crs)
     val values = Array[AnyRef](
       point,
       location._1.asInstanceOf[AnyRef],
@@ -61,10 +64,11 @@ object QGISPopulationGenerator extends App {
       sex.asInstanceOf[AnyRef],
       education.asInstanceOf[AnyRef]
     )
-    val simpleFeature = writer.next
-    simpleFeature.setAttributes(values)
-    writer.write
+    featureCollection.add( SimpleFeatureBuilder.build( featureType, values, null) )
   }
-  writer.close
-  dataStore.dispose
+  println(Calendar.getInstance.getTime + " Writing population")
+  val io = new FeatureJSON
+  println(featureCollection.getBounds.getCoordinateReferenceSystem)
+  io.writeFeatureCollection(featureCollection, outFile.toJava)
+  println(Calendar.getInstance.getTime + " Finished")
 }
