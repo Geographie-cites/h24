@@ -28,7 +28,7 @@ You could produce csv outputs of Netlogo MeatModel using Netlogo interface by op
 If you have `sbt` build engine installed on your computer you could also run this headless script by running this chunk directly from R/RStudio. 
 
 `./toy/PicSaintLoup/MeatModel-V5` folder. 
-```{bash}
+```{bash, include=FALSE}
 cd ../toy/PicSaintLoup/
 sbt run
 ```
@@ -68,9 +68,9 @@ names(dfOpinion)[2] <- paste("age")
 names(dfOpinion)[3] <- paste("sex")
 names(dfOpinion)[4] <- paste("edu")
 
-gDfApparie <- gather(dfApparie, time, nb, c(5:ncol(dfApparie)))
-gDfOpinion <- gather(dfOpinion, time, ValueOpinion, c(5:ncol(dfOpinion)))
-gDfVoisins <- gather(dfVoisins, time, nbVoisins, c(5:ncol(dfVoisins))) 
+gDfApparie <- gather(data = dfApparie, key = time, value= nb,  c(5:34))
+gDfOpinion <- gather(dfOpinion, time, ValueOpinion, c(5:34))
+gDfVoisins <- gather(dfVoisins, time, nbVoisins, c(5:34)) 
 
 gdfFinal <- join(gDfApparie, gDfOpinion, by=c("who","age","sex","edu","time"), type="inner")
 gdfFinal <- join(gdfFinal, gDfVoisins, by=c("who","age","sex","edu","time"), type="inner")
@@ -149,19 +149,95 @@ p
 
 # FAT MODEL 
 
-## Producing outputs
+## Exploring scenarii
 
-# Producing explorations
+# random residential scenario 1
+
+-----------------------------------------------------------------------------------------------------------
+ maxProbaToSwitch    constraintsStrength         inertiaCoefficient         healthyDietReward         seed
+-----------------    -------------------         ------------------         -----------------         ----
+0.8                  0.05                         0.5                        0.4                       42
+-----------------------------------------------------------------------------------------------------------
+
 
 ```{r, fig.width=10}
-sortie <- read_csv("categories.csv",col_names = TRUE, col_types= "nnnnnnnn")
-sortie$propHealthy <- sortie$healthy / sortie$effective 
+sortie_sc1 <- read_csv("../data/CIST2018/random_residential_scenario1/csv/categories.csv",col_names = TRUE, col_types= "nnnnnnnn")
+sortie_sc1$propHealthy <- sortie_sc1$healthy / sortie_sc1$effective 
   
-sortieLong <- gather(sortie, facteur, valeur, by=c(propHealthy,avgOpinion) ) 
+sortieLong_sc1 <- gather(sortie_sc1, facteur, valeur, by=c(propHealthy,avgOpinion) ) 
 
-sortieLong <- mutate(sortieLong, "ds" = paste(sortieLong$day, sortieLong$slice))
+sortieLong_sc1 <- mutate(sortieLong_sc1, "ds" = gsub(" ", "", paste(paste("[",paste(sortieLong_sc1$day, sortieLong_sc1$slice)),"]")))
 
-p <- ggplot(data=sortieLong, aes(x=ds, y=valeur, group=educ, fill=educ, colour=as.character(educ)))
+p <- ggplot(data=sortieLong_sc1, aes(x=ds, y=valeur, group=educ, fill=educ, colour=as.character(educ)))
+p <- p + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 p <- p + geom_line(size=0.5) + facet_grid(facteur ~ sex ~ age) #show.legend = FALSE
 p
 ```
+
+# survey residential scenario 2
+
+-----------------------------------------------------------------------------------------------------------
+ maxProbaToSwitch    constraintsStrength         inertiaCoefficient         healthyDietReward         seed
+-----------------    -------------------         ------------------         -----------------         ----
+0.8                  0.05                         0.5                        0.4                       42
+-----------------------------------------------------------------------------------------------------------
+
+
+
+```{r, fig.width=10}
+sortie_sc2 <- read_csv("../data/CIST2018/survey_residential_scenario2/csv/categories.csv",col_names = TRUE, col_types= "nnnnnnnn")
+sortie_sc2$propHealthy <- sortie_sc2$healthy / sortie_sc2$effective 
+  
+sortieLong_sc2 <- gather(sortie_sc2, facteur, valeur, by=c(propHealthy,avgOpinion) ) 
+
+sortieLong_sc2 <- mutate(sortieLong_sc2, "ds" = gsub(" ", "", paste(paste("[",paste(sortieLong_sc2$day, sortieLong_sc2$slice)),"]")))
+
+p <- ggplot(data=sortieLong_sc2, aes(x=ds, y=valeur, group=educ, fill=educ, colour=as.character(educ)))
+p <- p + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+p <- p + geom_line(size=0.5) + facet_grid(facteur ~ sex ~ age) #show.legend = FALSE
+p
+```
+
+# random activity scenario 3
+
+-----------------------------------------------------------------------------------------------------------
+ maxProbaToSwitch    constraintsStrength         inertiaCoefficient         healthyDietReward         seed
+-----------------    -------------------         ------------------         -----------------         ----
+0.8                  0.5                         0.5                        0.4                       42
+-----------------------------------------------------------------------------------------------------------
+
+```{r, fig.width=10}
+sortie_sc3 <- read_csv("../data/CIST2018/random_activity_scenario3/csv/categories.csv",col_names = TRUE, col_types= "nnnnnnnn")
+sortie_sc3$propHealthy <- sortie_sc3$healthy / sortie_sc3$effective 
+  
+sortieLong_sc3 <- gather(sortie_sc3, facteur, valeur, by=c(propHealthy,avgOpinion) ) 
+
+sortieLong_sc3 <- mutate(sortieLong_sc3, "ds" = gsub(" ", "", paste(paste("[",paste(sortieLong_sc3$day, sortieLong_sc3$slice)),"]")))
+
+p <- ggplot(data=sortieLong_sc3, aes(x=ds, y=valeur, group=educ, fill=educ, colour=as.character(educ)))
+p <- p + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+p <- p + geom_line(size=0.5) + facet_grid(facteur ~ sex ~ age) #show.legend = FALSE
+p
+```
+
+# survey activity scenario 4
+
+-----------------------------------------------------------------------------------------------------------
+ maxProbaToSwitch    constraintsStrength         inertiaCoefficient         healthyDietReward         seed
+-----------------    -------------------         ------------------         -----------------         ----
+0.8                  0.05                        0.5                        0.4                       42
+-----------------------------------------------------------------------------------------------------------
+
+```{r, fig.width=10}
+sortie_sc4 <- read_csv("../data/CIST2018/survey_activity_scenario4/csv/categories.csv",col_names = TRUE, col_types= "nnnnnnnn")
+sortie_sc4$propHealthy <- sortie_sc4$healthy / sortie_sc4$effective 
+  
+sortieLong_sc4 <- gather(sortie_sc4, facteur, valeur, by=c(propHealthy,avgOpinion) ) 
+sortieLong_sc4 <- mutate(sortieLong_sc4, "ds" = gsub(" ", "", paste(paste("[",paste(sortieLong_sc4$day, sortieLong_sc4$slice)),"]")))
+
+p <- ggplot(data=sortieLong_sc4, aes(x=ds, y=valeur, group=educ, fill=educ, colour=as.character(educ)))
+p <- p + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+p <- p + geom_line(size=0.5) + facet_grid(facteur ~ sex ~ age) #show.legend = FALSE
+p
+```
+
