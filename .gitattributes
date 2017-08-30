@@ -1,1 +1,2 @@
 *.lzma filter=lfs diff=lfs merge=lfs -text
+fat/data/*.bin filter=lfs diff=lfs merge=lfs -text
