@@ -203,11 +203,8 @@ object dynamic {
     World.individuals.set(newIndividuals.flatten.toVector)(world)
   }
 
-  var i = 0
   def fixWorkPlace(world: World, timeSlices: TimeSlices, rng: Random) =
     World.allIndividuals.modify { individual =>
-      if (i % 1000000 == 0) println(Calendar.getInstance.getTime + " ind " + i)
-      i = i + 1
       val workTimeMoves = timeSlices.toMap.apply(workTimeSlice)
       dynamic.sampleDestinationInMoveMatrix(workTimeMoves, individual, rng) match {
         case Some(d) => Individual.stableDestinations.modify(_ + (workTimeSlice -> d))(individual)

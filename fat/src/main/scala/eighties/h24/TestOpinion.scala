@@ -37,7 +37,8 @@ object TestOpinion extends App {
 
   val lastCell = Iterator.iterate(cell)(interact).drop(99).next()
 
-  println(cell.count(_.healthCategory.behaviour == Healthy))
-  println(lastCell.count(_.healthCategory.behaviour == Healthy))
+
+  println(cell.count(_.healthCategory.behaviour == Healthy) + " " + cell.map(_.healthCategory.opinion).sum / 100)
+  println(lastCell.count(_.healthCategory.behaviour == Healthy)+ " " + lastCell.map(_.healthCategory.opinion).sum / 100)
 
 }
