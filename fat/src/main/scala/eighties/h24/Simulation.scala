@@ -132,7 +132,7 @@ object Simulation extends App {
         //def moved = dynamic.randomMove(world, 1.0, rng)
 
         //def convicted = dynamic.localConviction(gamaOpinion, moved, rng)
-        def convicted = dynamic.interchangeConviction(
+        def convicted = opinion.interchangeConviction(
           if (doMove) moved else world,
           slice,
           interactionMap,
