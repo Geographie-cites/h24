@@ -10,7 +10,9 @@ import scala.util.Random
 
 object MapPopulation extends App {
   val rng = new Random(42)
-  def features = WorldFeature.load(File("results/population.bin"))
+  val popFile = "population.bin"
+  val result = "results"
+  def features = WorldFeature.load(File("results") / popFile)
 
   val dataDirectory = File("../data")
   val distributionConstraints = dataDirectory / "initialisation_distribution_per_cat.csv"
@@ -19,17 +21,17 @@ object MapPopulation extends App {
 
   val world = generateWorld(features.individualFeatures, healthCategory, rng)
   val bb = features.originalBoundingBox
-  val start = System.currentTimeMillis()
   def filter(n:Int) = n>=30
 //  worldMapper.mapRGB(world, File("results") / "map.tiff")
   def getHealthyValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
   //worldMapper.mapGray(world, File("results") / "map.tiff", getValue, 1000, 10)
-  worldMapper.mapColorRGB(world, bb, File("results") / "healthFilter30.tiff", getHealthyValue,filter)
+  worldMapper.mapColorRGB(world, bb, File(result) / "healthFilter30.tiff", getHealthyValue,filter)
 
   def getOpinionValue(individual: Individual) = individual.healthCategory.opinion
-  worldMapper.mapColorRGB(world, bb, File("results") / "opinionFilter30.tiff", getOpinionValue,filter)
-  val end = System.currentTimeMillis()
-  println((end - start) + " ms")
+  worldMapper.mapColorRGB(world, bb, File(result) / "opinionFilter30.tiff", getOpinionValue,filter)
+
+  def getPop(individual: Individual) = 1.0
+  worldMapper.mapColorRGB(world, bb, File(result) / "popFilter30.tiff", getPop,filter, v=>v.sum, 0.0, 10000.0)
 }
 
 // % de gens sains par cellule

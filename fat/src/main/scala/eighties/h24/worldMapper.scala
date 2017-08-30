@@ -88,6 +88,7 @@ object worldMapper {
                   file: File,
                   getValue: (Individual => Double),
                   filter: (Int => Boolean) = _=>true,
+                  aggregator: (Vector[Double] => Double) = (v => v.sum / v.size),
                   minValue: Double = 0.0,
                   maxValue: Double = 1.0,
                   cellSize: Int = 1000,
@@ -111,7 +112,7 @@ object worldMapper {
       (0.0,255.0,255.0),//cyan
       (0.0,127.0,255.0),//cyan-blue
       (0.0,0.0,255.0)//blue
-    )
+    ).reverse
     val bufferedImage = new BufferedImage(width*pixelSize, height*pixelSize, BufferedImage.TYPE_INT_ARGB)
     val raster = bufferedImage.getRaster
     val index = space.Index.indexIndividuals(world)
@@ -132,10 +133,9 @@ object worldMapper {
       val values = c map getValue
       val size = values.size
       if (filter(size)) {
-        def meanValue = values.sum / size
-
+        def aggValue = aggregator(values)
         val color = if (size > 0) {
-          val value = clamp((meanValue - minValue) / rangeValues) * (colors.size - 1)
+          val value = clamp((aggValue - minValue) / rangeValues) * (colors.size - 1)
           val ind = value.toInt
           val lambda = value - ind
           val c0 = colors(ind)

@@ -34,7 +34,7 @@ object Simulation extends App {
   val seed = 42
   val rng = new Random(seed)
 
-  val doMove = true
+  val doMove = false
   val days = 5
 
   val maxProbaToSwitch = 0.8
@@ -43,7 +43,7 @@ object Simulation extends App {
   val healthyDietReward = 0.4
 
   val result = File("results")
-  val outputPath = result / "random"
+  val outputPath = result / "nomove"
   outputPath.createDirectories
   println(Calendar.getInstance.getTime + " loading population")
   val worldFeature = WorldFeature.load(result / "population.bin")

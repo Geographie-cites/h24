@@ -116,7 +116,7 @@ object space {
     def apply[T](content: Iterator[T], location: T => Location, sideI: Int, sideJ: Int): Index[T] = {
       val cellBuffer: Array[Array[ArrayBuffer[T]]] = Array.fill(sideI, sideJ) { ArrayBuffer[T]() }
 
-      for {
+      for                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               {
         s <- content
         (i, j) = location(s)
       } cellBuffer(i)(j) += s

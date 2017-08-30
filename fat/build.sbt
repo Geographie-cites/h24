@@ -9,7 +9,7 @@ scalaVersion := "2.12.1"
 
 val monocleVersion = "1.4.0"
 
-val geotoolsVersion = "14.3"
+val geotoolsVersion = "17.2"
 
 val jtsVersion = "1.13"
 
@@ -29,7 +29,7 @@ libraryDependencies ++= Seq (
   "com.github.julien-truffaut"  %%  "monocle-macro"   % monocleVersion,
   "org.geotools" % "gt-referencing" % geotoolsVersion,
   "org.geotools" % "gt-shapefile" % geotoolsVersion,
-  "org.geotools" % "gt-epsg-hsql" % geotoolsVersion,
+  "org.geotools" % "gt-epsg-wkt" % geotoolsVersion,
   "org.geotools" % "gt-cql" % geotoolsVersion,
   "org.geotools" % "gt-geotiff" % geotoolsVersion,
   "org.geotools" % "gt-image" % geotoolsVersion,

@@ -30,15 +30,15 @@ import org.geotools.geojson.feature.FeatureJSON
 import org.geotools.referencing.CRS
 
 object GeoJSONPopulationGenerator extends App {
-  val inputFileName = "population.bin"
-  val outputFileName = "generated-population.json"
+  val inputFileName = "population2.bin"
+  val outputFileName = "population2.json"
   val path = File("data")
   val outputPath = File("results")
   outputPath.createDirectories
   val outFile = outputPath / outputFileName
   val specs = "geom:Point:srid=3035," +
-              "cellX:Integer," +
-              "cellY:Integer," +
+//              "cellX:Integer," +
+//              "cellY:Integer," +
               "ageCat:Integer," +
               "sex:Integer," +
               "education:Integer"
@@ -58,8 +58,8 @@ object GeoJSONPopulationGenerator extends App {
     point.setUserData(crs)
     val values = Array[AnyRef](
       point,
-      location._1.asInstanceOf[AnyRef],
-      location._2.asInstanceOf[AnyRef],
+//      location._1.asInstanceOf[AnyRef],
+//      location._2.asInstanceOf[AnyRef],
       ageCategory.asInstanceOf[AnyRef],
       sex.asInstanceOf[AnyRef],
       education.asInstanceOf[AnyRef]
@@ -72,3 +72,4 @@ object GeoJSONPopulationGenerator extends App {
   io.writeFeatureCollection(featureCollection, outFile.toJava)
   println(Calendar.getInstance.getTime + " Finished")
 }
+  
