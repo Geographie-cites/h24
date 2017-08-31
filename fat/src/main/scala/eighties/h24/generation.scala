@@ -757,8 +757,9 @@ object generation {
     MoveMatrix.TimeSlice.fromHours(16, 24)
   )
 
+  lazy val nightTimeSlice = timeSlices(0)
   lazy val dayTimeSlice = timeSlices(1)
-  lazy val nightTimeSlice = timeSlices(2)
+  lazy val eveningTimeSlice = timeSlices(2)
 
   def overlap(t1: TimeSlice, t2: TimeSlice) = {
     def isIncluded(t1: TimeSlice, t2: TimeSlice) =

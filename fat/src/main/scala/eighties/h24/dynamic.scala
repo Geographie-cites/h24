@@ -24,7 +24,7 @@ import better.files._
 import com.vividsolutions.jts.geom.Envelope
 import com.vividsolutions.jts.index.strtree.STRtree
 import eighties.h24.dynamic.MoveMatrix.{TimeSlice, TimeSlices}
-import eighties.h24.generation.{Interactions, LCell, dayTimeSlice}
+import eighties.h24.generation._
 import eighties.h24.population._
 import eighties.h24.space._
 import monocle.Monocle._
@@ -203,7 +203,7 @@ object dynamic {
     World.individuals.set(newIndividuals.flatten.toVector)(world)
   }
 
-  def fixWorkPlace(world: World, timeSlices: TimeSlices, rng: Random) =
+  def assignRandomDayLocation(world: World, timeSlices: MoveMatrix.TimeSlices, rng: Random) =
     World.allIndividuals.modify { individual =>
       val workTimeMoves = timeSlices.toMap.apply(dayTimeSlice)
       dynamic.sampleDestinationInMoveMatrix(workTimeMoves, individual, rng) match {
@@ -211,6 +211,9 @@ object dynamic {
         case None => Individual.stableDestinations.modify(_ + (dayTimeSlice -> individual.home))(individual)
       }
     }(world)
+
+  def assignFixNightLocation(world: World, timeSlices: TimeSlices) =
+    World.allIndividuals.modify { individual => Individual.stableDestinations.modify(_ + (nightTimeSlice -> individual.home))(individual) } (world)
 
   def randomiseLocation(world: World, random: Random) = {
     val reach = reachable(Index[Individual](world.individuals.iterator, Individual.location.get(_), world.sideI, world.sideJ))

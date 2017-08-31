@@ -147,8 +147,12 @@ object Simulation extends App {
         simulateOneDay(convicted, bb, t, day, slice + 1, doMove)
     }
   }
+
+  val populationWithMoves =
+    assignFixNightLocation(assignRandomDayLocation(world, timeSlices, rng), timeSlices)
+
   println(Calendar.getInstance.getTime + " starting simulation")
-  (1 to days).foldLeft(fixWorkPlace(world, timeSlices, rng)) {
+  (1 to days).foldLeft(populationWithMoves) {
     (w, s) => {
       println(Calendar.getInstance.getTime + ": simulating one day")
       simulateOneDay(w, bbox, timeSlices.toList, s, 0, doMove)
