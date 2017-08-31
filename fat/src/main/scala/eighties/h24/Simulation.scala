@@ -43,10 +43,11 @@ object Simulation extends App {
   val healthyDietReward = 0.4
 
   val result = File("results")
+  val generatedData = File("data")
   val outputPath = result / "nomove"
   outputPath.createDirectories
   println(Calendar.getInstance.getTime + " loading population")
-  val worldFeature = WorldFeature.load(result / "population.bin")
+  val worldFeature = WorldFeature.load(generatedData / "population.bin")
   val dataDirectory = File("../data/")
 //  val pathEGT = dataDirectory / "EGT 2010/presence semaine EGT"
   val distributionConstraints = dataDirectory / "initialisation_distribution_per_cat.csv"
@@ -59,7 +60,7 @@ object Simulation extends App {
   val bbox = worldFeature.originalBoundingBox
   val indexedWorld = Index.indexIndividuals(world, Individual.home.get)
   println(Calendar.getInstance.getTime + " loading move matrix")
-  val timeSlices = MoveMatrix.load(result / "matrix.bin")
+  val timeSlices = MoveMatrix.load(generatedData / "matrix.bin")
 
   def mapHealth(world: World, bb: BoundingBox, file: File) = {
     def getValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
