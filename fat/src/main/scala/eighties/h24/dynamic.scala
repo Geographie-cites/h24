@@ -24,7 +24,7 @@ import better.files._
 import com.vividsolutions.jts.geom.Envelope
 import com.vividsolutions.jts.index.strtree.STRtree
 import eighties.h24.dynamic.MoveMatrix.{TimeSlice, TimeSlices}
-import eighties.h24.generation.{Interactions, LCell, workTimeSlice}
+import eighties.h24.generation.{Interactions, LCell, dayTimeSlice}
 import eighties.h24.population._
 import eighties.h24.space._
 import monocle.Monocle._
@@ -161,7 +161,7 @@ object dynamic {
     val cellMoves = moves(location._1)(location._2)
     val aggregatedCategory = Individual.socialCategory.get(individual)
     def myCategory = cellMoves.get(aggregatedCategory)
-    def noSex = cellMoves.find { case(c, v) => c.age == aggregatedCategory.age && c.education == aggregatedCategory.education}.map(_._2)
+    def noSex = cellMoves.find { case(c, v) => c.age == aggregatedCategory.age && c.education == aggregatedCategory.education }.map(_._2)
     myCategory orElse noSex
   }
 
@@ -205,10 +205,10 @@ object dynamic {
 
   def fixWorkPlace(world: World, timeSlices: TimeSlices, rng: Random) =
     World.allIndividuals.modify { individual =>
-      val workTimeMoves = timeSlices.toMap.apply(workTimeSlice)
+      val workTimeMoves = timeSlices.toMap.apply(dayTimeSlice)
       dynamic.sampleDestinationInMoveMatrix(workTimeMoves, individual, rng) match {
-        case Some(d) => Individual.stableDestinations.modify(_ + (workTimeSlice -> d))(individual)
-        case None => Individual.stableDestinations.modify(_ + (workTimeSlice -> individual.home))(individual)
+        case Some(d) => Individual.stableDestinations.modify(_ + (dayTimeSlice -> d))(individual)
+        case None => Individual.stableDestinations.modify(_ + (dayTimeSlice -> individual.home))(individual)
       }
     }(world)
 
