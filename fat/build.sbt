@@ -13,7 +13,7 @@ val geotoolsVersion = "17.2"
 
 val jtsVersion = "1.13"
 
-val breezeVersion = "0.13.1"
+val breezeVersion = "0.13.2"
 
 resolvers ++= Seq(
   "osgeo" at "http://download.osgeo.org/webdav/geotools/",
@@ -47,7 +47,11 @@ libraryDependencies ++= Seq (
   "org.typelevel"  %% "squants"  % "1.1.0",
   "joda-time" % "joda-time" % "2.9.7",
   //"com.thoughtworks.xstream" % "xstream" % "1.4.9",
-  "io.suzaku" %% "boopickle" % "1.2.6"
+  "io.suzaku" %% "boopickle" % "1.2.6",
+  //"it.geosolutions.jaiext" % "jaiext" % "1.0.20"
+  "javax.media" % "jai_core" % "1.1.3",
+  "javax.media" % "jai_codec" % "1.1.3",
+  "javax.media" % "jai_imageio" % "1.1.1"
 )
  
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
@@ -66,4 +70,4 @@ OsgiKeys.embeddedJars := (Keys.externalDependencyClasspath in Compile).value map
 
 OsgiKeys.requireCapability := ""
 
-
+excludeFilter in unmanagedSources := "worldMapper.scala" || "MapPopulation.scala"
