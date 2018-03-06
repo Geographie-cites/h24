@@ -6,7 +6,7 @@ import eighties.h24.population._
 
 import scala.util.Random
 
-object TestOpinion extends App {
+object OpinionFunction {
 
   def individual(opinion: Double, behaviour: Behaviour) =
     Individual(
@@ -18,27 +18,33 @@ object TestOpinion extends App {
     )
 
 
-  val cell = Vector.fill(10)(individual(1.0, Healthy)) ++ Vector.fill(90)(individual(0.5, Unhealthy))
+  def balanced = Vector.fill(50)(individual(0.9, Healthy)) ++ Vector.fill(50)(individual(0.1, Unhealthy))
 
-  val rng = new Random(42)
-
-  def interact(cell: Vector[Individual]) =
-    InterchangeConviction.interchangeConvictionInCell(
+  def interact(cell: Vector[Individual], steps: Int, rng: Random) = {
+    def step(cell: Vector[Individual]) = InterchangeConviction.interchangeConvictionInCell(
       cell,
       timeOfDay = 1,
       interactions = Map(AggregatedSocialCategory.all.head -> Interactions(1.0, 1.0, 1.0)),
       maxProbaToSwitch = 1.0,
       constraintsStrength = 0.0,
-      inertiaCoefficient = 0.8,
+      inertiaCoefficient = 0.2,
       healthyDietReward = 1.0,
+      interpersonalInfluence = 0.001,
       rng
     )
 
+    Iterator.iterate(cell)(step).drop(steps).next()
+  }
+  
 
-  val lastCell = Iterator.iterate(cell)(interact).drop(99).next()
+}
 
+object TestOpinion extends App {
+  import OpinionFunction._
 
+  val rng = new Random(42)
+  val cell = balanced
+  val lastCell = interact(cell, 9999, rng)
   println(cell.count(_.healthCategory.behaviour == Healthy) + " " + cell.map(_.healthCategory.opinion).sum / 100)
   println(lastCell.count(_.healthCategory.behaviour == Healthy)+ " " + lastCell.map(_.healthCategory.opinion).sum / 100)
-
 }

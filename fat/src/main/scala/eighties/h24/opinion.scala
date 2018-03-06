@@ -37,6 +37,7 @@ object opinion {
      constraintsStrength: Double,
      inertiaCoefficient: Double,
      healthyDietReward: Double,
+     interpersonalInfluence: Double,
      random: Random): Vector[Individual] = {
 
       def booleanToDouble(b: Boolean) = if(b) 1.0 else 0.0
@@ -54,32 +55,15 @@ object opinion {
         else (random.shuffle(interactingPeople).dropRight(1).grouped(2).toVector.map { case Vector(i1, i2) => (i1, i2) }, passivePeople ++ Seq(interactingPeople.last))
       }
 
-      def dietReward(individual: Individual) = {
+      def dietRewardOpinion(individual: Individual) = {
+        def opinion = Individual.opinion.get(individual)
         def getReward(o: Opinion): Opinion =  math.min(1.0, (1.0 + healthyDietReward) * o)
-        if(individual.healthCategory.behaviour == Healthy) (Individual.healthCategory composeLens HealthCategory.opinion modify getReward) (individual)
-        else individual
+        if(individual.healthCategory.behaviour == Healthy) getReward(opinion) else opinion
       }
 
-      def opinionInertia(previousOpinion: Opinion, opinion: Opinion): Opinion =
-        previousOpinion * inertiaCoefficient + (1.0 - inertiaCoefficient) * opinion
+      def interactingOpinion(ego: Individual, partner: Option[Individual]): Opinion = partner.map(_.healthCategory.opinion).getOrElse(ego.healthCategory.opinion)
 
-      def updateInteractingOpinion(ego: Individual, partner: Individual, healthRatio: Option[Double]): Individual = {
-        val influencePartner = (booleanToDouble(partner.healthCategory.behaviour == Healthy) + partner.healthCategory.opinion) / 2
-        Individual.opinion.modify { o =>
-          healthRatio match {
-            case Some(hr) => opinionInertia(o, 0.5 * influencePartner + 0.5 * hr)
-            case None => o // This wont happend
-          }
-        }(ego)
-      }
-
-      def updatePassiveOpinion(individual: Individual, healthRatio: Option[Double]): Individual = Individual.opinion.modify { o =>
-        healthRatio match {
-          case Some(hr) => opinionInertia(o, 0.5 * o + 0.5 * hr)
-          case None => o
-        }
-      }(individual)
-
+      def passiveOpinion(individual: Individual, healthRatio: Option[Double]): Opinion = healthRatio.getOrElse(Individual.opinion.get(individual))
 
       def updateBehaviour(individual: Individual): Individual = {
         def probaSwitchToUnhealthy = {
@@ -110,19 +94,19 @@ object opinion {
         }(individual)
       }
 
+      // Nb: Clémentine trouve ça clair ! => C'est confirmé
+      def updateIndividual(individual: Individual, healthyRatio: Option[Double], interactions: Map[Individual, Individual]) = {
+        def a = inertiaCoefficient * dietRewardOpinion(individual)
+        def b = interpersonalInfluence * interactingOpinion(individual, interactions.get(individual))
+        def c = (1 - interpersonalInfluence) * passiveOpinion(individual, healthyRatio)
+        Individual.opinion.set(a + (1 - inertiaCoefficient) * (b + c))(individual)
+      }
+
       def newCell = {
         val healthyRatio = if(!cell.isEmpty) Some(cell.count(_.healthCategory.behaviour == Healthy).toDouble / cell.size) else None
-        val rewarded = cell.map(dietReward)
-        val (interactingPeople, passivePeople) = peering(rewarded)
-
-        val sens1 = interactingPeople.map { case(ego, partner) => updateInteractingOpinion(ego, partner, healthyRatio) }
-        val sens2 = interactingPeople.map { case(partner, ego) => updateInteractingOpinion(ego, partner, healthyRatio)  }
-
-        val afterInteractions = sens1 ++ sens2
-
-        val afterPassiveInteractions = passivePeople.map(i => updatePassiveOpinion(i, healthyRatio))
-
-        (afterInteractions ++ afterPassiveInteractions).map(updateBehaviour)
+        val (interactingPeople, passivePeople) = peering(cell)
+        val interactions = (interactingPeople ++ interactingPeople.map(_.swap)).toMap
+        cell.map(i => updateIndividual(i, healthyRatio, interactions)).map(updateBehaviour)
       }
 
       newCell
@@ -138,6 +122,7 @@ object opinion {
     constraintsStrength: Double,
     inertiaCoefficient: Double,
     healthyDietReward: Double,
+    interpersonalInfluence: Double,
     random: Random): World = {
 
     def cells = Index.indexIndividuals(world).cells.view.flatten.map {
@@ -149,6 +134,7 @@ object opinion {
         constraintsStrength,
         inertiaCoefficient,
         healthyDietReward,
+        interpersonalInfluence,
         random)
     }
 

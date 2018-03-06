@@ -41,6 +41,7 @@ object Simulation extends App {
   val constraintsStrength = 0.05
   val inertiaCoefficient = 0.5
   val healthyDietReward = 0.4
+  val interpersonalInfluence = 0.5
 
   val result = File("results")
   val generatedData = File("data")
@@ -141,6 +142,7 @@ object Simulation extends App {
           constraintsStrength = constraintsStrength,
           inertiaCoefficient = inertiaCoefficient,
           healthyDietReward = healthyDietReward,
+          interpersonalInfluence = interpersonalInfluence,
           rng
         )
 
