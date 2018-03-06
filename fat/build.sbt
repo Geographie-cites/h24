@@ -5,7 +5,7 @@ name := "h24"
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.12.3"
+scalaVersion := "2.12.4"
 
 val monocleVersion = "1.4.0"
 
