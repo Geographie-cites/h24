@@ -1,7 +1,8 @@
 package eighties
 
-import monocle.Traversal
-import monocle.function.Each
+import monocle.function.Each.fromTraverse
+import monocle.{Optional, Traversal}
+import monocle.function.{Each, Index}
 
 import scala.annotation.tailrec
 import scala.util.Random
@@ -92,5 +93,14 @@ package object h24 {
     override def traverseImpl[G[_], A, B](fa: Array[A])(f: A => G[B])(implicit evidence$1: Applicative[G]): G[Array[B]] =
       evidence$1.traverse(fa)(f)
   }
+  /*
+  implicit def arrayIndex[A]: Index[Array[A], Int, A] = new Index[Array[A], Int, A] {
+    def index(i: Int) =
+      Optional[Array[A], A](v =>
+        if(v.isDefinedAt(i)) Some(v(i))     else None)(a => v =>
+        if(v.isDefinedAt(i)) v.updated(i,a) else v)
+  }
+  */
+  //implicit def arrayEach[A]: Each[Array[A], A] = fromTraverse
 
 }
