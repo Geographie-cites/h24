@@ -2,6 +2,7 @@ package eighties
 
 import monocle.Traversal
 import monocle.function.Each
+import monocle.macros.Lenses
 
 import scala.annotation.tailrec
 import scala.util.Random
@@ -82,9 +83,18 @@ package object h24 {
 
   def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
 
-  implicit val arrayInstance: scalaz.Traverse[Array] = new Traverse[Array] {
+  implicit val traverseArray: scalaz.Traverse[Array] = new Traverse[Array] {
     override def traverseImpl[G[_], A, B](fa: Array[A])(f: A => G[B])(implicit evidence$1: Applicative[G]): G[Array[B]] =
       evidence$1.traverse(fa)(f)
+  }
+
+  implicit def traversalArray[T] = new Traversal[Array[T], T] {
+    override def modifyF[F[_]](f: T => F[T])(s: Array[T])(implicit evidence$1: Applicative[F]): F[Array[T]] =
+      evidence$1.traverse(s)(f)
+  }
+
+  implicit def eachArray[T] = new Each[Array[T], T] {
+    override def each: Traversal[Array[T], T] = traversalArray[T]
   }
 
 }
