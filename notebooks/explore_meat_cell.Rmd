@@ -1,0 +1,23 @@
+---
+title: "explore_meat_cell"
+output: html_document
+---
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+library(readr)
+library(magrittr)
+library(pairsD3)
+
+```
+
+# Scatter Plot Matrix
+
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+df <- read_csv("/home/reyman/Projets/h24/data/CIST2018/PSE/population48013.csv")
+
+#pairsD3(df[,2:9],width=1000)
+shinypairs(df[,2:9])
+
+```
+

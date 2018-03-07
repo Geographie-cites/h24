@@ -17,7 +17,6 @@ object OpinionFunction {
       stableDestinations = Map.empty
     )
 
-
   def balanced = Vector.fill(50)(individual(0.9, Healthy)) ++ Vector.fill(50)(individual(0.1, Unhealthy))
   def unhealthyMajority = Vector.fill(10)(individual(0.9, Healthy)) ++ Vector.fill(90)(individual(0.1, Unhealthy))
   def healthyMajority = Vector.fill(90)(individual(0.9, Healthy)) ++ Vector.fill(10)(individual(0.1, Unhealthy))
