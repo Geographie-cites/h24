@@ -18,10 +18,10 @@ object OpinionFunction {
     )
 
 
-  def balanced = Vector.fill(50)(individual(0.9, Healthy)) ++ Vector.fill(50)(individual(0.1, Unhealthy))
+  def balanced = Array.fill(50)(individual(0.9, Healthy)) ++ Array.fill(50)(individual(0.1, Unhealthy))
 
-  def interact(cell: Vector[Individual], steps: Int, rng: Random) = {
-    def step(cell: Vector[Individual]) = InterchangeConviction.interchangeConvictionInCell(
+  def interact(cell: Array[Individual], steps: Int, rng: Random) = {
+    def step(cell: Array[Individual]) = InterchangeConviction.interchangeConvictionInCell(
       cell,
       timeOfDay = 1,
       interactions = Map(AggregatedSocialCategory.all.head -> Interactions(1.0, 1.0, 1.0)),

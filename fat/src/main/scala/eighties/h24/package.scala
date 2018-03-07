@@ -66,6 +66,12 @@ package object h24 {
       s(random.nextInt(size))
     }
   }
+  implicit class ArrayDecorator[T](s: Array[T]) {
+    def randomElement(random: Random) = {
+      val size = s.size
+      s(random.nextInt(size))
+    }
+  }
 
   implicit class SeqDoubleDecorator(s: Seq[Double]) {
     def average = s.sum / s.size
@@ -77,7 +83,7 @@ package object h24 {
 
   def clamp(v: Double, min: Double = -1.0, max: Double = 1.0) = math.min(math.max(v, min), max)
 
-  def zipWithIndices[T](matrix: Vector[Vector[T]]): Vector[Vector[(T, (Int, Int))]] =
+  def zipWithIndices[T](matrix: Array[Array[T]]): Array[Array[(T, (Int, Int))]] =
     matrix.zipWithIndex.map { case(line, i) => line.zipWithIndex.map { case(c, j) => (c, (i, j)) } }
 
   def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
