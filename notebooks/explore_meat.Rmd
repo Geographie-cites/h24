@@ -241,3 +241,5 @@ p <- p + geom_line(size=0.5) + facet_grid(facteur ~ sex ~ age) #show.legend = FA
 p
 ```
 
+
+

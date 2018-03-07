@@ -18,7 +18,7 @@ val breezeVersion = "0.13.1"
 resolvers ++= Seq(
   "osgeo" at "http://download.osgeo.org/webdav/geotools/",
   "geosolutions" at "http://maven.geo-solutions.it/",
-  "geotoolkit" at "http://maven.geotoolkit.org/"
+  "geotoolkit" at "http://maven.geotoolkit.org/",
 )
 
 
@@ -53,6 +53,8 @@ libraryDependencies ++= Seq (
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 
 enablePlugins(SbtOsgi)
+
+updateOptions := updateOptions.value.withGigahorse(false)
 
 osgiSettings
 

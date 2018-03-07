@@ -17,7 +17,6 @@ object OpinionFunction {
       stableDestinations = Map.empty
     )
 
-
   def balanced = Vector.fill(50)(individual(0.9, Healthy)) ++ Vector.fill(50)(individual(0.1, Unhealthy))
 
   def interact(cell: Vector[Individual], steps: Int, rng: Random) = {
