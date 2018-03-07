@@ -18,6 +18,9 @@ object OpinionFunction {
     )
 
   def balanced = Array.fill(50)(individual(0.9, Healthy)) ++ Array.fill(50)(individual(0.1, Unhealthy))
+  def unhealthyMajority = Array.fill(10)(individual(0.9, Healthy)) ++ Array.fill(90)(individual(0.1, Unhealthy))
+  def healthyMajority = Array.fill(90)(individual(0.9, Healthy)) ++ Array.fill(10)(individual(0.1, Unhealthy))
+  def balancedMiddle = Array.fill(50)(individual(0.5, Healthy)) ++ Array.fill(50)(individual(0.5, Unhealthy))
 
   def interact(cell: Array[Individual], steps: Int, rng: Random) = {
     def step(cell: Array[Individual]) = InterchangeConviction.interchangeConvictionInCell(
@@ -34,7 +37,7 @@ object OpinionFunction {
 
     Iterator.iterate(cell)(step).drop(steps).next()
   }
-  
+
 
 }
 

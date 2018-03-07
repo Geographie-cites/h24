@@ -5,7 +5,7 @@ import monocle.function.Each
 
 import scala.annotation.tailrec
 import scala.util.Random
-import scalaz.Applicative
+import scalaz.{Applicative, Traverse}
 
 /**
   * Created by Romain Reuillon on 11/05/16.
@@ -87,5 +87,10 @@ package object h24 {
     matrix.zipWithIndex.map { case(line, i) => line.zipWithIndex.map { case(c, j) => (c, (i, j)) } }
 
   def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
+
+  implicit val arrayInstance: scalaz.Traverse[Array] = new Traverse[Array] {
+    override def traverseImpl[G[_], A, B](fa: Array[A])(f: A => G[B])(implicit evidence$1: Applicative[G]): G[Array[B]] =
+      evidence$1.traverse(fa)(f)
+  }
 
 }
