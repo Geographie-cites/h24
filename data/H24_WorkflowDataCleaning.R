@@ -1,6 +1,6 @@
 library("foreign")
 library("readstata13")
-setwd("~/Desktop/Data_clem")
+setwd("~/Desktop/CSV_Travail")
 
 meanNoNA = function(x){
   y = mean(x, na.rm = T)
@@ -11,16 +11,27 @@ sumNoNA = function(x){
   return(y)
 }
 
+
+
 # Matching health data tables by year
-b96_demo= read.dta13("Bsn96_CNRS_sociodem_alimhorsConso.dta")
-b96_cons= read.dta13("Bsn96_CNRS_FL_pour_evol.dta")
+# b96_demo= read.dta13("Bsn96_CNRS_sociodem_alimhorsConso.dta")
+# b96_cons= read.dta13("Bsn96_CNRS_FL_pour_evol.dta")
+b96_demo= read.csv("Bsn96_CNRS_sociodem_alimhorsConso.csv")
+b96_cons= read.csv("Bsn96_CNRS_FL_pour_evol.csv")
 b96 = data.frame(b96_demo, b96_cons[match(b96_demo$ident, b96_cons$ident),])
-b02_demo= read.dta13("Bsn02_CNRS_sociodem_alimhorsConso.dta")
-b02_cons= read.dta13("Bsn02_CNRS_FL_pour_evol.dta")
+
+# b02_demo= read.dta13("Bsn02_CNRS_sociodem_alimhorsConso.dta")
+# b02_cons= read.dta13("Bsn02_CNRS_FL_pour_evol.dta")
+b02_demo= read.csv("Bsn02_CNRS_sociodem_alimhorsConso.csv")
+b02_cons= read.csv("Bsn02_CNRS_FL_pour_evol.csv")
 b02 = data.frame(b02_demo, b02_cons[match(b02_demo$q2, b02_cons$q2),])
-b08_demo= read.dta13("Bsn08_CNRS_sociodem_alimhorsConso.dta")
-b08_cons= read.dta13("Bsn08_CNRS_FL_pour_evol.dta")
-b08_organic = read.dta13("BSN08_bio.dta")
+
+# b08_demo= read.dta13("Bsn08_CNRS_sociodem_alimhorsConso.dta")
+# b08_cons= read.dta13("Bsn08_CNRS_FL_pour_evol.dta")
+# b08_organic = read.dta13("BSN08_bio.dta")
+b08_demo= read.csv("Bsn08_CNRS_sociodem_alimhorsConso.csv")
+b08_cons= read.csv("Bsn08_CNRS_FL_pour_evol.csv")
+b08_organic = read.csv("BSN08_bio.csv")
 b08 = data.frame(b08_demo, b08_cons[match(b08_demo$ident, b08_cons$ident),])
 b08 = data.frame(b08, b08_organic[match(b08$ident, b08_organic$ident),])
 
@@ -289,6 +300,7 @@ for(a in 1:3){ # 1 = 1996, 2= 2002, 3=2008
   bd$low_consumption_veg = as.numeric(bd[,low_consumption_veg[a]])
   
   
+  summary(as.factor(bd$n_per_day))
   if (a == 2) {
     bd$n_per_day = ifelse(bd$q267s1 > 0, bd$q267s1, NA)
     bd$n_per_week = ifelse(bd$q267s2 > 0, bd$q267s2 / 7, NA)
@@ -301,6 +313,8 @@ for(a in 1:3){ # 1 = 1996, 2= 2002, 3=2008
   if (a %in% c(1,3)) {
     bd$opinion_index = NA
   }
+
+  
   
   
   if (a == 1) bd$annee = 1996
@@ -334,6 +348,8 @@ bd_evol_select = bd_evol_select[!is.na(bd_evol_select$educ),]
 bd_evol_select$category = paste(bd_evol_select$sex, bd_evol_select$age_3cat, bd_evol_select$educ, sep="_")
 write.csv(bd_evol_select, "bsn_96_02_08_harmonised_subset.csv")
 
+
+
 ##### define initialisation variables by category
 habit_constraint = prop.table(table(bd_evol_select$category, bd_evol_select$impact_habits), margin = 1)[,"1"]
 budget_constraint = prop.table(table(bd_evol_select$category, bd_evol_select$impact_budget), margin = 1)[,"1"]
@@ -354,17 +370,30 @@ n_1996 = table(bd_evol_select[bd_evol_select$annee == 1996, "category"], bd_evol
 n_2002 = table(bd_evol_select[bd_evol_select$annee == 2002, "category"], bd_evol_select[bd_evol_select$annee == 2002, "n"])[,"1"]
 n_2008 = table(bd_evol_select[bd_evol_select$annee == 2008, "category"], bd_evol_select[bd_evol_select$annee == 2008, "n"])[,"1"]
 
-sub2002 = bd_evol_select[bd_evol_select$annee == 2002,]
 
-sub2002$opinion_index_q1 = ifelse(sub2002$opinion_index >= 0 & sub2002$opinion_index < 0.2,1,0)
-sub2002$opinion_index_q2 = ifelse(sub2002$opinion_index >= 0.2 & sub2002$opinion_index < 0.4,1,0)
-sub2002$opinion_index_q3 = ifelse(sub2002$opinion_index >= 0.4 & sub2002$opinion_index < 0.6,1,0)
-sub2002$opinion_index_q4 = ifelse(sub2002$opinion_index >= 0.6 & sub2002$opinion_index < 0.8,1,0)
-sub2002$opinion_index_q5 = ifelse(sub2002$opinion_index >= 0.8 & sub2002$opinion_index <= 1,1,0)
-opinion_index_2002 =  aggregate(sub2002[,paste0("opinion_index_q", 1:5)], by = list(sub2002$category), FUN = sumNoNA)
-opinion_index_2002$tot = opinion_index_2002$opinion_index_q1 + opinion_index_2002$opinion_index_q2 +
-                            opinion_index_2002$opinion_index_q3 + opinion_index_2002$opinion_index_q4 +
-                            opinion_index_2002$opinion_index_q5 
+sub2002H = bd_evol_select[bd_evol_select$annee == 2002 & bd_evol_select$cons_5aday == 1,]
+sub2002U = bd_evol_select[bd_evol_select$annee == 2002 & bd_evol_select$cons_5aday == 0,]
+
+sub2002H$opinion_index_Hq1 = ifelse(sub2002H$opinion_index >= 0 & sub2002H$opinion_index < 0.2,1,0)
+sub2002H$opinion_index_Hq2 = ifelse(sub2002H$opinion_index >= 0.2 & sub2002H$opinion_index < 0.4,1,0)
+sub2002H$opinion_index_Hq3 = ifelse(sub2002H$opinion_index >= 0.4 & sub2002H$opinion_index < 0.6,1,0)
+sub2002H$opinion_index_Hq4 = ifelse(sub2002H$opinion_index >= 0.6 & sub2002H$opinion_index < 0.8,1,0)
+sub2002H$opinion_index_Hq5 = ifelse(sub2002H$opinion_index >= 0.8 & sub2002H$opinion_index <= 1,1,0)
+
+sub2002U$opinion_index_Uq1 = ifelse(sub2002U$opinion_index >= 0 & sub2002U$opinion_index < 0.2,1,0)
+sub2002U$opinion_index_Uq2 = ifelse(sub2002U$opinion_index >= 0.2 & sub2002U$opinion_index < 0.4,1,0)
+sub2002U$opinion_index_Uq3 = ifelse(sub2002U$opinion_index >= 0.4 & sub2002U$opinion_index < 0.6,1,0)
+sub2002U$opinion_index_Uq4 = ifelse(sub2002U$opinion_index >= 0.6 & sub2002U$opinion_index < 0.8,1,0)
+sub2002U$opinion_index_Uq5 = ifelse(sub2002U$opinion_index >= 0.8 & sub2002U$opinion_index <= 1,1,0)
+
+opinion_index_2002H =  aggregate(sub2002H[,paste0("opinion_index_Hq", 1:5)], by = list(sub2002H$category), FUN = sumNoNA)
+opinion_index_2002U =  aggregate(sub2002U[,paste0("opinion_index_Uq", 1:5)], by = list(sub2002U$category), FUN = sumNoNA)
+opinion_index_2002H$totH = opinion_index_2002H$opinion_index_Hq1 + opinion_index_2002H$opinion_index_Hq2 +
+                            opinion_index_2002H$opinion_index_Hq3 + opinion_index_2002H$opinion_index_Hq4 +
+                            opinion_index_2002H$opinion_index_Hq5 
+opinion_index_2002U$totU = opinion_index_2002U$opinion_index_Uq1 + opinion_index_2002U$opinion_index_Uq2 +
+  opinion_index_2002U$opinion_index_Uq3 + opinion_index_2002U$opinion_index_Uq4 +
+  opinion_index_2002U$opinion_index_Uq5 
 
 
 Init_categories = cbind(n, n_1996, n_2002, n_2008, 
@@ -373,10 +402,12 @@ Init_categories = cbind(n, n_1996, n_2002, n_2008,
                         social_context_breakfast, social_context_lunch,
                         social_context_dinner)
 
-Init_categories = cbind(Init_categories,opinion_index_2002)
+Init_categories = cbind(Init_categories,opinion_index_2002H,opinion_index_2002U)
 
-Init_categories[,paste0("opinion_index_q", 1:5)] = Init_categories[,paste0("opinion_index_q", 1:5)] / Init_categories$tot
-Init_categories$tot = NULL
+Init_categories[,paste0("opinion_index_Hq", 1:5)] = Init_categories[,paste0("opinion_index_Hq", 1:5)] / Init_categories$totH
+Init_categories[,paste0("opinion_index_Uq", 1:5)] = Init_categories[,paste0("opinion_index_Uq", 1:5)] / Init_categories$totU
+Init_categories$totH = NULL
+Init_categories$totU = NULL
 category_var = data.frame(1:18)
 category_var$Sex = ifelse(substr(rownames(Init_categories), 1, 1) == "1", 1, 2)
 category_var$Age = ifelse(substr(rownames(Init_categories), 3, 3) == "1", 1,
