@@ -9,12 +9,12 @@ import eighties.h24.space._
 
 object PopulationGenerator extends App {
   println(Calendar.getInstance.getTime + " Generating population")
-  def features = generateFeatures(
+  val features = generateFeatures(
     File("data").toJava,
     _ => true,
     new util.Random(42),
     generatePopulation2
-  ).get.toVector
+  ).get.toArray
   println(Calendar.getInstance.getTime + " Relocating population")
   val originalBoundingBox = BoundingBox(features, IndividualFeature.location.get)
   def relocate = IndividualFeature.location.modify(BoundingBox.translate(originalBoundingBox))

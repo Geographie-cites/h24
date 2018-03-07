@@ -42,7 +42,7 @@ object population {
     object From60To74 extends Age(60, Some(74))
     object Above75 extends Age(75, None)
 
-    def all = Vector(From0To14, From15To29, From30To44, From45To59, From60To74, Above75)
+    def all = Array(From0To14, From15To29, From30To44, From45To59, From60To74, Above75)
 
     def apply(code: Int): Age =
       code match {
@@ -84,7 +84,7 @@ object population {
       case Age.From60To74 | Age.Above75 => Veteran
     }
 
-    def all = Vector(Junior, Senior, Veteran)
+    def all = Array(Junior, Senior, Veteran)
 
     def toCode(age: AggregatedAge) =
       age match {
@@ -104,7 +104,7 @@ object population {
       override def toString = "Female"
     }
 
-    def all = Vector(Male, Female)
+    def all = Array(Male, Female)
 
     def apply(code: Int): Sex =
       code match {
@@ -133,7 +133,7 @@ object population {
     object BACP2 extends Education
     object SUP extends Education
 
-    def all = Vector(Schol, Dipl0, CEP, BEPC, CAPBEP, BAC, BACP2, SUP)
+    def all = Array(Schol, Dipl0, CEP, BEPC, CAPBEP, BAC, BACP2, SUP)
 
     def apply(code: Int): Education =
       code match {
@@ -161,7 +161,7 @@ object population {
       override def toString = "High"
     }
 
-    def all = Vector(Low, Middle, High)
+    def all = Array(Low, Middle, High)
 
     def apply(education: Education) =
       education match {
@@ -218,7 +218,7 @@ object population {
       } yield AggregatedSocialCategory(age, sex, education)
 
     def toCode(aggregatedSocialCategory: AggregatedSocialCategory) =
-      Vector(
+      Array(
         Sex.toCode(aggregatedSocialCategory.sex),
         AggregatedAge.toCode(aggregatedSocialCategory.age),
         AggregatedEducation.toCode(aggregatedSocialCategory.education))

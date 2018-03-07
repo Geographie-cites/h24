@@ -26,6 +26,7 @@ import eighties.h24.generation.IndividualFeature
 
 import scala.collection.SeqView
 import scala.collection.mutable.ArrayBuffer
+import scala.reflect.ClassTag
 import scala.util.Random
 
 object space {
@@ -60,7 +61,7 @@ object space {
   }
 
   object BoundingBox {
-    def apply[T](content: Vector[T], location: T => Location): BoundingBox = {
+    def apply[T](content: Array[T], location: T => Location): BoundingBox = {
       val (minI, minJ) = content.view.map(location).reduceLeft(Location.lowerBound)
       val (maxI, maxJ) = content.view.map(location).reduceLeft(Location.upperBound)
       BoundingBox(minI = minI, maxI = maxI, minJ = minJ, maxJ = maxJ)
@@ -81,7 +82,7 @@ object space {
 
   object World {
 
-    def apply[B](individuals: Vector[Individual], attractions: Vector[Attraction]): World = {
+    def apply[B](individuals: Array[Individual], attractions: Array[Attraction]): World = {
       val boundingBox = BoundingBox(individuals, Individual.location.get)
 
       def relocate =
@@ -100,9 +101,11 @@ object space {
     def allIndividuals = World.individuals composeTraversal each
 
   }
+  def arrayToVectorLens[A: Manifest] = monocle.Lens[Array[A], Vector[A]](_.toVector)(v => _ => v.toArray)
+  def array2ToVectorLens[A: Manifest] = monocle.Lens[Array[Array[A]], Vector[Vector[A]]](_.toVector.map(_.toVector))(v => _ => v.map(_.toArray).toArray)
 
   /* Définition d'une classe Grid, composé de vecteurs, de edges et de side*/
-  @Lenses case class World(individuals: Vector[Individual], attractions: Vector[Attraction], originI: Int, originJ: Int, sideI: Int, sideJ: Int)
+  @Lenses case class World(individuals: Array[Individual], attractions: Array[Attraction], originI: Int, originJ: Int, sideI: Int, sideJ: Int)
   @Lenses case class Attraction(location: Location, education: AggregatedEducation)
 
   object Index {
@@ -113,7 +116,7 @@ object space {
     def indexAttraction(world: World) =
       Index[Attraction](World.attractions.get(world).iterator, Attraction.location.get(_), world.sideI, world.sideJ)
 
-    def apply[T](content: Iterator[T], location: T => Location, sideI: Int, sideJ: Int): Index[T] = {
+    def apply[T: ClassTag](content: Iterator[T], location: T => Location, sideI: Int, sideJ: Int): Index[T] = {
       val cellBuffer: Array[Array[ArrayBuffer[T]]] = Array.fill(sideI, sideJ) { ArrayBuffer[T]() }
 
       for                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               {
@@ -121,7 +124,7 @@ object space {
         (i, j) = location(s)
       } cellBuffer(i)(j) += s
 
-      Index[T](cellBuffer.toVector.map(_.toVector.map(_.toVector)), sideI, sideJ)
+      Index[T](cellBuffer.map(_.map(_.toArray)), sideI, sideJ)
     }
 
     def getLocatedCells[T, U](index: Index[T]) =
@@ -134,10 +137,10 @@ object space {
     def allIndividuals[T] = allCells[T] composeTraversal each
   }
 
-  @Lenses case class Index[T](cells: Vector[Vector[Vector[T]]], sideI: Int, sideJ: Int)
+  @Lenses case class Index[T](cells: Array[Array[Array[T]]], sideI: Int, sideJ: Int)
 
   def generateWorld(
-    features: Vector[IndividualFeature],
+    features: Array[IndividualFeature],
     healthCategory: (AggregatedSocialCategory, Random) => HealthCategory,
     rng: Random) = {
 
@@ -152,6 +155,6 @@ object space {
 
     //assignWork(workerRatio, generateAttractions(World(individuals.get, Vector.empty), 0.01, rng), rng)
 
-    World(individuals, Vector.empty)
+    World(individuals, Array.empty)
   }
 }

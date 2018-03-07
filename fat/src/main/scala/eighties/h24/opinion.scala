@@ -30,7 +30,7 @@ object opinion {
 
   object InterchangeConviction {
     def interchangeConvictionInCell(
-     cell: Vector[Individual],
+     cell: Array[Individual],
      timeOfDay: Int,
      interactions: Map[AggregatedSocialCategory, Interactions],
      maxProbaToSwitch: Double,
@@ -38,7 +38,7 @@ object opinion {
      inertiaCoefficient: Double,
      healthyDietReward: Double,
      interpersonalInfluence: Double,
-     random: Random): Vector[Individual] = {
+     random: Random): Array[Individual] = {
 
       def booleanToDouble(b: Boolean) = if(b) 1.0 else 0.0
 
@@ -48,11 +48,13 @@ object opinion {
         case 2 => interactions(individual.socialCategory).dinnerInteraction
       }
 
-      def peering(cell: Vector[Individual]): (Vector[(Individual, Individual)], Vector[Individual]) = {
+      def peering(cell: Array[Individual]): (Array[(Individual, Individual)], Array[Individual]) = {
         val (interactingPeople, passivePeople) = cell.partition { individual => random.nextDouble() < interactionProbability(individual) }
-
-        if(interactingPeople.size % 2 == 0) (random.shuffle(interactingPeople).grouped(2).toVector.map { case Vector(i1, i2) => (i1, i2) }, passivePeople)
-        else (random.shuffle(interactingPeople).dropRight(1).grouped(2).toVector.map { case Vector(i1, i2) => (i1, i2) }, passivePeople ++ Seq(interactingPeople.last))
+        val randomizedInteractingPeople = random.shuffle(interactingPeople.toVector)
+        if(interactingPeople.size % 2 == 0)
+          (randomizedInteractingPeople.grouped(2).toArray.map { case Vector(i1, i2) => (i1, i2) }, passivePeople)
+        else
+          (randomizedInteractingPeople.dropRight(1).grouped(2).toArray.map { case Vector(i1, i2) => (i1, i2) }, passivePeople ++ Seq(randomizedInteractingPeople.last))
       }
 
       def dietRewardOpinion(individual: Individual) = {
@@ -138,7 +140,7 @@ object opinion {
         random)
     }
 
-    World.individuals.set(cells.flatten.toVector)(world)
+    World.individuals.set(cells.flatten.toArray)(world)
   }
 
 

@@ -88,7 +88,7 @@ object worldMapper {
                   file: File,
                   getValue: (Individual => Double),
                   filter: (Int => Boolean) = _=>true,
-                  aggregator: (Vector[Double] => Double) = (v => v.sum / v.size),
+                  aggregator: (Array[Double] => Double) = (v => v.sum / v.size),
                   minValue: Double = 0.0,
                   maxValue: Double = 1.0,
                   cellSize: Int = 1000,
@@ -101,7 +101,7 @@ object worldMapper {
     val maxY = minY + height
     val rangeValues = maxValue - minValue
     val pixelSize = 10
-    val colors = Vector(
+    val colors = Array(
       (127.0,0.0,0.0),//dark red
       (255.0,0.0,0.0),//red
       (255.0,127.0,0.0),//orange

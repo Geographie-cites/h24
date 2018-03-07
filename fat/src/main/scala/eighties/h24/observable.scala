@@ -21,9 +21,11 @@ import better.files.File
 import eighties.h24.population._
 import eighties.h24.space._
 
+import scala.reflect.ClassTag
+
 object observable {
 
-  def byEducation[T](b: scala.Vector[Double] => T)(world: World) =
+  def byEducation[T](b: scala.Array[Double] => T)(world: World) =
       for {
         ed <- AggregatedEducation.all
         level = world.individuals.filter(i => Individual.education.get(i)  == ed)
@@ -32,7 +34,7 @@ object observable {
   def resume(world: World) = {
     import breeze.linalg._
     import breeze.stats._
-    byEducation[Vector[Double]](b => Vector(mean(b), scala.math.sqrt(variance(DenseVector(b: _*))), median(DenseVector(b: _*))))(world)
+    byEducation[Array[Double]](b => Array(mean(b), scala.math.sqrt(variance(DenseVector(b: _*))), median(DenseVector(b: _*))))(world)
   }
 
   def saveEffectivesAsCSV(world: World, output: File) = {
@@ -46,7 +48,7 @@ object observable {
     }
   }
 
-  def moran[T](matrix: Vector[Vector[T]], quantity: T => Double): Double = {
+  def moran[T](matrix: Array[Array[T]], quantity: T => Double): Double = {
     def adjacentCells(i: Int, j: Int, size: Int = 1) =
       for {
         oi ← -size to size
@@ -64,7 +66,7 @@ object observable {
         cellJ ← adjacentCells(i, j)
       } yield (cellI, cellJ, 1.0)
 
-    val flatCells = matrix.flatten
+    val flatCells = matrix.toVector.flatten// ?
     val totalQuantity = flatCells.map(quantity).sum
     val averageQuantity = totalQuantity / flatCells.size
 

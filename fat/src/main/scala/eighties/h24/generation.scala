@@ -63,7 +63,7 @@ object generation {
     object From25To29 extends SchoolAge(25, Some(29))
     object Above30 extends SchoolAge(30, None)
 
-    def all = Vector[SchoolAge](From0To1, From2To5, From6To10, From11To14, From15To17, From18To24, From25To29, Above30)
+    def all = Array[SchoolAge](From0To1, From2To5, From6To10, From11To14, From15To17, From18To24, From25To29, Above30)
     def index(age: Double) = SchoolAge.all.lastIndexWhere(value => age > value.from)
   }
 
@@ -86,7 +86,7 @@ object generation {
     }
   }
 
-  @Lenses case class WorldFeature(individualFeatures: Vector[IndividualFeature], originalBoundingBox: BoundingBox, boundingBox: BoundingBox)
+  @Lenses case class WorldFeature(individualFeatures: Array[IndividualFeature], originalBoundingBox: BoundingBox, boundingBox: BoundingBox)
 
 
   @Lenses case class IndividualFeature(
@@ -151,9 +151,9 @@ object generation {
   def readEducationSex(file: File) = withCSVReader(file)(CommaFormat){ reader =>
     Try {
       reader.iterator.drop(6).map { line =>
-        val men = line.drop(36).take(7).map(toDouble).toVector
-        val women = line.drop(44).take(7).map(toDouble).toVector
-        AreaID(line(0).replaceAll("0000$", "").trim) -> Vector(men, women)
+        val men = line.drop(36).take(7).map(toDouble).toArray
+        val women = line.drop(44).take(7).map(toDouble).toArray
+        AreaID(line(0).replaceAll("0000$", "").trim) -> Array(men, women)
       }.toMap
     }
   }
@@ -161,8 +161,8 @@ object generation {
   def readAgeSchool(file: File) = withCSVReader(file)(CommaFormat){ reader =>
     Try {
       reader.iterator.drop(6).map { line =>
-        val totalPop = line.drop(13).take(7).map(toDouble).toVector
-        val schooled = line.drop(20).take(7).map(toDouble).toVector
+        val totalPop = line.drop(13).take(7).map(toDouble).toArray
+        val schooled = line.drop(20).take(7).map(toDouble).toArray
         AreaID(line(0).replaceAll("0000$", "").trim) -> ((schooled zip totalPop).map { case (x,y)=> x / y })
       }.toMap
     }
@@ -171,8 +171,8 @@ object generation {
   def readAgeSex(file: File) = withCSVReader(file)(CommaFormat){ reader =>
     Try {
       reader.iterator.drop(6).map { line =>
-        val men = line.drop(34).take(6).map(toDouble).toVector
-        val women = line.drop(44).take(6).map(toDouble).toVector
+        val men = line.drop(34).take(6).map(toDouble).toArray
+        val women = line.drop(44).take(6).map(toDouble).toArray
         AreaID(line(0).replaceAll("0000$", "").trim) -> (men ++ women)
       }.toMap
     }
@@ -186,8 +186,8 @@ object generation {
         val x = line(6)
         val y = line(7)
         val quality = line(8)
-        AreaID(iris) -> Vector(typeEquipment,x,y,quality)
-      }.toVector
+        AreaID(iris) -> Array(typeEquipment,x,y,quality)
+      }.toArray
     }
   }
 
@@ -198,7 +198,7 @@ object generation {
         val workLocation = line(2)
         val numberOfFlows = line(4).toDouble
         (workLocation, numberOfFlows)
-      }.toVector
+      }.toArray
     }
   }
 
@@ -242,9 +242,9 @@ object generation {
                           rnd: Random,
                           irises: Seq[AreaID],
                           geometry: AreaID => Option[MultiPolygon],
-                          ageSex: Map[AreaID, Vector[Double]],
-                          schoolAge: Map[AreaID, Vector[Double]],
-                          educationSex: Map[AreaID, Vector[Vector[Double]]],
+                          ageSex: Map[AreaID, Array[Double]],
+                          schoolAge: Map[AreaID, Array[Double]],
+                          educationSex: Map[AreaID, Array[Array[Double]]],
                           cells: STRtree) = {
     /*
     //test
@@ -284,7 +284,7 @@ object generation {
           val g = cell._1.intersection(transformedIris)
           ((cell._3, cell._4), cell._2 * g.getArea / cell._1.getArea)
         }
-      }.toVector.filter{case (_,v) => v>0}
+      }.toArray.filter{case (_,v) => v>0}
 
       if (relevantCellsArea.isEmpty) throw new RuntimeException("NoOOOOOOooooOOO cell intersecting the iris")
       val res = (0 until total.toInt).map{ _ =>
@@ -330,7 +330,7 @@ object generation {
                         inputDirectory: java.io.File,
                         filter: String => Boolean,
                         rng: Random,
-                        pop: (Random, Seq[AreaID], AreaID => Option[MultiPolygon],Map[AreaID, Vector[Double]],Map[AreaID, Vector[Double]], Map[AreaID, Vector[Vector[Double]]], STRtree) => Seq[IndexedSeq[generation.IndividualFeature]]
+                        pop: (Random, Seq[AreaID], AreaID => Option[MultiPolygon],Map[AreaID, Array[Double]],Map[AreaID, Array[Double]], Map[AreaID, Array[Array[Double]]], STRtree) => Seq[IndexedSeq[generation.IndividualFeature]]
                       ) = {
     val contourIRISFile = inputDirectory.toScala / "CONTOURS-IRIS_FE_IDF.shp"
     val baseICEvolStructPopFileName = inputDirectory.toScala / "base-ic-evol-struct-pop-2012-IDF.csv.lzma"
@@ -351,13 +351,13 @@ object generation {
                           rnd: Random,
                           irises: Seq[AreaID],
                           geometry: AreaID => Option[MultiPolygon],
-                          ageSex: Map[AreaID, Vector[Double]],
-                          schoolAge: Map[AreaID, Vector[Double]],
-                          educationSex: Map[AreaID, Vector[Vector[Double]]],
+                          ageSex: Map[AreaID, Array[Double]],
+                          schoolAge: Map[AreaID, Array[Double]],
+                          educationSex: Map[AreaID, Array[Array[Double]]],
                           cells: STRtree) = {
     val env = cells.getRoot.getBounds
     val allCells = cells.query(env.asInstanceOf[Envelope]).toArray.toSeq.map(_.asInstanceOf[KMCell])
-    val allCellsArea = allCells.map{cell => {((cell._3, cell._4), cell._2)}}.toVector.filter{case (_,v) => v>0}.map{case (l,v) => (l,1.0)}.toList
+    val allCellsArea = allCells.map{cell => {((cell._3, cell._4), cell._2)}}.toArray.filter{case (_,v) => v>0}.map{case (l,v) => (l,1.0)}.toList
     val mn = new Multinomial(allCellsArea)
     var i = 0
     irises.map { id =>
@@ -419,7 +419,7 @@ object generation {
       JTS.toGeometry(JTS.toDirectPosition(transformed, outCRS))
     }
 
-  def generateEquipment(rnd: Random, eq: Vector[(AreaID, Vector[String])], geometry: AreaID => Option[MultiPolygon], completeArea: MultiPolygon) = {
+  def generateEquipment(rnd: Random, eq: Array[(AreaID, Array[String])], geometry: AreaID => Option[MultiPolygon], completeArea: MultiPolygon) = {
     val l93CRS = CRS.decode("EPSG:2154")
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
@@ -555,7 +555,7 @@ object generation {
       cdf.map(_ / sum)
     }
 
-    def compute(rng: Random): Vector[Double] = {
+    def compute(rng: Random): Array[Double] = {
       import collection.Searching._
 
       val x = rng.nextDouble()
@@ -566,7 +566,7 @@ object generation {
         output(i) = (ix + rng.nextDouble()) / m_size(i)
         offset /= m_size(i)
       }
-      output.toVector
+      output.toArray
     }
 
   }
@@ -670,8 +670,8 @@ object generation {
         val res_y = line("POINT_Y_RES").trim.replaceAll(",",".").toDouble
 
         val timeSlices =
-          if(date_start.isBefore(midnight) && date_end.isAfter(midnight)) Vector(TimeSlice(date_start.get(DateTimeFieldType.minuteOfDay()), 24 * 60), TimeSlice(0, date_end.get(DateTimeFieldType.minuteOfDay())))
-          else Vector(TimeSlice(date_start.get(DateTimeFieldType.minuteOfDay()),  date_end.get(DateTimeFieldType.minuteOfDay())))
+          if(date_start.isBefore(midnight) && date_end.isAfter(midnight)) Array(TimeSlice(date_start.get(DateTimeFieldType.minuteOfDay()), 24 * 60), TimeSlice(0, date_end.get(DateTimeFieldType.minuteOfDay())))
+          else Array(TimeSlice(date_start.get(DateTimeFieldType.minuteOfDay()), date_end.get(DateTimeFieldType.minuteOfDay())))
 
         timeSlices.map(s => Flow(line("ID_pers"), s, sex, age, dipl, location(new Coordinate(point_x,point_y)),location(new Coordinate(res_x,res_y))))
       }.filter(_.age.from >= 15)
@@ -695,7 +695,7 @@ object generation {
             val v = moves(index)._2
             c + (cat -> moves.updated(index, (flow.activity, v + intersection)))
           }
-        case None => c + (cat -> Vector((flow.activity, intersection)))
+        case None => c + (cat -> Array((flow.activity, intersection)))
       }
   }
 
@@ -705,18 +705,19 @@ object generation {
       category -> moves.map { case(destination, effective) => destination -> effective / total }
     }
 
+  /*
   def addFlowToMatrix(slices: TimeSlices, flow: Flow): TimeSlices =
     slices.map { case (time, slice) =>
      time ->
        MoveMatrix.cell(flow.residence).modify { current => addFlowToCell(current, flow, time) }(slice)
     }
-
-  def noMove(timeSlices: Vector[TimeSlice], i: Int, j: Int): TimeSlices =
+  */
+  def noMove(timeSlices: Array[TimeSlice], i: Int, j: Int): TimeSlices =
     timeSlices.map { ts =>
-      ts -> Vector.tabulate(i, j) { (ii, jj) => Map.empty[AggregatedSocialCategory, Vector[Move]] }
+      ts -> Array.tabulate(i, j) { (ii, jj) => Map.empty[AggregatedSocialCategory, Array[Move]] }
     }
 
-  def idw(power: Double)(location: Location, moves: Vector[(Location, Double)], neighborhood: Vector[(Location, Vector[(Location, Double)])]) = {
+  def idw(power: Double)(location: Location, moves: Array[(Location, Double)], neighborhood: Array[(Location, Array[(Location, Double)])]) = {
     if (moves.isEmpty) {
       val weights = neighborhood.map(v => (v._1 -> 1.0 / scala.math.pow(space.distance(location, v._1), power))).toMap
       val destinations = neighborhood.flatMap(_._2).map(_._1).distinct
@@ -737,21 +738,21 @@ object generation {
   }
 
   def interpolateFlows(index: SpatialCellIndex,
-                       interpolate: (Location, Vector[(Location, Double)], Vector[(Location, Vector[(Location, Double)])]) => Vector[(Location, Double)])
+                       interpolate: (Location, Array[(Location, Double)], Array[(Location, Array[(Location, Double)])]) => Array[(Location, Double)])
                       (c: Cell, location: Location): Cell = {
     val movesByCat = movesInNeighborhoodByCategory(location, index)
     AggregatedSocialCategory.all.map {
       category =>
-        def moves = c.get(category).getOrElse(Vector())
+        def moves = c.get(category).getOrElse(Array())
         def m = for {
           (l, c) <- movesByCat
           mm <- c.get(category)
         } yield l -> mm
-        category -> interpolate(location, moves, m.toVector)
+        category -> interpolate(location, moves, m.toArray)
     }.toMap
   }
 
-  val timeSlices = Vector(
+  val timeSlices = Array(
     MoveMatrix.TimeSlice.fromHours(0, 8),
     MoveMatrix.TimeSlice.fromHours(8, 16),
     MoveMatrix.TimeSlice.fromHours(16, 24)
@@ -779,7 +780,7 @@ object generation {
     new Interval(new DateTime(2010, 1, 1, timeSlice.from, 0), new DateTime(2010, 1, 1, timeSlice.to, 0))
   }
 
-  def flowsFromEGT(boundingBox: BoundingBox, aFile: File, slices: Vector[TimeSlice] = timeSlices) = {
+  def flowsFromEGT(boundingBox: BoundingBox, aFile: File, slices: Array[TimeSlice] = timeSlices) = {
     val l2eCRS = CRS.decode("EPSG:27572")
     val outCRS = CRS.decode("EPSG:3035")
     val transform = CRS.findMathTransform(l2eCRS, outCRS, true)
@@ -803,7 +804,7 @@ object generation {
         }
       }
     }
-    def interpolate(index: Vector[(TimeSlice, CellMatrix, SpatialCellIndex)]): TimeSlices = index.map {
+    def interpolate(index: Array[(TimeSlice, CellMatrix, SpatialCellIndex)]): TimeSlices = index.map {
       case (time, cellMatrix, ind) => {
         //def nei(l1: Location)(l2: Location) = space.distance(l1, l2) < 10
 //        (time, modifyCellMatrix(interpolateFlows(cellMatrix, nei, idw(2.0)))(cellMatrix))
@@ -816,8 +817,17 @@ object generation {
         def noSex = c.find { case (c, _) => c.age == cat.age && c.education == cat.education }.map(_._2)
         (moves orElse noSex) map (m => cat -> m)
       }.toMap
-    readFlowsFromEGT(aFile, location) map {
-      _.foldLeft(noMove(slices, boundingBox.sideI, boundingBox.sideJ))(addFlowToMatrix)
+
+
+
+    readFlowsFromEGT(aFile, location) map { l =>
+      val nm = noMove(slices, boundingBox.sideI, boundingBox.sideJ)
+      for {
+        slice <- nm
+        f <- l
+      } slice._2(f.residence._1)(f.residence._2) = addFlowToCell(slice._2(f.residence._1)(f.residence._2), f, slice._1)
+      nm
+      //_.foldLeft(noMove(slices, boundingBox.sideI, boundingBox.sideJ))(addFlowToMatrix)
     } map {
       cells modify getMovesFromOppositeSex
     } map(index) map(interpolate) map {
@@ -865,34 +875,43 @@ object generation {
       habit: Double,
       budget: Double,
       time: Double,
-      opinionDistribution: Vector[Double])
+      opinionDistributionH: Array[Double],
+      opinionDistributionU: Array[Double])
 
     val header = headers(file)
 
     val stats =
       file.lines.drop(1).flatMap(l => parser.parseLine(l)).map {
         cs =>
+          val indexH1 = header("opinion_index_Hq1")
+          val indexH5 = header("opinion_index_Hq5")
+          val indexU1 = header("opinion_index_Uq1")
+          val indexU5 = header("opinion_index_Uq5")
           AggregatedSocialCategory(sex = sex(cs(header("Sex"))), age = age(cs(header("Age"))), education = education(cs(header("Edu")))) ->
             CSVLine(
               consomation1996 = cs(header("conso_5_1996")).toDouble,
               habit = cs(header("habit_constraint")).toDouble,
               budget = cs(header("budget_constraint")).toDouble,
               time = cs(header("time_constraint")).toDouble,
-              opinionDistribution = cs.takeRight(5).map(_.toDouble).toVector)
+              opinionDistributionH = cs.slice(indexH1, indexH5).map(_.toDouble).toArray,
+              opinionDistributionU = cs.slice(indexU1, indexU5).map(_.toDouble).toArray
+            )
       }.toMap
 
     (category: AggregatedSocialCategory, random: Random) => {
       val line = stats(category)
       val constraints = ChangeConstraints(budget = random.nextDouble() < line.budget, habit = random.nextDouble() < line.habit, time = random.nextDouble() < line.time)
 
-      val distribution = stats(category).opinionDistribution
-      val opinion = new RasterVariate(distribution.toArray, Seq(distribution.size)).compute(random).head
-
       val behaviour =
         random.nextDouble() < stats(category).consomation1996 match {
           case false => Unhealthy
           case true => Healthy
         }
+
+      val distributionH = stats(category).opinionDistributionH
+      val distributionU = stats(category).opinionDistributionU
+      val distribution = if (behaviour == Healthy) distributionH else distributionU
+      val opinion = new RasterVariate(distribution, Seq(distribution.size)).compute(random).head
 
       HealthCategory(opinion, behaviour, constraints)
     }
