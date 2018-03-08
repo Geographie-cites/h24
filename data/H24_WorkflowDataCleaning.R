@@ -420,6 +420,19 @@ Init_categories$Group.1 = NULL
 rownames(Init_categories) = NULL
 write.csv(Init_categories, "initialisation_distribution_per_cat.csv")
   
+
+Init_categories$Healthy1996 = Init_categories$n_1996 * Init_categories$conso_5_1996
+Init_categories$Healthy2002 = Init_categories$n_2002 * Init_categories$conso_5_2002
+Init_categories$Healthy2008 = Init_categories$n_2008 * Init_categories$conso_5_2008
+Init_categories$sexAge = paste(Init_categories$Sex, Init_categories$Age, sep="_")
+  
+SexAge = aggregate(Init_categories[,c("n_1996","n_2002", "n_2008","Healthy1996","Healthy2002", "Healthy2008")], 
+                   by = list(Init_categories$sexAge), FUN = sum)
+SexAge$conso_5_1996 = SexAge$Healthy1996 / SexAge$n_1996
+SexAge$conso_5_2002 = SexAge$Healthy2002 / SexAge$n_2002
+SexAge$conso_5_2008 = SexAge$Healthy2008 / SexAge$n_2008
+write.csv(SexAge, "validation_distribution_per_ageSex.csv")
+
 # 
 # bd_evol_select$cons_5aday
 # plot(cons_5aday ~ age_3cat , data = bd_evol_select)
