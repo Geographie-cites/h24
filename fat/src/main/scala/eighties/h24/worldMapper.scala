@@ -88,7 +88,7 @@ object worldMapper {
                   file: File,
                   getValue: (Individual => Double),
                   filter: (Int => Boolean) = _=>true,
-                  aggregator: (Array[Double] => Double) = (v => v.sum / v.size),
+                  aggregator: (Vector[Double] => Double) = (v => v.sum / v.size),
                   minValue: Double = 0.0,
                   maxValue: Double = 1.0,
                   cellSize: Int = 1000,
