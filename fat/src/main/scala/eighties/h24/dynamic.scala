@@ -23,6 +23,7 @@ import java.util.Calendar
 import better.files._
 import com.vividsolutions.jts.geom.Envelope
 import com.vividsolutions.jts.index.strtree.STRtree
+import eighties.h24.Simulation._
 import eighties.h24.dynamic.MoveMatrix.{TimeSlice, TimeSlices}
 import eighties.h24.generation._
 import eighties.h24.population._
@@ -75,6 +76,8 @@ object dynamic {
     type CellMatrix = Vector[Vector[Cell]]
     type Cell = Map[AggregatedSocialCategory, Vector[Move]]
     type Move = (Location, Double)
+
+    def cellName(t: TimeSlice, i: Int, j: Int) = s"${t.from}-${t.to}_${i}_${j}"
 
     def getLocatedCells(timeSlice: TimeSlices) =
       for {
@@ -146,6 +149,15 @@ object dynamic {
       val os = new FileOutputStream(file.toJava)
       try os.getChannel.write(Pickle.intoBytes(moves))
       finally os.close()
+    }
+
+    def save2(moves: TimeSlices, file: File) = {
+      getLocatedCells(moves).foreach{
+        case (t, (i,j), cell) =>
+          val os = new FileOutputStream(file + cellName(t, i, j))
+          try os.getChannel.write(Pickle.intoBytes(cell))
+          finally os.close()
+      }
     }
 
     def load(file: File) = {
