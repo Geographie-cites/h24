@@ -63,15 +63,15 @@ object Simulation extends App {
   println(Calendar.getInstance.getTime + " loading move matrix")
   val timeSlices = MoveMatrix.load(generatedData / "matrix.bin")
 
-  def mapHealth(world: World, bb: BoundingBox, file: File) = {
-    def getValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
-    worldMapper.mapColorRGB(world, bb, file, getValue)
-  }
-
-  def mapOpinion(world: World, bb: BoundingBox, file: File) = {
-    def getValue(individual: Individual) = individual.healthCategory.opinion
-    worldMapper.mapColorRGB(world, bb, file, getValue)
-  }
+//  def mapHealth(world: World, bb: BoundingBox, file: File) = {
+//    def getValue(individual: Individual) = if (individual.healthCategory.behaviour == Healthy) 1.0 else 0.0
+//    worldMapper.mapColorRGB(world, bb, file, getValue)
+//  }
+//
+//  def mapOpinion(world: World, bb: BoundingBox, file: File) = {
+//    def getValue(individual: Individual) = individual.healthCategory.opinion
+//    worldMapper.mapColorRGB(world, bb, file, getValue)
+//  }
 
   def byCell(day: Int, slice: Int, world: World, file: File) = {
     def cellInfo(cell: Vector[Individual]) =
