@@ -18,12 +18,10 @@
 package eighties.h24
 
 import java.io.{FileInputStream, FileOutputStream}
-import java.util.Calendar
 
 import better.files._
 import com.vividsolutions.jts.geom.Envelope
 import com.vividsolutions.jts.index.strtree.STRtree
-import eighties.h24.Simulation._
 import eighties.h24.dynamic.MoveMatrix.{TimeSlice, TimeSlices}
 import eighties.h24.generation._
 import eighties.h24.population._
@@ -73,8 +71,8 @@ object dynamic {
     }
 
     type TimeSlices = Vector[(TimeSlice, CellMatrix)]
-    type CellMatrix = Array[Array[Cell]]
-    type Cell = Map[AggregatedSocialCategory, Array[Move]]
+    type CellMatrix = Vector[Vector[Cell]]
+    type Cell = Map[AggregatedSocialCategory, Vector[Move]]
     type Move = (Location, Double)
 
     def cellName(t: TimeSlice, i: Int, j: Int) = s"${t.from}-${t.to}_${i}_${j}"
@@ -100,16 +98,17 @@ object dynamic {
 
     def cells =
       each[TimeSlices, (TimeSlice, CellMatrix)] composeLens
-        second[(TimeSlice, CellMatrix), CellMatrix] composeIso arrayVectorIso composeTraversal each composeIso arrayVectorIso composeTraversal
+        second[(TimeSlice, CellMatrix), CellMatrix] composeTraversal
+        each[CellMatrix, Vector[Cell]] composeTraversal
         each[Vector[Cell], Cell]
 
     def allMoves =
       cells composeTraversal
-        each[Cell, Array[Move]] composeIso arrayVectorIso composeTraversal each[Vector[Move], Move]
+        each[Cell, Vector[Move]] composeTraversal each[Vector[Move], Move]
 
     def moves(category: AggregatedSocialCategory => Boolean) =
       cells composeTraversal
-        filterIndex[Cell, AggregatedSocialCategory, Array[Move]](category) composeIso arrayVectorIso composeTraversal
+        filterIndex[Cell, AggregatedSocialCategory, Vector[Move]](category) composeTraversal
         each[Vector[Move], Move]
 
 //    def movesInNeighborhood(cellMatrix: CellMatrix, category: AggregatedSocialCategory, neighbor: Location => Boolean) =
@@ -150,10 +149,10 @@ object dynamic {
       finally os.close()
     }
 
-    def save2(moves: TimeSlices, file: File) = {
+    def saveCell(moves: TimeSlices, file: File) = {
       getLocatedCells(moves).foreach{
         case (t, (i,j), cell) =>
-          val os = new FileOutputStream(file + cellName(t, i, j))
+          val os = new FileOutputStream((file / cellName(t, i, j)).toJava)
           try os.getChannel.write(Pickle.intoBytes(cell))
           finally os.close()
       }
@@ -162,6 +161,12 @@ object dynamic {
     def load(file: File) = {
       val is = new FileInputStream(file.toJava)
       try Unpickle[TimeSlices].fromBytes(is.getChannel.toMappedByteBuffer)
+      finally is.close()
+    }
+
+    def loadCell(file: File, t: TimeSlice, i: Int, j: Int) = {
+      val is = new FileInputStream((file / cellName(t, i, j)).toJava)
+      try Unpickle[Cell].fromBytes(is.getChannel.toMappedByteBuffer)
       finally is.close()
     }
 
