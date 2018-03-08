@@ -695,7 +695,7 @@ object generation {
             val v = moves(index)._2
             c + (cat -> moves.updated(index, (flow.activity, v + intersection)))
           }
-        case None => c + (cat -> Vector((flow.activity, intersection)))
+        case None => c + (cat -> Array((flow.activity, intersection)))
       }
   }
 
@@ -705,21 +705,21 @@ object generation {
       category -> moves.map { case(destination, effective) => destination -> effective / total }
     }
 
-  def addFlowToMatrix(slices: TimeSlices, flow: Flow): TimeSlices =
-    slices.map { case (time, slice) =>
-     time ->
-       MoveMatrix.cell(flow.residence).modify { current => addFlowToCell(current, flow, time) }(slice)
-    }
+//  def addFlowToMatrix(slices: TimeSlices, flow: Flow): TimeSlices =
+//    slices.map { case (time, slice) =>
+//     time ->
+//       MoveMatrix.cell(flow.residence).modify { current => addFlowToCell(current, flow, time) }
+//    }
 
   def noMove(timeSlices: Vector[TimeSlice], i: Int, j: Int): TimeSlices =
     timeSlices.map { ts =>
-      ts -> Vector.tabulate(i, j) { (ii, jj) => Map.empty[AggregatedSocialCategory, Vector[Move]] }
+      ts -> Array.tabulate(i, j) { (ii, jj) => Map.empty[AggregatedSocialCategory, Array[Move]] }
     }
 
-  def idw(power: Double)(location: Location, moves: Vector[(Location, Double)], neighborhood: Vector[(Location, Vector[(Location, Double)])]) = {
+  def idw(power: Double)(location: Location, moves: Array[(Location, Double)], neighborhood: Vector[(Location, Array[(Location, Double)])]): Array[(Location, Double)] = {
     if (moves.isEmpty) {
       val weights = neighborhood.map(v => (v._1 -> 1.0 / scala.math.pow(space.distance(location, v._1), power))).toMap
-      val destinations = neighborhood.flatMap(_._2).map(_._1).distinct
+      val destinations = neighborhood.flatMap(_._2).map(_._1).distinct.toArray
       destinations.map { d =>
         val v = for {
           n <- neighborhood
@@ -737,12 +737,12 @@ object generation {
   }
 
   def interpolateFlows(index: SpatialCellIndex,
-                       interpolate: (Location, Vector[(Location, Double)], Vector[(Location, Vector[(Location, Double)])]) => Vector[(Location, Double)])
+                       interpolate: (Location, Array[(Location, Double)], Vector[(Location, Array[(Location, Double)])]) => Array[(Location, Double)])
                       (c: Cell, location: Location): Cell = {
     val movesByCat = movesInNeighborhoodByCategory(location, index)
     AggregatedSocialCategory.all.map {
       category =>
-        def moves = c.get(category).getOrElse(Vector())
+        def moves = c.get(category).getOrElse(Array())
         def m = for {
           (l, c) <- movesByCat
           mm <- c.get(category)
@@ -821,14 +821,13 @@ object generation {
 
     readFlowsFromEGT(aFile, location) map { l =>
       val nm = noMove(slices, boundingBox.sideI, boundingBox.sideJ)
-      /*
       for {
         slice <- nm
         f <- l
       } slice._2(f.residence._1)(f.residence._2) = addFlowToCell(slice._2(f.residence._1)(f.residence._2), f, slice._1)
       nm
-      */
-      l.foldLeft(noMove(slices, boundingBox.sideI, boundingBox.sideJ))(addFlowToMatrix)
+
+      //l.foldLeft(noMove(slices, boundingBox.sideI, boundingBox.sideJ))(addFlowToMatrix)
 
     } map {
       cells modify getMovesFromOppositeSex

@@ -85,12 +85,14 @@ package object h24 {
 
   def clamp(v: Double, min: Double = -1.0, max: Double = 1.0) = math.min(math.max(v, min), max)
 
-  def zipWithIndices[T](matrix: Vector[Vector[T]]): Vector[Vector[(T, (Int, Int))]] =
+  def zipWithIndices[T](matrix: Array[Array[T]]): Array[Array[(T, (Int, Int))]] =
     matrix.zipWithIndex.map { case(line, i) => line.zipWithIndex.map { case(c, j) => (c, (i, j)) } }
 
   def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
+  def arrayToVector[A: Manifest] = monocle.Lens[Array[A], Vector[A]](_.toVector)(v => _ => v.toArray)
+  def array2ToVector[A: Manifest] = monocle.Lens[Array[Array[A]], Vector[Vector[A]]](_.toVector.map(_.toVector))(v => _ => v.map(_.toArray).toArray)
 
-  def arrayVectorIso[A: ClassTag] = Iso[Array[A], Vector[A]](_.toVector)(_.toArray)
+  def arrayVectorIso[A: ClassTag]: Iso[Array[A], Vector[A]] = Iso[Array[A], Vector[A]](_.toVector)(_.toArray)
 
   /*
   implicit val traverseArray: Traverse[Array] = new Traverse[Array] {

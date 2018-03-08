@@ -98,7 +98,7 @@ object space {
         boundingBox.sideJ)
     }
 
-    def individualsVector = World.individuals composeIso arrayVectorIso
+    def individualsVector = World.individuals composeLens arrayToVector[Individual]
     def allIndividuals = individualsVector composeTraversal each
 
   }
@@ -119,14 +119,14 @@ object space {
       Index[Attraction](World.attractions.get(world).iterator, Attraction.location.get(_), world.sideI, world.sideJ)
 
     def apply[T: ClassTag](content: Iterator[T], location: T => Location, sideI: Int, sideJ: Int): Index[T] = {
-      val cellBuffer: Vector[Vector[ArrayBuffer[T]]] = Vector.fill(sideI, sideJ) { ArrayBuffer[T]() }
+      val cellBuffer: Array[Array[ArrayBuffer[T]]] = Array.fill(sideI, sideJ) { ArrayBuffer[T]() }
 
       for                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               {
         s <- content
         (i, j) = location(s)
       } cellBuffer(i)(j) += s
 
-      Index[T](cellBuffer.map(_.map(_.toVector)), sideI, sideJ)
+      Index[T](cellBuffer.map(_.map(_.toArray)), sideI, sideJ)
     }
 
     def getLocatedCells[T, U](index: Index[T]) =
@@ -135,11 +135,11 @@ object space {
         (c, j) <- l.zipWithIndex
       } yield (c, Location(i, j))
 
-    def allCells[T] = cells[T] composeTraversal each composeTraversal each
-    def allIndividuals[T] = allCells[T] composeTraversal each
+    def allCells[T: ClassTag] = cells[T] composeIso arrayVectorIso[Array[Array[T]]] composeTraversal each composeIso arrayVectorIso[Array[T]] composeTraversal each composeIso arrayVectorIso[T]
+    def allIndividuals[T: ClassTag] = allCells[T] composeTraversal each
   }
 
-  @Lenses case class Index[T](cells: Vector[Vector[Vector[T]]], sideI: Int, sideJ: Int)
+  @Lenses case class Index[T](cells: Array[Array[Array[T]]], sideI: Int, sideJ: Int)
 
   def generateWorld(
     features: Array[IndividualFeature],

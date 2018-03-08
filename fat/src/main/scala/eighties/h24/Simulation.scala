@@ -29,7 +29,73 @@ import eighties.h24.space._
 
 import scala.util.Random
 
-object Simulation extends App {
+object Fit {
+  def run(
+    maxProbaToSwitch: Double,
+    constraintsStrength: Double,
+    inertiaCoefficient: Double,
+    healthyDietReward: Double,
+    interpersonalInfluence: Double,
+    days: Int,
+    population: File,
+    moves: File,
+    distributionConstraints: File,
+    rng: Random) = {
+    val result = File("results")
+    val generatedData = File("data")
+
+//    val outputPath = result / "nomove"
+//    outputPath.createDirectories
+
+    val worldFeature = WorldFeature.load(population) //generatedData / "population.bin")
+    //val dataDirectory = File("../data/")
+    //  val pathEGT = dataDirectory / "EGT 2010/presence semaine EGT"
+
+   // val distributionConstraints = dataDirectory / "initialisation_distribution_per_cat.csv"
+    val healthCategory = generateHealthCategory(distributionConstraints)
+    val interactionMap = generateInteractionMap(distributionConstraints)
+
+    val world = generateWorld(worldFeature.individualFeatures, healthCategory, rng)
+    val bbox = worldFeature.originalBoundingBox
+    //val indexedWorld = Index.indexIndividuals(world, Individual.home.get)
+    val timeSlices = MoveMatrix.load(moves) //generatedData / "matrix.bin")
+
+    def simulateOneDay(world: space.World, bb: BoundingBox, lapses: List[(TimeSlice, CellMatrix)], day: Int, slice: Int = 0): World = {
+      lapses match {
+        case Nil => world
+        case (time, moveMatrix) :: t =>
+          def moved = dynamic.moveInMoveMatrix(world, moveMatrix, time, rng)
+          //def moved = dynamic.randomMove(world, 1.0, rng)
+
+          def convicted = opinion.interchangeConviction(
+            moved,
+            slice,
+            interactionMap,
+            maxProbaToSwitch = maxProbaToSwitch,
+            constraintsStrength = constraintsStrength,
+            inertiaCoefficient = inertiaCoefficient,
+            healthyDietReward = healthyDietReward,
+            interpersonalInfluence = interpersonalInfluence,
+            rng
+          )
+
+          simulateOneDay(convicted, bb, t, day, slice + 1)
+      }
+    }
+
+    def populationWithMoves = assignFixNightLocation(assignRandomDayLocation(world, timeSlices, rng), timeSlices)
+
+    (1 to days).foldLeft(populationWithMoves) { (w, s) => simulateOneDay(w, bbox, timeSlices.toList, s, 0) }
+  }
+
+
+  def loadMatrix(data: File) = {
+    data.lines.drop(1)
+  }
+}
+
+
+object SimulationApp extends App {
 
   val seed = 42
   val rng = new Random(seed)
@@ -45,6 +111,7 @@ object Simulation extends App {
 
   val result = File("results")
   val generatedData = File("data")
+
   val outputPath = result / "nomove"
   outputPath.createDirectories
   println(Calendar.getInstance.getTime + " loading population")
@@ -74,7 +141,7 @@ object Simulation extends App {
 //  }
 
   def byCell(day: Int, slice: Int, world: World, file: File) = {
-    def cellInfo(cell: Vector[Individual]) =
+    def cellInfo(cell: Array[Individual]) =
       if(cell.isEmpty) List.fill(3)("0.0")
       else {
         def cellSize = cell.size
@@ -86,7 +153,7 @@ object Simulation extends App {
     file.parent.createDirectories
 
     def indexed = Index.indexIndividuals(world)
-    zipWithIndices[Vector[Individual]](indexed.cells).flatten.foreach { case(c, (i, j)) =>
+    zipWithIndices[Array[Individual]](Index.cells.get(indexed)).flatten.foreach { case(c, (i, j)) =>
       file << s"""$day,$slice,$i,$j,${cellInfo(c).mkString(",")}"""
     }
   }
@@ -150,7 +217,7 @@ object Simulation extends App {
     }
   }
 
-  val populationWithMoves =
+  def populationWithMoves =
     assignFixNightLocation(assignRandomDayLocation(world, timeSlices, rng), timeSlices)
 
   println(Calendar.getInstance.getTime + " starting simulation")
