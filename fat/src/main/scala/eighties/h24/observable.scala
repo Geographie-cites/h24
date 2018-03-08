@@ -21,8 +21,6 @@ import better.files.File
 import eighties.h24.population._
 import eighties.h24.space._
 
-import scala.reflect.ClassTag
-
 object observable {
 
   def byEducation[T](b: Vector[Double] => T)(world: World) =
@@ -36,6 +34,39 @@ object observable {
     import breeze.stats._
     byEducation[Vector[Double]](b => Vector(mean(b), scala.math.sqrt(variance(DenseVector(b: _*))), median(DenseVector(b: _*))))(world)
   }
+
+  def sexAge(sex: Sex, age: AggregatedAge)(world: World) =
+    World.individuals.modify(_.filter(i => Individual.sex.get(i) == sex && Individual.age.get(i) == age))(world)
+
+  def sexAgeEducation(sex: Sex, age: AggregatedAge, education: AggregatedEducation)(world: World) =
+    World.individuals.modify(_.filter(i => Individual.sex.get(i) == sex && Individual.age.get(i) == age && Individual.education.get(i) == education))(world)
+
+  def numberOfHealthy(world: World) = world.individuals.count(_.healthCategory.behaviour == Healthy)
+
+  def socialInequality(world: World) = {
+    val bySA =
+      for {
+        sex <- Sex.all
+        age <- AggregatedAge.all
+      } yield {
+        val high = sexAgeEducation(sex, age, AggregatedEducation.High)(world)
+        val numberOfHighHealthy = numberOfHealthy(high) + 1
+        val numberOfHigh = high.individuals.size + 1
+        val low = sexAgeEducation(sex, age, AggregatedEducation.Low)(world)
+        val numberOfLowHealthy = numberOfHealthy(low) + 1
+        val numberOfLow = low.individuals.size + 1
+        val all = world.individuals.size
+        val sa = sexAge(sex, age)(world).individuals.size
+
+        ((numberOfHighHealthy.toDouble / numberOfHigh) / (numberOfLowHealthy.toDouble / numberOfLow)) *
+          (sa.toDouble / all)
+      }
+
+    bySA.sum
+  }
+
+  //def deltaToData()
+
 
   def saveEffectivesAsCSV(world: World, output: File) = {
     output.parent.createDirectories()
