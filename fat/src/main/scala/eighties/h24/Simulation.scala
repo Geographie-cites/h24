@@ -102,7 +102,7 @@ object Simulation extends App {
       }
 
     AggregatedSocialCategory.all.foreach { cat =>
-      def individualOfCategory = world.individuals.filter(_.socialCategory == cat)
+      def individualOfCategory = World.individualsVector.get(world).filter(_.socialCategory == cat)
       file <<
         s"""$day,$slice,${Sex.toCode(cat.sex)},${AggregatedAge.toCode(cat.age)},${AggregatedEducation.toCode(cat.education)},${categoryInfo(individualOfCategory).mkString(",")}"""
     }

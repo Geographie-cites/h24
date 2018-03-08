@@ -200,7 +200,7 @@ object dynamic {
         }
       }
 
-    World.individuals.set(newIndividuals.flatten.toVector)(world)
+    World.individuals.set(newIndividuals.flatten.toArray)(world)
   }
 
   def assignRandomDayLocation(world: World, timeSlices: MoveMatrix.TimeSlices, rng: Random) =
@@ -235,7 +235,7 @@ object dynamic {
     }
 
     def attractions = (0 until (reach.size * proportion).toInt).map(_ => attraction)
-    World.attractions.set(attractions.toVector)(world)
+    World.attractions.set(attractions.toArray)(world)
   }
 
   def logistic(l: Double, k: Double, x0: Double)(x: Double) = l / (1.0 +  math.exp(-k * (x - x0)))

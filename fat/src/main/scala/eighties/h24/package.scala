@@ -1,8 +1,9 @@
 package eighties
 
-import monocle.{Optional, Traversal}
+import monocle.{Iso, Optional, Traversal}
 import monocle.function.{Each, Index}
 import monocle.macros.Lenses
+import spire.ClassTag
 
 import scala.annotation.tailrec
 import scala.util.Random
@@ -88,6 +89,8 @@ package object h24 {
     matrix.zipWithIndex.map { case(line, i) => line.zipWithIndex.map { case(c, j) => (c, (i, j)) } }
 
   def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
+
+  def arrayVectorIso[A: ClassTag] = Iso[Array[A], Vector[A]](_.toVector)(_.toArray)
 
   /*
   implicit val traverseArray: Traverse[Array] = new Traverse[Array] {

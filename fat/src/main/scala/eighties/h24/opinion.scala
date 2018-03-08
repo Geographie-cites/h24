@@ -140,7 +140,7 @@ object opinion {
         random)
     }
 
-    World.individuals.set(cells.flatten.toVector)(world)
+    World.individuals.set(cells.flatten.toArray)(world)
   }
 
 

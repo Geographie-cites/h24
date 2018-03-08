@@ -26,7 +26,7 @@ object observable {
   def byEducation[T](b: Vector[Double] => T)(world: World) =
       for {
         ed <- AggregatedEducation.all
-        level = world.individuals.filter(i => Individual.education.get(i)  == ed)
+        level = World.individualsVector.get(world).filter(i => Individual.education.get(i)  == ed)
       } yield ed -> b(level.map(Individual.opinion.get))
 
   def resume(world: World) = {

@@ -86,7 +86,7 @@ object generation {
     }
   }
 
-  @Lenses case class WorldFeature(individualFeatures: Vector[IndividualFeature], originalBoundingBox: BoundingBox, boundingBox: BoundingBox)
+  @Lenses case class WorldFeature(individualFeatures: Array[IndividualFeature], originalBoundingBox: BoundingBox, boundingBox: BoundingBox)
 
 
   @Lenses case class IndividualFeature(

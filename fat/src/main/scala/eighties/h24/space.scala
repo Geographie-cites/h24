@@ -61,7 +61,7 @@ object space {
   }
 
   object BoundingBox {
-    def apply[T](content: Vector[T], location: T => Location): BoundingBox = {
+    def apply[T](content: Array[T], location: T => Location): BoundingBox = {
       val (minI, minJ) = content.view.map(location).reduceLeft(Location.lowerBound)
       val (maxI, maxJ) = content.view.map(location).reduceLeft(Location.upperBound)
       BoundingBox(minI = minI, maxI = maxI, minJ = minJ, maxJ = maxJ)
@@ -82,7 +82,7 @@ object space {
 
   object World {
 
-    def apply[B](individuals: Vector[Individual], attractions: Vector[Attraction]): World = {
+    def apply[B](individuals: Array[Individual], attractions: Array[Attraction]): World = {
       val boundingBox = BoundingBox(individuals, Individual.location.get)
 
       def relocate =
@@ -98,14 +98,16 @@ object space {
         boundingBox.sideJ)
     }
 
-    def allIndividuals = World.individuals composeTraversal each
+    def individualsVector = World.individuals composeIso arrayVectorIso
+    def allIndividuals = individualsVector composeTraversal each
 
   }
+
   //def arrayToVectorLens[A: Manifest] = monocle.Lens[Array[A], Vector[A]](_.toVector)(v => _ => v.toArray)
   //def array2ToVectorLens[A: Manifest] = monocle.Lens[Array[Array[A]], Vector[Vector[A]]](_.toVector.map(_.toVector))(v => _ => v.map(_.toArray).toArray)
 
   /* Définition d'une classe Grid, composé de vecteurs, de edges et de side*/
-  @Lenses case class World(individuals: Vector[Individual], attractions: Vector[Attraction], originI: Int, originJ: Int, sideI: Int, sideJ: Int)
+  @Lenses case class World(individuals: Array[Individual], attractions: Array[Attraction], originI: Int, originJ: Int, sideI: Int, sideJ: Int)
   @Lenses case class Attraction(location: Location, education: AggregatedEducation)
 
   object Index {
@@ -140,7 +142,7 @@ object space {
   @Lenses case class Index[T](cells: Vector[Vector[Vector[T]]], sideI: Int, sideJ: Int)
 
   def generateWorld(
-    features: Vector[IndividualFeature],
+    features: Array[IndividualFeature],
     healthCategory: (AggregatedSocialCategory, Random) => HealthCategory,
     rng: Random) = {
 
@@ -155,6 +157,6 @@ object space {
 
     //assignWork(workerRatio, generateAttractions(World(individuals.get, Vector.empty), 0.01, rng), rng)
 
-    World(individuals, Vector.empty)
+    World(individuals, Array.empty)
   }
 }
