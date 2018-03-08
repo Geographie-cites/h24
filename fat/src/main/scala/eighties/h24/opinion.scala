@@ -11,15 +11,15 @@ import scala.util.Random
 
 object opinion {
 
-  def sigmaAdoption(current: Double, all: Array[Double], sigma: Double, random: Random): Double = {
+  def sigmaAdoption(current: Double, all: Vector[Double], sigma: Double, random: Random): Double = {
     val dist = new Gaussian(0.0, sigma)
-    val d = all.map(x => dist.value(x - current))
+    val d = all.map(x => dist.value(x - current)).toArray
     val v = new RasterVariate(d, Array(d.size))
     val index = (v.compute(random)(0) * d.size).toInt
     all(index)
   }
 
-  def binomialAdoption(current: Double, all: Array[Double], gama: Double, random: Random): Double = {
+  def binomialAdoption(current: Double, all: Vector[Double], gama: Double, random: Random): Double = {
     val other = all(random.nextInt(all.size))
     val distance = math.abs(current - other)
 
@@ -30,7 +30,7 @@ object opinion {
 
   object InterchangeConviction {
     def interchangeConvictionInCell(
-     cell: Array[Individual],
+     cell: Vector[Individual],
      timeOfDay: Int,
      interactions: Map[AggregatedSocialCategory, Interactions],
      maxProbaToSwitch: Double,
@@ -38,7 +38,7 @@ object opinion {
      inertiaCoefficient: Double,
      healthyDietReward: Double,
      interpersonalInfluence: Double,
-     random: Random): Array[Individual] = {
+     random: Random): Vector[Individual] = {
 
       def booleanToDouble(b: Boolean) = if(b) 1.0 else 0.0
 
@@ -48,13 +48,13 @@ object opinion {
         case 2 => interactions(individual.socialCategory).dinnerInteraction
       }
 
-      def peering(cell: Array[Individual]): (Array[(Individual, Individual)], Array[Individual]) = {
+      def peering(cell: Vector[Individual]): (Vector[(Individual, Individual)], Vector[Individual]) = {
         val (interactingPeople, passivePeople) = cell.partition { individual => random.nextDouble() < interactionProbability(individual) }
         val randomizedInteractingPeople = random.shuffle(interactingPeople.toVector)
         if(interactingPeople.size % 2 == 0)
-          (randomizedInteractingPeople.grouped(2).toArray.map { case Vector(i1, i2) => (i1, i2) }, passivePeople)
+          (randomizedInteractingPeople.grouped(2).toVector.map { case Vector(i1, i2) => (i1, i2) }, passivePeople)
         else
-          (randomizedInteractingPeople.dropRight(1).grouped(2).toArray.map { case Vector(i1, i2) => (i1, i2) }, passivePeople ++ Seq(randomizedInteractingPeople.last))
+          (randomizedInteractingPeople.dropRight(1).grouped(2).toVector.map { case Vector(i1, i2) => (i1, i2) }, passivePeople ++ Seq(randomizedInteractingPeople.last))
       }
 
       def dietRewardOpinion(individual: Individual) = {
@@ -140,7 +140,7 @@ object opinion {
         random)
     }
 
-    World.individuals.set(cells.flatten.toArray)(world)
+    World.individuals.set(cells.flatten.toVector)(world)
   }
 
 

@@ -14,7 +14,7 @@ object PopulationGenerator extends App {
     _ => true,
     new util.Random(42),
     generatePopulation2
-  ).get.toArray
+  ).get.toVector
   println(Calendar.getInstance.getTime + " Relocating population")
   val originalBoundingBox = BoundingBox(features, IndividualFeature.location.get)
   def relocate = IndividualFeature.location.modify(BoundingBox.translate(originalBoundingBox))

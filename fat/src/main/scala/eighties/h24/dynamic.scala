@@ -57,9 +57,9 @@ object dynamic {
     (World.allIndividuals modify m)(world)
   }
 
-  def getTimeIndex(i: Instant, intervals: Array[Interval]) = intervals.indexWhere(p=>p.contains(i))
+  def getTimeIndex(i: Instant, intervals: Vector[Interval]) = intervals.indexWhere(p=>p.contains(i))
 
-  def getTimeIndices(i: Interval, intervals: Array[Interval]) = intervals.zipWithIndex.filter(v => v._1.contains(i)).map(_._2)
+  def getTimeIndices(i: Interval, intervals: Vector[Interval]) = intervals.zipWithIndex.filter(v => v._1.contains(i)).map(_._2)
 
   object MoveMatrix {
 
@@ -71,9 +71,9 @@ object dynamic {
       def length = to - from
     }
 
-    type TimeSlices = Array[(TimeSlice, CellMatrix)]
-    type CellMatrix = Array[Array[Cell]]
-    type Cell = Map[AggregatedSocialCategory, Array[Move]]
+    type TimeSlices = Vector[(TimeSlice, CellMatrix)]
+    type CellMatrix = Vector[Vector[Cell]]
+    type Cell = Map[AggregatedSocialCategory, Vector[Move]]
     type Move = (Location, Double)
 
     def getLocatedCells(timeSlice: TimeSlices) =
@@ -92,24 +92,23 @@ object dynamic {
     def modifyCellMatrix(f: (Cell, Location) => Cell)(matrix: CellMatrix): CellMatrix =
       matrix.zipWithIndex.map { case(line, i) => line.zipWithIndex.map { case(c, j) => f(c, (i, j)) } }
 
-    /*
     def cell(location: Location) =
-      index[Array[Array[Cell]], Int, Array[Cell]](location._1) composeOptional index(location._2)
-*/
+      index[Vector[Vector[Cell]], Int, Vector[Cell]](location._1) composeOptional index(location._2)
+
     def cells =
       each[TimeSlices, (TimeSlice, CellMatrix)] composeLens
         second[(TimeSlice, CellMatrix), CellMatrix] composeTraversal
-        each[CellMatrix, Array[Cell]] composeTraversal
-        each[Array[Cell], Cell]
+        each[CellMatrix, Vector[Cell]] composeTraversal
+        each[Vector[Cell], Cell]
 
     def allMoves =
       cells composeTraversal
-        each[Cell, Array[Move]] composeTraversal each[Array[Move], Move]
+        each[Cell, Vector[Move]] composeTraversal each[Vector[Move], Move]
 
     def moves(category: AggregatedSocialCategory => Boolean) =
       cells composeTraversal
-        filterIndex[Cell, AggregatedSocialCategory, Array[Move]](category) composeTraversal
-        each[Array[Move], Move]
+        filterIndex[Cell, AggregatedSocialCategory, Vector[Move]](category) composeTraversal
+        each[Vector[Move], Move]
 
 //    def movesInNeighborhood(cellMatrix: CellMatrix, category: AggregatedSocialCategory, neighbor: Location => Boolean) =
 //      for {
@@ -136,7 +135,7 @@ object dynamic {
     def moveRatio = second[Move, Double]
 
     def noMove(i: Int, j: Int) =
-      Array.tabulate(i, j) {(ii, jj) => AggregatedSocialCategory.all.map { c => c -> Array((ii, jj) -> 1.0) }.toMap }
+      Vector.tabulate(i, j) {(ii, jj) => AggregatedSocialCategory.all.map { c => c -> Vector((ii, jj) -> 1.0) }.toMap }
 
     import boopickle.Default._
 
@@ -194,14 +193,14 @@ object dynamic {
         if (size == 0) cell
         else {
           //val cellBehaviours = random.shuffle(cell.map(_.behaviour)).take((size * 0.01).toInt + 1).toArray
-          val cellBehaviours = cell.map(i => Individual.opinion.get(i)).toArray
-          cell applyTraversal (each[Array[Individual], Individual] composeLens Individual.opinion) modify { b: Double =>
+          val cellBehaviours = cell.map(i => Individual.opinion.get(i)).toVector
+          cell applyTraversal (each[Vector[Individual], Individual] composeLens Individual.opinion) modify { b: Double =>
             opinion.binomialAdoption(b, cellBehaviours, gama, random)
           }
         }
       }
 
-    World.individuals.set(newIndividuals.flatten.toArray)(world)
+    World.individuals.set(newIndividuals.flatten.toVector)(world)
   }
 
   def assignRandomDayLocation(world: World, timeSlices: MoveMatrix.TimeSlices, rng: Random) =
@@ -236,7 +235,7 @@ object dynamic {
     }
 
     def attractions = (0 until (reach.size * proportion).toInt).map(_ => attraction)
-    World.attractions.set(attractions.toArray)(world)
+    World.attractions.set(attractions.toVector)(world)
   }
 
   def logistic(l: Double, k: Double, x0: Double)(x: Double) = l / (1.0 +  math.exp(-k * (x - x0)))

@@ -74,7 +74,7 @@ object Simulation extends App {
   }
 
   def byCell(day: Int, slice: Int, world: World, file: File) = {
-    def cellInfo(cell: Array[Individual]) =
+    def cellInfo(cell: Vector[Individual]) =
       if(cell.isEmpty) List.fill(3)("0.0")
       else {
         def cellSize = cell.size
@@ -86,13 +86,13 @@ object Simulation extends App {
     file.parent.createDirectories
 
     def indexed = Index.indexIndividuals(world)
-    zipWithIndices[Array[Individual]](indexed.cells).flatten.foreach { case(c, (i, j)) =>
+    zipWithIndices[Vector[Individual]](indexed.cells).flatten.foreach { case(c, (i, j)) =>
       file << s"""$day,$slice,$i,$j,${cellInfo(c).mkString(",")}"""
     }
   }
 
   def byCategory(day: Int, slice: Int, world: World, file: File) = {
-    def categoryInfo(category: Array[Individual]) =
+    def categoryInfo(category: Vector[Individual]) =
       if(category.isEmpty) List.fill(3)("0.0")
       else {
         def categorySize = category.size

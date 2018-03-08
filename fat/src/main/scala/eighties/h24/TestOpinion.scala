@@ -17,13 +17,13 @@ object OpinionFunction {
       stableDestinations = Map.empty
     )
 
-  def balanced = Array.fill(50)(individual(0.9, Healthy)) ++ Array.fill(50)(individual(0.1, Unhealthy))
-  def unhealthyMajority = Array.fill(10)(individual(0.9, Healthy)) ++ Array.fill(90)(individual(0.1, Unhealthy))
-  def healthyMajority = Array.fill(90)(individual(0.9, Healthy)) ++ Array.fill(10)(individual(0.1, Unhealthy))
-  def balancedMiddle = Array.fill(50)(individual(0.5, Healthy)) ++ Array.fill(50)(individual(0.5, Unhealthy))
+  def balanced = Vector.fill(50)(individual(0.9, Healthy)) ++ Vector.fill(50)(individual(0.1, Unhealthy))
+  def unhealthyMajority = Vector.fill(10)(individual(0.9, Healthy)) ++ Vector.fill(90)(individual(0.1, Unhealthy))
+  def healthyMajority = Vector.fill(90)(individual(0.9, Healthy)) ++ Vector.fill(10)(individual(0.1, Unhealthy))
+  def balancedMiddle = Vector.fill(50)(individual(0.5, Healthy)) ++ Vector.fill(50)(individual(0.5, Unhealthy))
 
-  def interact(cell: Array[Individual], steps: Int, rng: Random) = {
-    def step(cell: Array[Individual]) = InterchangeConviction.interchangeConvictionInCell(
+  def interact(cell: Vector[Individual], steps: Int, rng: Random) = {
+    def step(cell: Vector[Individual]) = InterchangeConviction.interchangeConvictionInCell(
       cell,
       timeOfDay = 1,
       interactions = Map(AggregatedSocialCategory.all.head -> Interactions(1.0, 1.0, 1.0)),

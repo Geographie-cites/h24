@@ -7,7 +7,8 @@ version := "1.0-SNAPSHOT"
 
 scalaVersion := "2.12.4"
 
-val monocleVersion = "1.4.0"
+//val monocleVersion = "1.5.0-cats"
+val monocleVersion = "1.5.0"
 
 val geotoolsVersion = "17.2"
 

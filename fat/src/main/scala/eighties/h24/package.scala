@@ -6,7 +6,7 @@ import monocle.macros.Lenses
 
 import scala.annotation.tailrec
 import scala.util.Random
-import scalaz.{Applicative, Traverse}
+import scalaz.Traverse
 
 /**
   * Created by Romain Reuillon on 11/05/16.
@@ -84,15 +84,22 @@ package object h24 {
 
   def clamp(v: Double, min: Double = -1.0, max: Double = 1.0) = math.min(math.max(v, min), max)
 
-  def zipWithIndices[T](matrix: Array[Array[T]]): Array[Array[(T, (Int, Int))]] =
+  def zipWithIndices[T](matrix: Vector[Vector[T]]): Vector[Vector[(T, (Int, Int))]] =
     matrix.zipWithIndex.map { case(line, i) => line.zipWithIndex.map { case(c, j) => (c, (i, j)) } }
 
   def rescale(min: Double, max: Double, value: Double) = min + value * (max - min)
 
-  implicit val traverseArray: scalaz.Traverse[Array] = new Traverse[Array] {
-    override def traverseImpl[G[_], A, B](fa: Array[A])(f: A => G[B])(implicit evidence$1: Applicative[G]): G[Array[B]] =
-      evidence$1.traverse(fa)(f)
+  /*
+  implicit val traverseArray: Traverse[Array] = new Traverse[Array] {
+
+//    override def traverseImpl[G[_], A, B](fa: Array[A])(f: A => G[B])(implicit evidence$1: Applicative[G]): G[Array[B]] =
+//      fa.traverse(f)
+    override def traverse[G[_], A, B](fa: Array[A])(f: A => G[B])(implicit evidence$1: Applicative[G]): G[Array[B]] = ???
+    override def foldLeft[A, B](fa: Array[A], b: B)(f: (B, A) => B): B = ???
+
+    override def foldRight[A, B](fa: Array[A], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B] = ???
   }
+  */
   /*
   implicit def arrayIndex[A]: Index[Array[A], Int, A] = new Index[Array[A], Int, A] {
     def index(i: Int) =
@@ -103,13 +110,15 @@ package object h24 {
   */
   //implicit def arrayEach[A]: Each[Array[A], A] = fromTraverse
 
+  /*
   implicit def traversalArray[T] = new Traversal[Array[T], T] {
     override def modifyF[F[_]](f: T => F[T])(s: Array[T])(implicit evidence$1: Applicative[F]): F[Array[T]] =
-      evidence$1.traverse(s)(f)
+      s.traverse(f)
   }
 
   implicit def eachArray[T] = new Each[Array[T], T] {
     override def each: Traversal[Array[T], T] = traversalArray[T]
   }
+  */
 
 }
