@@ -18,7 +18,6 @@
 package eighties.h24
 
 import java.io.{FileInputStream, FileOutputStream}
-import java.util.Calendar
 
 import better.files._
 import com.vividsolutions.jts.geom.Envelope
@@ -75,6 +74,8 @@ object dynamic {
     type CellMatrix = Array[Array[Cell]]
     type Cell = Map[AggregatedSocialCategory, Array[Move]]
     type Move = (Location, Double)
+
+    def cellName(t: TimeSlice, i: Int, j: Int) = s"${t.from}-${t.to}_${i}_${j}"
 
     def getLocatedCells(timeSlice: TimeSlices) =
       for {
@@ -147,9 +148,24 @@ object dynamic {
       finally os.close()
     }
 
+    def saveCell(moves: TimeSlices, file: File) = {
+      getLocatedCells(moves).foreach{
+        case (t, (i,j), cell) =>
+          val os = new FileOutputStream((file / cellName(t, i, j)).toJava)
+          try os.getChannel.write(Pickle.intoBytes(cell))
+          finally os.close()
+      }
+    }
+
     def load(file: File) = {
       val is = new FileInputStream(file.toJava)
       try Unpickle[TimeSlices].fromBytes(is.getChannel.toMappedByteBuffer)
+      finally is.close()
+    }
+
+    def loadCell(file: File, t: TimeSlice, i: Int, j: Int) = {
+      val is = new FileInputStream((file / cellName(t, i, j)).toJava)
+      try Unpickle[Cell].fromBytes(is.getChannel.toMappedByteBuffer)
       finally is.close()
     }
 
