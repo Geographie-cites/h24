@@ -79,7 +79,7 @@ object observable {
     }
   }
 
-  def moran[T](matrix: Vector[Vector[T]], quantity: T => Double): Double = {
+  def moran[T](matrix: Array[Array[T]], quantity: T => Double): Double = {
     def adjacentCells(i: Int, j: Int, size: Int = 1) =
       for {
         oi ← -size to size

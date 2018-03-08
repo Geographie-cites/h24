@@ -73,8 +73,8 @@ object dynamic {
     }
 
     type TimeSlices = Vector[(TimeSlice, CellMatrix)]
-    type CellMatrix = Vector[Vector[Cell]]
-    type Cell = Map[AggregatedSocialCategory, Vector[Move]]
+    type CellMatrix = Array[Array[Cell]]
+    type Cell = Map[AggregatedSocialCategory, Array[Move]]
     type Move = (Location, Double)
 
     def cellName(t: TimeSlice, i: Int, j: Int) = s"${t.from}-${t.to}_${i}_${j}"
@@ -100,17 +100,16 @@ object dynamic {
 
     def cells =
       each[TimeSlices, (TimeSlice, CellMatrix)] composeLens
-        second[(TimeSlice, CellMatrix), CellMatrix] composeTraversal
-        each[CellMatrix, Vector[Cell]] composeTraversal
+        second[(TimeSlice, CellMatrix), CellMatrix] composeIso arrayVectorIso composeTraversal each composeIso arrayVectorIso composeTraversal
         each[Vector[Cell], Cell]
 
     def allMoves =
       cells composeTraversal
-        each[Cell, Vector[Move]] composeTraversal each[Vector[Move], Move]
+        each[Cell, Array[Move]] composeIso arrayVectorIso composeTraversal each[Vector[Move], Move]
 
     def moves(category: AggregatedSocialCategory => Boolean) =
       cells composeTraversal
-        filterIndex[Cell, AggregatedSocialCategory, Vector[Move]](category) composeTraversal
+        filterIndex[Cell, AggregatedSocialCategory, Array[Move]](category) composeIso arrayVectorIso composeTraversal
         each[Vector[Move], Move]
 
 //    def movesInNeighborhood(cellMatrix: CellMatrix, category: AggregatedSocialCategory, neighbor: Location => Boolean) =

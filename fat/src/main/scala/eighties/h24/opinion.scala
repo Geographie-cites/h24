@@ -127,9 +127,9 @@ object opinion {
     interpersonalInfluence: Double,
     random: Random): World = {
 
-    def cells = Index.indexIndividuals(world).cells.view.flatten.map {
+    def cells = Index.indexIndividuals(world).cells.view.flatten.map { c =>
       InterchangeConviction.interchangeConvictionInCell(
-        _,
+        c.toVector,
         timeOfDay,
         interactions,
         maxProbaToSwitch,
