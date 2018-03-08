@@ -126,7 +126,7 @@ object SimulationApp extends App {
   println(Calendar.getInstance.getTime + " generating world")
   val world = generateWorld(worldFeature.individualFeatures, healthCategory, rng)
   val bbox = worldFeature.originalBoundingBox
-  val indexedWorld = Index.indexIndividuals(world, Individual.home.get)
+  def indexedWorld = Index.indexIndividuals(world, Individual.home.get)
   println(Calendar.getInstance.getTime + " loading move matrix")
   val timeSlices = MoveMatrix.load(generatedData / "matrix.bin")
 

@@ -23,7 +23,7 @@ import java.util.Calendar
 import better.files._
 import com.vividsolutions.jts.geom.Envelope
 import com.vividsolutions.jts.index.strtree.STRtree
-import eighties.h24.dynamic.MoveMatrix.{TimeSlice, TimeSlices}
+import eighties.h24.dynamic.MoveMatrix.{Cell, TimeSlice, TimeSlices}
 import eighties.h24.generation._
 import eighties.h24.population._
 import eighties.h24.space._
@@ -155,29 +155,42 @@ object dynamic {
 
   }
 
-  def moveFlowDefaultOnOtherSex(moves: MoveMatrix.CellMatrix, individual: Individual) = {
-    val location = Individual.location.get(individual)
-    val cellMoves = moves(location._1)(location._2)
+  def moveFlowDefaultOnOtherSex(cellMoves: Cell, individual: Individual) /*moves: MoveMatrix.CellMatrix, individualInCel: Individual)*/ = {
+    //val location = Individual.location.get(individual)
+    //val cellMoves = moves(location._1)(location._2)
     val aggregatedCategory = Individual.socialCategory.get(individual)
     def myCategory = cellMoves.get(aggregatedCategory)
     def noSex = cellMoves.find { case(c, v) => c.age == aggregatedCategory.age && c.education == aggregatedCategory.education }.map(_._2)
     myCategory orElse noSex
   }
 
-  def sampleDestinationInMoveMatrix(moves: MoveMatrix.CellMatrix, individual: Individual, random: Random) =
-    moveFlowDefaultOnOtherSex(moves, individual).flatMap { m => if(m.isEmpty) None else Some(multinomial(m)(random)) }
+  def sampleDestinationInMoveMatrix(cellMoves: Cell, individual: Individual, random: Random) =
+    moveFlowDefaultOnOtherSex(cellMoves, individual).flatMap { m => if(m.isEmpty) None else Some(multinomial(m)(random)) }
 
-  def moveInMoveMatrix(world: World, moves: MoveMatrix.CellMatrix, timeSlice: TimeSlice, random: Random) = {
-    def sampleMoveInMatrix(individual: Individual) =
+  def moveInMoveMatrix(world: World, moves: MoveMatrix.CellMatrix, timeSlice: TimeSlice, random: Random): World = {
+    def sampleMoveInMatrix(individual: Individual, cellMoves: Cell) =
       individual.stableDestinations.get(timeSlice) match {
         case None =>
-          sampleDestinationInMoveMatrix(moves, individual, random)  match {
+          sampleDestinationInMoveMatrix(cellMoves, individual, random)  match {
             case None => individual
             case Some(destination) => Individual.location.set(destination)(individual)
           }
         case Some(destination) => Individual.location.set(destination)(individual)
     }
-    (World.allIndividuals modify sampleMoveInMatrix)(world)
+
+    def newIndividuals =
+      for {
+        (line, i) <- Index.cells.get(Index.indexIndividuals(world, Individual.home.get)).zipWithIndex
+        (individuals, j) <- line.zipWithIndex
+      } yield individuals.map(individual => sampleMoveInMatrix(individual, moves(i)(j)))
+
+    World.individuals.set(newIndividuals.flatten)(world)
+//
+//    Index.cells.get(Index.indexIndividuals(world, Individual.location.get)).flatMap { cell =>
+//      cell.flatten.map(i => sampleMoveInMatrix(i, cell))
+//    }
+//
+//    (World.allIndividuals modify sampleMoveInMatrix)(world)
   }
   def noMoveInMoveMatrix(world: World, moves: MoveMatrix.CellMatrix, timeSlice: TimeSlice, random: Random) = {
     world
@@ -202,14 +215,32 @@ object dynamic {
     World.individuals.set(newIndividuals.flatten.toArray)(world)
   }
 
-  def assignRandomDayLocation(world: World, timeSlices: MoveMatrix.TimeSlices, rng: Random) =
-    World.allIndividuals.modify { individual =>
-      val workTimeMoves = timeSlices.toMap.apply(dayTimeSlice)
-      dynamic.sampleDestinationInMoveMatrix(workTimeMoves, individual, rng) match {
-        case Some(d) => Individual.stableDestinations.modify(_ + (dayTimeSlice -> d))(individual)
-        case None => Individual.stableDestinations.modify(_ + (dayTimeSlice -> individual.home))(individual)
+  def assignRandomDayLocation(world: World, timeSlices: MoveMatrix.TimeSlices, rng: Random) = {
+    def newIndividuals =
+      for {
+        (line, i) <- Index.cells.get(Index.indexIndividuals(world, Individual.location.get)).zipWithIndex
+        (individuals, j) <- line.zipWithIndex
+      } yield {
+        val workTimeMovesFromCell = timeSlices.toMap.apply(dayTimeSlice)(i)(j)
+        individuals.map {
+          individual =>
+            dynamic.sampleDestinationInMoveMatrix(workTimeMovesFromCell, individual, rng) match {
+              case Some(d) => Individual.stableDestinations.modify(_ + (dayTimeSlice -> d))(individual)
+              case None => Individual.stableDestinations.modify(_ + (dayTimeSlice -> individual.home))(individual)
+            }
+        }
       }
-    }(world)
+
+    World.individuals.set(newIndividuals.flatten)(world)
+
+//    World.allIndividuals.modify { individual =>
+//      val workTimeMoves = timeSlices.toMap.apply(dayTimeSlice)
+//      dynamic.sampleDestinationInMoveMatrix(workTimeMoves, individual, rng) match {
+//        case Some(d) => Individual.stableDestinations.modify(_ + (dayTimeSlice -> d))(individual)
+//        case None => Individual.stableDestinations.modify(_ + (dayTimeSlice -> individual.home))(individual)
+//      }
+//    }(world)
+  }
 
   def assignFixNightLocation(world: World, timeSlices: TimeSlices) =
     World.allIndividuals.modify { individual => Individual.stableDestinations.modify(_ + (nightTimeSlice -> individual.home))(individual) } (world)
