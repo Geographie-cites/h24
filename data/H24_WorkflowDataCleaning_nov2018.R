@@ -1,6 +1,8 @@
 library("foreign")
 library("readstata13")
-setwd("~/Desktop/CSV_Travail")
+library("dplyr")
+
+setwd("/Users/clementinecottineau/Desktop/bureau/CSV_Travail/")
 
 meanNoNA = function(x){
   y = mean(x, na.rm = T)
@@ -62,9 +64,6 @@ size_com_res = c("q21", "q19", "catagg")
 region = c("q25", "q26", "dep")
 deps_idf = c(75, 77, 78, 91, 92, 93, 94, 95)
 # id of districts included in the Paris region to aggregate
-paris = c(75)
-petite_couronne = c(92, 93, 94)
-grande_couronne = c(77, 78, 91, 95)
 
 
 # social context of meals
@@ -121,7 +120,6 @@ low_consumption_veg = c("pr_legpc", "pr_legpc", "pr_legevpc")
 # 1 = yes
 # 2 = no
 
-
 # Select, harmonise and rename variables of interest for all 3 years
 for(a in 1:3){ # 1 = 1996, 2= 2002, 3=2008
   if (a == 1) bd = b96
@@ -156,7 +154,6 @@ for(a in 1:3){ # 1 = 1996, 2= 2002, 3=2008
                        ifelse(bd$age_continuous %in% 30:59, 2,
                               ifelse(bd$age_continuous >= 60, 3,0)))
   bd$adult = ifelse(bd$age_continuous >= 15, 1, 0)
-  
   
   if (a == 1) household = bd[,paste0("q70s", 1:8)]
   if (a == 2) household = bd[,paste0("q102s", 1:12)]
@@ -213,16 +210,8 @@ for(a in 1:3){ # 1 = 1996, 2= 2002, 3=2008
    }
     if (a == 3) {
       bd$idf = ifelse(bd$reg %in% deps_idf, 1, 0)
-      bd$paris = ifelse(bd$reg %in% paris, 1, 0)
-      bd$petite_couronne = ifelse(bd$reg %in% petite_couronne, 1, 0)
-      bd$grande_couronne = ifelse(bd$reg %in% grande_couronne, 1, 0)
-      
     }
    
-   
-   
-   
-
   bd$breakfast_take = as.numeric(bd[,breakfast_take[a]])
   bd$breakfast_yes = ifelse(bd$breakfast_take == 1, 1, 0) 
   bd$lunch_take = as.numeric(bd[,lunch_take[a]])
@@ -311,7 +300,6 @@ for(a in 1:3){ # 1 = 1996, 2= 2002, 3=2008
   bd$low_consumption_fruit = as.numeric(bd[,low_consumption_fruit[a]]) # 1 = petit consommateur
   bd$low_consumption_veg = as.numeric(bd[,low_consumption_veg[a]])
   
-  
   summary(as.factor(bd$n_per_day))
   if (a == 2) {
     bd$n_per_day = ifelse(bd$q267s1 > 0, bd$q267s1, NA)
@@ -334,8 +322,7 @@ for(a in 1:3){ # 1 = 1996, 2= 2002, 3=2008
   if (a == 3)  bd$annee = 2008
   
   
-  if (a %in% c(1,2)) {
-    bd_clean = bd[,c("ID", "pond_annee", "pond_96", "sex", "age_continuous", "age_3cat",
+bd_clean = bd[,c("ID", "pond_annee", "pond_96", "sex", "age_continuous", "age_3cat",
                  "adult", "n_child", "educ", "income_4cat", "commune", "rural", "idf", "pro",
                  "breakfast_yes", "lunch_yes", "dinner_yes", 
                  "breakfast_location", "lunch_location", "dinner_location",
@@ -344,19 +331,6 @@ for(a in 1:3){ # 1 = 1996, 2= 2002, 3=2008
                  "healthy_diet", "info_about_diet", "enough_veg_yes", "enough_fruit_yes",
                  "freq_organic_consumption", "never_organic", "cons_5aday", "low_consumption_fruit", "low_consumption_veg",
                  "opinion_index", "annee")]
-    } else {
-      bd_clean = bd[,c("ID", "pond_annee", "pond_96", "sex", "age_continuous", "age_3cat",
-                       "adult", "n_child", "educ", "income_4cat", "commune", "rural", "idf", "paris", 
-                       "petite_couronne", "grande_couronne", "pro",
-                       "breakfast_yes", "lunch_yes", "dinner_yes", 
-                       "breakfast_location", "lunch_location", "dinner_location",
-                       "breakfast_ext", "lunch_ext", "dinner_ext",
-                       "impact_habits", "impact_health", "impact_budget", "impact_time",
-                       "healthy_diet", "info_about_diet", "enough_veg_yes", "enough_fruit_yes",
-                       "freq_organic_consumption", "never_organic", "cons_5aday", "low_consumption_fruit", "low_consumption_veg",
-                       "opinion_index", "annee")]
-      
-                 }
 
   if (a == 1) bd96_clean = bd_clean
   if (a == 2) bd02_clean = bd_clean 
@@ -364,38 +338,112 @@ for(a in 1:3){ # 1 = 1996, 2= 2002, 3=2008
 }
 
 
-# Integrate 3 database-year in one
+# Integrate 3 database-year / 2 database-year in one
 bd_evol = rbind(bd96_clean, bd02_clean, bd08_clean)
+bd_evol$category = paste(bd_evol$sex, bd_evol$age_3cat, bd_evol$educ, sep="_")
+bd_evol$category_an = paste( bd_evol$annee,bd_evol$sex, bd_evol$age_3cat, bd_evol$educ, sep="_")
+bd_evol$categshort = paste( bd_evol$annee, bd_evol$sex, bd_evol$age_3cat, sep="_")
+bd_evol$consumption_fruitandveg_SupUn = ifelse (bd_evol$low_consumption_fruit==1 & bd_evol$low_consumption_veg==1,0,1)
+
 write.csv(bd_evol, "bsn_96_02_08_harmonised.csv")
+
+
+bd_evol_0208 = bd_evol[bd_evol$annee != 1996,]
+write.csv(bd_evol_0208, "bsn_02_08_harmonised.csv")
+
+
 # Select only respondents over 15 year old, not in rural municipalities outside the Paris region, excluing NA.
 bd_evol_select = bd_evol[bd_evol$adult == 1,]
 bd_evol_select = bd_evol_select[bd_evol_select$rural != 1 | bd_evol_select$idf == 1 ,]
 bd_evol_select = bd_evol_select[!is.na(bd_evol_select$educ),]
-bd_evol_select$category = paste(bd_evol_select$sex, bd_evol_select$age_3cat, bd_evol_select$educ, sep="_")
+
 write.csv(bd_evol_select, "bsn_96_02_08_harmonised_subset.csv")
 
-summary(bd08_clean)
+bd_evol_0208_select = bd_evol_0208[bd_evol_0208$adult == 1,]
+bd_evol_0208_select = bd_evol_0208_select[bd_evol_0208_select$rural != 1 | bd_evol_0208_select$idf == 1 ,]
+bd_evol_0208_select = bd_evol_0208_select[!is.na(bd_evol_0208_select$educ),]
+
+write.csv(bd_evol_select, "bsn_02_08_harmonised_subset.csv")
 
 
-mean(bd08_clean[bd08_clean$paris == 1,"cons_5aday"])
-mean(bd08_clean[bd08_clean$petite_couronne == 1,"cons_5aday"])
-mean(bd08_clean[bd08_clean$grande_couronne == 1,"cons_5aday"])
-# 1 = rural, 2 = <20k residents, 3 = 20-100, 4 = 100-200, 5 = >200, 6 = "agglomeration parisienne" ()
+########  define initialisation variables by category : en supprimant 1996
+habit_constraint = prop.table(table(bd_evol_0208_select$category, bd_evol_0208_select$impact_habits), margin = 1)[,"1"]
+budget_constraint = prop.table(table(bd_evol_0208_select$category, bd_evol_0208_select$impact_budget), margin = 1)[,"1"]
+time_constraint = prop.table(table(bd_evol_0208_select$category, bd_evol_0208_select$impact_time), margin = 1)[,"1"]
 
-s=0
-for(i in 1:12){
-bd96_clean$agePlus = bd96_clean$age_continuous + i
-bd96_clean$agePlus_3cat = ifelse(bd96_clean$agePlus %in% 15:29, 1,
-                     ifelse(bd96_clean$agePlus %in% 30:59, 2,
-                            ifelse(bd96_clean$agePlus >= 60, 3,0)))
-bd96_clean$changeCatAge =  ifelse(bd96_clean$agePlus_3cat > bd96_clean$age_3cat, 1,0)
-s = s + sum(bd96_clean$changeCatAge) 
-}
-d = 12 * dim(bd96_clean)[1]
-s/d
+#habit_constraint_2002 = prop.table(table(bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "category"], bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "impact_habits"]), margin = 1)[,"1"]
+#budget_constraint_2002 = prop.table(table(bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "category"], bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "impact_budget"]), margin = 1)[,"1"]
+#time_constraint_2002 = prop.table(table(bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "category"], bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "impact_time"]), margin = 1)[,"1"]
+
+conso_5_2002 = prop.table(table(bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "category"], bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "cons_5aday"]), margin = 1)[,"1"]
+conso_5_2008 = prop.table(table(bd_evol_0208_select[bd_evol_0208_select$annee == 2008, "category"], bd_evol_0208_select[bd_evol_0208_select$annee == 2008, "cons_5aday"]), margin = 1)[,"1"]
+conso_5_2002_2008 = prop.table(table(bd_evol_0208_select$category, bd_evol_0208_select$cons_5aday), margin = 1)[,"1"]
 
 
-##### define initialisation variables by category
+social_context_breakfast = prop.table(table(bd_evol_0208_select$category, bd_evol_0208_select$breakfast_ext), margin = 1)[,"1"]
+social_context_lunch = prop.table(table(bd_evol_0208_select$category, bd_evol_0208_select$lunch_ext), margin = 1)[,"1"]
+social_context_dinner = prop.table(table(bd_evol_0208_select$category, bd_evol_0208_select$dinner_ext), margin = 1)[,"1"]
+
+#social_context_breakfast_2002 = prop.table(table(bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "category"], bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "breakfast_ext"]), margin = 1)[,"1"]
+#social_context_lunch_2002 = prop.table(table(bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "category"], bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "lunch_ext"]), margin = 1)[,"1"]
+#social_context_dinner_2002 = prop.table(table(bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "category"], bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "dinner_ext"]), margin = 1)[,"1"]
+
+bd_evol_0208_select$n = 1
+n = table(bd_evol_0208_select$category, bd_evol_0208_select$n)[,"1"]
+n_2002 = table(bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "category"], bd_evol_0208_select[bd_evol_0208_select$annee == 2002, "n"])[,"1"]
+n_2008 = table(bd_evol_0208_select[bd_evol_0208_select$annee == 2008, "category"], bd_evol_0208_select[bd_evol_0208_select$annee == 2008, "n"])[,"1"]
+
+
+sub2002H = bd_evol_0208_select[bd_evol_0208_select$annee == 2002 & bd_evol_0208_select$cons_5aday == 1,]
+sub2002U = bd_evol_0208_select[bd_evol_0208_select$annee == 2002 & bd_evol_0208_select$cons_5aday == 0,]
+
+sub2002H$opinion_index_Hq1 = ifelse(sub2002H$opinion_index >= 0 & sub2002H$opinion_index < 0.2,1,0)
+sub2002H$opinion_index_Hq2 = ifelse(sub2002H$opinion_index >= 0.2 & sub2002H$opinion_index < 0.4,1,0)
+sub2002H$opinion_index_Hq3 = ifelse(sub2002H$opinion_index >= 0.4 & sub2002H$opinion_index < 0.6,1,0)
+sub2002H$opinion_index_Hq4 = ifelse(sub2002H$opinion_index >= 0.6 & sub2002H$opinion_index < 0.8,1,0)
+sub2002H$opinion_index_Hq5 = ifelse(sub2002H$opinion_index >= 0.8 & sub2002H$opinion_index <= 1,1,0)
+
+sub2002U$opinion_index_Uq1 = ifelse(sub2002U$opinion_index >= 0 & sub2002U$opinion_index < 0.2,1,0)
+sub2002U$opinion_index_Uq2 = ifelse(sub2002U$opinion_index >= 0.2 & sub2002U$opinion_index < 0.4,1,0)
+sub2002U$opinion_index_Uq3 = ifelse(sub2002U$opinion_index >= 0.4 & sub2002U$opinion_index < 0.6,1,0)
+sub2002U$opinion_index_Uq4 = ifelse(sub2002U$opinion_index >= 0.6 & sub2002U$opinion_index < 0.8,1,0)
+sub2002U$opinion_index_Uq5 = ifelse(sub2002U$opinion_index >= 0.8 & sub2002U$opinion_index <= 1,1,0)
+
+opinion_index_2002H =  aggregate(sub2002H[,paste0("opinion_index_Hq", 1:5)], by = list(sub2002H$category), FUN = sumNoNA)
+opinion_index_2002U =  aggregate(sub2002U[,paste0("opinion_index_Uq", 1:5)], by = list(sub2002U$category), FUN = sumNoNA)
+opinion_index_2002H$totH = opinion_index_2002H$opinion_index_Hq1 + opinion_index_2002H$opinion_index_Hq2 +
+  opinion_index_2002H$opinion_index_Hq3 + opinion_index_2002H$opinion_index_Hq4 +
+  opinion_index_2002H$opinion_index_Hq5 
+opinion_index_2002U$totU = opinion_index_2002U$opinion_index_Uq1 + opinion_index_2002U$opinion_index_Uq2 +
+  opinion_index_2002U$opinion_index_Uq3 + opinion_index_2002U$opinion_index_Uq4 +
+  opinion_index_2002U$opinion_index_Uq5 
+
+
+Init_categories = cbind(n, n_2002, n_2008, 
+                        conso_5_2002, conso_5_2008, conso_5_2002_2008,
+                        habit_constraint, budget_constraint, time_constraint,
+                        social_context_breakfast, social_context_lunch, social_context_dinner)
+
+Init_categories = cbind(Init_categories,opinion_index_2002H,opinion_index_2002U)
+
+Init_categories[,paste0("opinion_index_Hq", 1:5)] = Init_categories[,paste0("opinion_index_Hq", 1:5)] / Init_categories$totH
+Init_categories[,paste0("opinion_index_Uq", 1:5)] = Init_categories[,paste0("opinion_index_Uq", 1:5)] / Init_categories$totU
+Init_categories$totH = NULL
+Init_categories$totU = NULL
+category_var = data.frame(1:18)
+category_var$Sex = ifelse(substr(rownames(Init_categories), 1, 1) == "1", 1, 2)
+category_var$Age = ifelse(substr(rownames(Init_categories), 3, 3) == "1", 1,
+                          ifelse(substr(rownames(Init_categories), 3, 3) == "2", 2, 3))
+category_var$Edu = ifelse(substr(rownames(Init_categories), 5, 5) == "1", 1,
+                          ifelse(substr(rownames(Init_categories), 5, 5) == "2", 2, 3))
+category_var$X1.18 = NULL
+Init_categories = cbind(category_var,Init_categories)
+Init_categories$Group.1 = NULL
+rownames(Init_categories) = NULL
+write.csv(Init_categories, "initialisation_distribution_per_cat_2002_2008.csv")
+
+
+########  define initialisation variables by category : avec initialisation avec 1996
 habit_constraint = prop.table(table(bd_evol_select$category, bd_evol_select$impact_habits), margin = 1)[,"1"]
 budget_constraint = prop.table(table(bd_evol_select$category, bd_evol_select$impact_budget), margin = 1)[,"1"]
 time_constraint = prop.table(table(bd_evol_select$category, bd_evol_select$impact_time), margin = 1)[,"1"]
@@ -434,8 +482,8 @@ sub2002U$opinion_index_Uq5 = ifelse(sub2002U$opinion_index >= 0.8 & sub2002U$opi
 opinion_index_2002H =  aggregate(sub2002H[,paste0("opinion_index_Hq", 1:5)], by = list(sub2002H$category), FUN = sumNoNA)
 opinion_index_2002U =  aggregate(sub2002U[,paste0("opinion_index_Uq", 1:5)], by = list(sub2002U$category), FUN = sumNoNA)
 opinion_index_2002H$totH = opinion_index_2002H$opinion_index_Hq1 + opinion_index_2002H$opinion_index_Hq2 +
-                            opinion_index_2002H$opinion_index_Hq3 + opinion_index_2002H$opinion_index_Hq4 +
-                            opinion_index_2002H$opinion_index_Hq5 
+  opinion_index_2002H$opinion_index_Hq3 + opinion_index_2002H$opinion_index_Hq4 +
+  opinion_index_2002H$opinion_index_Hq5 
 opinion_index_2002U$totU = opinion_index_2002U$opinion_index_Uq1 + opinion_index_2002U$opinion_index_Uq2 +
   opinion_index_2002U$opinion_index_Uq3 + opinion_index_2002U$opinion_index_Uq4 +
   opinion_index_2002U$opinion_index_Uq5 
@@ -464,21 +512,186 @@ Init_categories = cbind(category_var,Init_categories)
 Init_categories$Group.1 = NULL
 rownames(Init_categories) = NULL
 write.csv(Init_categories, "initialisation_distribution_per_cat.csv")
-  
 
-Init_categories$Healthy1996 = Init_categories$n_1996 * Init_categories$conso_5_1996
-Init_categories$Healthy2002 = Init_categories$n_2002 * Init_categories$conso_5_2002
-Init_categories$Healthy2008 = Init_categories$n_2008 * Init_categories$conso_5_2008
-Init_categories$sexAge = paste(Init_categories$Sex, Init_categories$Age, sep="_")
-  
-SexAge = aggregate(Init_categories[,c("n_1996","n_2002", "n_2008","Healthy1996","Healthy2002", "Healthy2008")], 
-                   by = list(Init_categories$sexAge), FUN = sum)
-SexAge$conso_5_1996 = SexAge$Healthy1996 / SexAge$n_1996
-SexAge$conso_5_2002 = SexAge$Healthy2002 / SexAge$n_2002
-SexAge$conso_5_2008 = SexAge$Healthy2008 / SexAge$n_2008
-write.csv(SexAge, "validation_distribution_per_ageSex.csv")
 
-# 
+
+
+
+
+##ANALYSEJULIE
+
+
+########## 5 fruits et l?gumes ################
+
+##Evolution sur les trois ans -et par cat?gorie (Cinq fruits et l?gumes)
+
+tab_cons_5aday<-table(bd_evol_select$cons_5aday, bd_evol_select$annee)
+prop.table(tab_cons_5aday,margin=2)
+prop.table(table(bd_evol_select[bd_evol_select$annee == 2008, "cons_5aday"], bd_evol_select[bd_evol_select$annee == 2008, "category"]), margin = 2)
+prop.table(table(bd_evol_select[bd_evol_select$annee == 2002, "cons_5aday"], bd_evol_select[bd_evol_select$annee == 2002, "category"]), margin = 2)
+prop.table(table(bd_evol_select[bd_evol_select$annee == 1996, "cons_5aday"], bd_evol_select[bd_evol_select$annee == 1996, "category"]), margin = 2)
+
+
+##Measure of social inequality (Cinq fruits et l?gumes) - population distribution 1996 / 2002 / 2008
+
+
+PrepSocIneq0 <- bd_evol_select %>%
+  group_by(category_an, categshort, annee, sex, age_3cat, educ, cons_5aday) %>%
+  summarise(Tot = n(), Tot_pd96 = sum (pond_96), Tot_pdan = sum (pond_annee)) 
+
+PrepSocIneq1 <-reshape2::dcast(data = PrepSocIneq0, 
+                                    formula = category_an + categshort + annee + sex + age_3cat + educ  ~ cons_5aday, 
+                                    value.var = "Tot",fun.aggregate = sum)
+  colnames(PrepSocIneq1)[c(7,8)]<- c("NBunhealthy", "NBhealthy")
+
+PrepSocIneq2 <-reshape2::dcast(data = PrepSocIneq0, 
+                                   formula = category_an   ~ cons_5aday, 
+                                   value.var = "Tot_pd96",fun.aggregate = sum)
+  colnames(PrepSocIneq2)[c(2,3)]<- c("NBunhealthy_pd96", "NBhealthy_pd96")
+
+PrepSocIneq3 <-reshape2::dcast(data = PrepSocIneq0, 
+                                    formula = category_an ~ cons_5aday, 
+                                    value.var = "Tot_pdan",fun.aggregate = sum)
+  colnames(PrepSocIneq3)[c(2,3)]<- c("NBunhealthy_pdan", "NBhealthy_pdan")
+
+PrepSocIneq4 <- full_join(PrepSocIneq1, PrepSocIneq2, by = "category_an")
+PrepSocIneq <- full_join(PrepSocIneq4, PrepSocIneq3, by = "category_an")
+rm (PrepSocIneq0,PrepSocIneq1, PrepSocIneq2, PrepSocIneq3, PrepSocIneq4)
+
+
+PrepSocIneq$Tot <- PrepSocIneq$NBhealthy+PrepSocIneq$NBunhealthy
+PrepSocIneq$Tot_pd96 <- PrepSocIneq$NBhealthy_pd96+PrepSocIneq$NBunhealthy_pd96
+PrepSocIneq$Tot_pdan <- PrepSocIneq$NBhealthy_pdan+PrepSocIneq$NBunhealthy_pdan
+##PrepSocIneq$Pop2012IDF <- c (0.032803071,0.018921943,0.016376739,0.131945784,0.081081621,0.076213344,0.052093723,0.032139249,0.032265131,0.032832828,0.022836182,0.015121341,0.135555969,0.099735879,0.068748432,0.065459075,0.049409044,0.036460647)
+PrepSocIneq$Pop2012IDF <- c (0.032918436, 0.018984796, 0.016421921, 0.131994532, 0.081230533, 0.076242946,0.051952471,0.032066553,0.032317892,0.032815059,0.022885573,0.015088061, 0.135362868, 0.099710323,0.068636633,0.065394212,0.049427567,0.036549624)
+Tot2012IDF <- 8164270
+
+head(PrepSocIneq)
+df <- PrepSocIneq[,c('annee', 'sex', 'age_3cat', 'educ', 'NBhealthy', 'Tot', 'Pop2012IDF')]
+colnames(df) <- c('year', 'sex', 'age', 'edu', 'healthy', 'totSurvey', 'PondIDF')
+df$shareHealthy <- df$healthy / df$totSurvey
+df$totIDF <- df$PondIDF * Tot2012IDF
+df$healthyIDF <- df$totIDF * df$shareHealthy
+df$unhealthyIDF <- df$totIDF - df$healthyIDF
+
+guido <- function(nedu1, nedu2, nedu3, nhedu1, nhedu2, nhedu3){
+  n <- nedu1 + nedu2 + nedu3
+  rankEdu3 <- nedu3/2
+  rankEdu2 <- (2*nedu3 + nedu2)/2
+  rankEdu1 <- (n + nedu3 + nedu2)/2
+  zing <- function(r){
+    ((n + 1) / 2) - r
+  }
+ e <- (8/(n^2))*(zing(rankEdu3)*nhedu3 + zing(rankEdu2)*nhedu2 + zing(rankEdu1)*nhedu1)
+ return(e)
+}
+
+y=2002
+for (y in c(1996, 2002, 2008)){
+  taby <- df[which(df$year == y),]
+  nedu1 <- sum(taby[which(taby$edu == 1),"totIDF"])
+  nedu2 <- sum(taby[which(taby$edu == 2),"totIDF"])
+  nedu3 <- sum(taby[which(taby$edu == 3),"totIDF"])
+  nhedu1 <- sum(taby[which(taby$edu == 1),"healthyIDF"])
+  nhedu2 <- sum(taby[which(taby$edu == 2),"healthyIDF"])
+  nhedu3 <- sum(taby[which(taby$edu == 3),"healthyIDF"])
+  e <- guido(nedu1, nedu2, nedu3, nhedu1, nhedu2, nhedu3)
+  print(paste(nedu1, nedu2, nedu3, nhedu1, nhedu2, nhedu3))
+  print(paste(y, e))
+}
+
+(nhedu1+nhedu2+nhedu3)/Tot2012IDF
+
+
+
+PrepSocIneq$PCThealthy <- ifelse (PrepSocIneq$NBhealthy==0, 
+                                       (PrepSocIneq$NBhealthy+1) / (PrepSocIneq$Tot+1),
+                                       PrepSocIneq$NBhealthy / PrepSocIneq$Tot)
+PrepSocIneq$PCThealthy_pd96 <- ifelse (PrepSocIneq$NBhealthy_pd96==0, 
+                                  (PrepSocIneq$NBhealthy_pd96+1) / (PrepSocIneq$Tot_pd96+1),
+                                  PrepSocIneq$NBhealthy_pd96 / PrepSocIneq$Tot_pd96)
+
+PrepSocIneq$PCThealthy_pdan <- ifelse (PrepSocIneq$NBhealthy_pdan==0, 
+                                       (PrepSocIneq$NBhealthy_pdan+1) / (PrepSocIneq$Tot_pdan+1),
+                                       PrepSocIneq$NBhealthy_pdan / PrepSocIneq$Tot_pdan)                                     
+
+PrepSocIneq$PCThealthy_Educ3 <- ifelse (PrepSocIneq$educ==3, PrepSocIneq$PCThealthy,NA)
+PrepSocIneq$PCThealthy_pd96_Educ3 <- ifelse (PrepSocIneq$educ==3, PrepSocIneq$PCThealthy_pd96,NA)
+PrepSocIneq$PCThealthy_pdan_Educ3 <- ifelse (PrepSocIneq$educ==3, PrepSocIneq$PCThealthy_pdan, NA)   
+
+PrepSocIneq$PCThealthy_Educ1 <- ifelse (PrepSocIneq$educ==1, PrepSocIneq$PCThealthy,NA)
+PrepSocIneq$PCThealthy_pd96_Educ1 <- ifelse (PrepSocIneq$educ==1, PrepSocIneq$PCThealthy_pd96,NA)
+PrepSocIneq$PCThealthy_pdan_Educ1 <- ifelse (PrepSocIneq$educ==1, PrepSocIneq$PCThealthy_pdan, NA) 
+
+CategTot <- PrepSocIneq %>%
+  group_by(categshort) %>%
+  summarise(annee = mean (annee),
+            Tot = sum (Tot), Tot_pd96 = sum (Tot_pd96), Tot_pdan = sum (Tot_pdan),
+            Pop2012IDF = sum(Pop2012IDF),
+            NBhealthy  = sum (NBhealthy), NBhealthy_pd96  = sum (NBhealthy_pd96), NBhealthy_pdan  = sum (NBhealthy_pdan),
+            PCThealthy_Educ3 = sum (PCThealthy_Educ3, na.rm = TRUE), 
+            PCThealthy_Educ1= sum (PCThealthy_Educ1, na.rm = TRUE),
+            PCThealthy_pd96_Educ3= sum (PCThealthy_pd96_Educ3, na.rm = TRUE),
+            PCThealthy_pd96_Educ1= sum (PCThealthy_pd96_Educ1, na.rm = TRUE),
+            PCThealthy_pdan_Educ3= sum (PCThealthy_pdan_Educ3, na.rm = TRUE),
+            PCThealthy_pdan_Educ1= sum (PCThealthy_pdan_Educ1, na.rm = TRUE))
+            
+CategTot$ratioEduc_PCThealthy <- CategTot$PCThealthy_Educ3/ CategTot$PCThealthy_Educ1
+CategTot$ratioEduc_PCThealthy_pd96 <- CategTot$PCThealthy_pd96_Educ3/ CategTot$PCThealthy_pd96_Educ1
+CategTot$ratioEduc_PCThealthy_pdan <- CategTot$PCThealthy_pdan_Educ3/ CategTot$PCThealthy_pdan_Educ1
+
+CategTot$ratioEduc_PCThealthy_Tot <- CategTot$ratioEduc_PCThealthy * CategTot$Tot
+CategTot$ratioEduc_PCThealthy_pd96_Totpd96 <- CategTot$ratioEduc_PCThealthy_pd96 * CategTot$Tot_pd96
+CategTot$ratioEduc_PCThealthy_pdan_Totpdan <- CategTot$ratioEduc_PCThealthy_pdan * CategTot$Tot_pdan
+
+CategTot$ratioEduc_PCThealthy_popIDF2012 <- CategTot$ratioEduc_PCThealthy * CategTot$Pop2012IDF
+CategTot$ratioEduc_PCThealthy_pdan_popIDF2012 <- CategTot$ratioEduc_PCThealthy_pdan * CategTot$Pop2012IDF
+
+
+FIN <- CategTot %>%
+  group_by(annee) %>% 
+  summarise (Tot = sum (Tot), Tot_pd96 = sum (Tot_pd96), Tot_pdan = sum (Tot_pdan),
+             NBhealthy  = sum (NBhealthy), NBhealthy_pd96  = sum (NBhealthy_pd96), NBhealthy_pdan  = sum (NBhealthy_pdan),
+             SocIneq = sum (ratioEduc_PCThealthy_Tot / Tot),
+             SocIneq_pd96 = sum (ratioEduc_PCThealthy_pd96_Totpd96 / Tot_pd96),
+             SocIneq_pdan = sum (ratioEduc_PCThealthy_pdan_Totpdan /Tot_pdan),
+             SocIneq_popIDF2012 = sum (ratioEduc_PCThealthy_popIDF2012),
+             SocIneq_pdan_popIDF2012 = sum (ratioEduc_PCThealthy_pdan_popIDF2012))
+
+
+
+
+
+######## RELATION OPINION / CONSO Fruits et l?gumes
+
+ValueOpinion2002 <- bd_evol_select %>% 
+  filter(annee==2002) %>% 
+  group_by (cons_5aday) %>% 
+  summarise(NB = n(), moyopi = mean (opinion_index, na.rm=TRUE) ) 
+
+Tab2002 <- bd_evol_select %>% 
+  filter(annee==2002) 
+LM <-lm (opinion_index ~ cons_5aday, data = Tab2002)
+anova (LM)
+
+zut <-table(Tab$opinion_index, Tab$fruit_leg_5)
+dim (zut)
+aggregate(Tab$opinion_index, list(Tab$fruit_leg_5), mean, na.rm=TRUE)
+aggregate(Tab$opinion_index, list(Tab$fruit_leg_5), length, na.rm=TRUE )
+aggregate(x ~ opinion_index + fruit_leg_5, data=Tab, length)
+
+aggregate(Tab$opinion_index + Tab$fruit_leg_5, length, na.rm=TRUE)
+aggregate(frequency(Tab$opinion_index, Tab$fruit_leg_5, na.rm=TRUE))
+lm (opinion_index ~ fruit_leg_5, data = Tab)
+lmOp <- lm (opinion_index ~ fruit_leg_5, data = Tab)
+anova (lmOp)
+
+
+
+
+
+
+
 # bd_evol_select$cons_5aday
 # plot(cons_5aday ~ age_3cat , data = bd_evol_select)
 # 
@@ -574,4 +787,5 @@ write.csv(SexAge, "validation_distribution_per_ageSex.csv")
 # 
 # 
 # 
+
 

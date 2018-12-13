@@ -1,13 +1,13 @@
 require("ggplot2")
 setwd("~/Downloads")
-df = read.csv("unhealthy.csv")
+df = read.csv("population48013.csv")
 #df
 #colnames(df)
 
 p = ggplot(data = df, aes(x = deltaHealth, y = deltaAverageOpinion))
 dim(df)
 
-df = df[which(df$evolution.samples > 9),]
+df = df[which(df$evolution.samples > 5),]
 summary(df)
 dim(df)
 p + geom_point(aes(color = healthyDietReward, cex = maxProbaToSwitch))
@@ -29,3 +29,4 @@ summary(m3)
 
 df[which(df$deltaHealth < -0.45), ]
 
+summary(m1)
